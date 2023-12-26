@@ -1,0 +1,389 @@
+<!doctype HTML>
+<html>
+    <head>
+        <title>Left Center Right</title>
+        <link rel="stylesheet" href="../css/mvp.css">
+    </head>
+    <body>
+        <script src="../scripts/html_tools.js"></script>
+        <script>
+            const tokenDeliveryOffset = 20;
+            const tokenThickness = 5;
+
+            //TODO: clean this up and make the colors higher contrast?
+            function drawToken(ctx, x, y) {
+                const radius = 20;
+                const depth = 4; // Adjust for desired depth
+                const color = '#ffff00';
+                const shadowColor = '#a0a040'; // Darker shade for shadow
+
+                ctx.save();
+
+                // Draw base circle with slight shadow
+                ctx.translate(x, y + depth);
+                ctx.fillStyle = shadowColor;
+                fillCircle(ctx, 0, 0, radius);
+
+                // Draw main circle with gradient
+                ctx.translate(0, -depth); // Move up for top circle
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
+                gradient.addColorStop(0, '#f0f060'); // Lighter top
+                gradient.addColorStop(1, color); // Original color at bottom
+                ctx.fillStyle = gradient;
+                fillCircle(ctx, 0, 0, radius);
+
+                // Add subtle highlight
+                ctx.beginPath();
+                ctx.arc(0, 0, radius * 0.8, 0, Math.PI, true); // Upper semi-circle
+                ctx.lineWidth = depth / 2;
+                ctx.strokeStyle = '#fff';
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            function fillCircle(ctx, x, y, radius) {
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            function drawText(ctx, text, x, y) {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.font = "16px Arial"; // Adjust font as needed
+                ctx.fillStyle = "#000"; // Set color
+                ctx.fillText(text, 0, 0);
+                ctx.restore();
+            }
+
+            function TurnSummaryText(xPos, yPos, msg, lifeTime) {
+                const x = xPos;
+                const y = yPos;
+                const text = msg;
+                const originalLife = lifeTime;
+                let life = lifeTime;
+
+                this.kill = () => life <= 0;
+
+                this.draw = (ctx) => {
+                    const yOffset = originalLife - life;
+                    drawText(ctx, text, x, y + yOffset);
+                    life--;
+                };
+            }
+
+            function LCRDie() {
+                const faces = [
+                    'left',
+                    'right',
+                    '*',
+                    '@',
+                    '@',
+                    '@',
+                ];
+
+                this.roll = () => faces[Math.floor(Math.random() * faces.length)];
+            }
+
+            function TravelingToken(posX, posY, tOffset) {
+                let x = posX;
+                let y = posY;
+                let timeOffset = tOffset;
+                let dead = false;
+
+                this.kill = () => dead;
+
+                this.animate = (ctx, targetX, targetY) => {
+                    if (timeOffset <= 0) {
+                        const deltaX = targetX - x;
+                        const deltaY = targetY - y;
+
+                        x += deltaX * 0.5;
+                        y += deltaY * 0.5;
+                    }
+                    else {
+                        timeOffset--;
+                    }
+                    drawToken(ctx, x, y);
+                    dead = Math.round(x) === Math.round(targetX) && Math.round(y) === Math.round(targetY);
+                };
+            }
+
+            function Player(numPieces, posX, posY) {
+                const x = Math.floor(posX);
+                const y = Math.floor(posY);
+                let tokens = numPieces;
+                const travelingTokens = [];
+                const turnText = [];
+
+                this.canPlay = () => tokens > 0;
+
+                const tokenLocation = (i) => {
+                    const yOffset = i * tokenThickness;
+                    return { 'x': x, 'y': y - yOffset };
+                };
+
+                this.receiveToken = (travelingToken) => {
+                    travelingTokens.push(travelingToken);
+                    tokens++;
+                };
+
+                this.takeTurn = (leftPlayer, rightPlayer, dice) => {
+                    const rolls = Math.min(tokens, dice.length);
+                    const toCenter = [];
+                    const turnResults = [];
+                    let tokensLost = 0;
+                    for (let i = 0; i < rolls; i++) {
+                        var result = dice[i].roll();
+                        switch (result) {
+                            case 'left':
+                                turnResults.push(`left`);
+                                const leftTokenLoc = tokenLocation(tokens - (tokensLost + 1));
+                                leftPlayer.receiveToken(new TravelingToken(leftTokenLoc.x, leftTokenLoc.y, tokensLost * tokenDeliveryOffset));
+                                tokensLost++;
+                                break;
+
+                            case 'right':
+                                turnResults.push(`right`);
+                                const rightTokenLoc = tokenLocation(tokens - (tokensLost + 1));
+                                rightPlayer.receiveToken(new TravelingToken(rightTokenLoc.x, rightTokenLoc.y, tokensLost * tokenDeliveryOffset));
+                                tokensLost++;
+                                break;
+
+                            case '*':
+                                turnResults.push(`center`);
+                                const centerTokenLoc = tokenLocation(tokens - (tokensLost + 1));
+                                toCenter.push(new TravelingToken(centerTokenLoc.x, centerTokenLoc.y, tokensLost * tokenDeliveryOffset));
+                                tokensLost++;
+                                break;
+
+                            default:
+                                turnResults.push(`keep`);
+                        }
+                    }
+                    tokens -= tokensLost;
+                    const txt = turnResults.length === 0 ? 'skip' : turnResults.join(', ');
+                    turnText.push(new TurnSummaryText(x - 50, y - 100, txt, 100));
+                    return toCenter;
+                };
+
+                this.draw = (ctx, gameState) => {
+                    //TODO: draw the player?
+                    for (let i = 0; i < (tokens - travelingTokens.length); i++) {
+                        const loc = tokenLocation(i);
+                        drawToken(ctx, loc.x, loc.y);
+                    }
+                    
+                    for (let i = 0; i < travelingTokens.length; i++) {
+                        const targetPos = tokenLocation(tokens - travelingTokens.length + i);
+                        travelingTokens[i].animate(ctx, targetPos.x, targetPos.y);
+                    }
+                    for (let i = travelingTokens.length - 1; i >= 0; i--) {
+                        if (travelingTokens[i].kill()) {
+                            travelingTokens.splice(i, 1);
+                        }
+                    }
+                    //drawText(ctx, `${tokens}`, x-4, y + 10 - (tokens * tokenThickness));
+                    for (let i = 0; i < turnText.length; i++) {
+                        turnText[i].draw(ctx);
+                    }
+                    for (let i = turnText.length - 1; i >= 0; i--) {
+                        if (turnText[i].kill()) {
+                            turnText.splice(i, 1);
+                        }
+                    }
+
+                    if (gameState === 'won' && tokens > 0) {
+                        //this player is the winner
+                        drawText(ctx, `I won!`, x - 20, y + 50);
+                    }
+                };
+            }
+
+            function Game(numPlayers, width, height) {
+                const w = width;
+                const h = height;
+                const x = w / 2;
+                const y = h / 2;
+                const tableRadius = (Math.min(w, h) / 2) - 100;
+
+                const dice = [
+                    new LCRDie(),
+                    new LCRDie(),
+                    new LCRDie(),
+                ];
+
+                const tokensPerPlayer = 3;
+                const totalTokensInPlay = tokensPerPlayer * numPlayers;
+                const travelingCenterTokens = [];
+                let turn = 0;
+                let centerTokens = 0;
+                let gameState = 'playing';
+
+                const players = [];
+                const angleIncrement = 2 * Math.PI / numPlayers;
+                for (let i = 0; i < numPlayers; i++) {
+                    const angle = i * angleIncrement;
+                    const px = tableRadius * Math.cos(angle);
+                    const py = tableRadius * Math.sin(angle);
+                    players.push(new Player(tokensPerPlayer, x + px, y + py));
+                }
+
+                const playerForTurn = (num) => players[(num + players.length) % players.length];
+
+                const checkWinState = () => {
+                    let inPlay = 0;
+                    for (const player of players) {
+                        if (player.canPlay()) {
+                            inPlay++;
+                        }
+                    }
+                    return inPlay === 1;
+                };
+
+                const tokenOffset = (i) => {
+                    const spreadRadius = (tableRadius/4);
+                    let seed = i * 1013; // Unique seed for each index
+                    const random = () => {
+                        seed = (seed * 9301 + 49297) % 233280; // LCG algorithm
+                        return seed / 233280;
+                    }
+
+                    const angle = random() * Math.PI * 2; // Random angle within 0 to 2π
+                    const distance = random() * spreadRadius * (i + 1) / totalTokensInPlay; // Gradual offset increase
+
+                    const offsetX = Math.cos(angle) * distance;
+                    const offsetY = Math.sin(angle) * distance;
+                    return { 'x': offsetX, 'y': offsetY };
+                };
+
+                this.nextRound = () => {
+                    if (gameState === 'won') {
+                        return gameState;
+                    }
+                    let canPlay = false;
+                    let currentPlayer, leftPlayer, rightPlayer;
+                    while (!canPlay) {
+                        currentPlayer = playerForTurn(turn);
+                        leftPlayer = playerForTurn(turn + 1);
+                        rightPlayer = playerForTurn(turn - 1);
+                        canPlay = currentPlayer.canPlay();
+                        if (!canPlay) {
+                            turn++;
+                        }
+                    }
+                    const newCenterTokens = currentPlayer.takeTurn(leftPlayer, rightPlayer, dice);
+                    centerTokens += newCenterTokens.length;
+                    for (const newToken of newCenterTokens) {
+                        travelingCenterTokens.push(newToken);
+                    }
+
+                    //win condition
+                    if (checkWinState()) {
+                        //current player wins
+                        gameState = 'won';
+                    }
+                    else {
+                        //game continues
+                        turn++;
+                        //TODO: is it possible to identify and highlight the next player here?
+                        //This would mean moving the code in the above while loop in here, kind of.
+                    }
+                    return gameState;
+                };
+
+                this.draw = (ctx) => {
+                    ctx.clearRect(0, 0, w, y);
+                    //TODO: draw a backdrop of some kind?
+                    ctx.fillStyle = '#d92c23';
+                    ctx.fillRect(0, 0, w, h);
+                    for (const player of players) {
+                        player.draw(ctx, gameState);
+                    }
+                    
+                    for (let i = 0; i < (centerTokens - travelingCenterTokens.length); i++) {
+                        const offset = tokenOffset(i);
+                        drawToken(ctx, x + offset.x, y - offset.y);
+                    }
+
+                    const removeMe = [];
+                    for (let i = 0; i < travelingCenterTokens.length; i++) {
+                        const offset = tokenOffset((centerTokens - travelingCenterTokens.length) + i);
+                        if(travelingCenterTokens[i].animate(ctx, x + offset.x, y - offset.y)) {
+                            removeMe.push(i);
+                        }
+                    }
+                    for (let i = travelingCenterTokens.length - 1; i >= 0; i--) {
+                        if (travelingCenterTokens[i].kill()) {
+                            travelingCenterTokens.splice(i, 1);
+                        }
+                    }
+                    //drawText(ctx, `${centerTokens}`, x-16, y);
+                };
+            }
+
+            const gameWidth = 800;
+            const gameHeight = 600;
+
+            const gameDiv = createElement('div', {'style': `width:${gameWidth}px;height:100%;padding:0px;margin:0px auto;display:flex;flex-wrap:wrap;flex-direction:column;`}, null);
+            document.body.appendChild(gameDiv);
+
+            const canvas = createElement('canvas', {'width': gameWidth, 'height': gameHeight}, null);
+            canvas.addEventListener('click', updateGame, false);
+            const ctx = canvas.getContext('2d');
+
+            const preGameControls = createElement('div', { 'style': 'display: flex; flex-direction: row; gap: 8px; margin: 8px auto;' }, null);
+            gameDiv.appendChild(preGameControls);
+
+            const numPlayersLabel = createElement('label', {'for': 'numPlayers'}, `Number of Players:`);
+            preGameControls.appendChild(numPlayersLabel);
+
+            const maxPlayers = 12;
+            const numPlayersInput = createElement('input', {'type': 'number', 'min': '3', 'max': maxPlayers, 'value': 3, 'name': 'numPlayers', 'id': 'numPlayers'});
+            preGameControls.appendChild(numPlayersInput);
+
+            const goButton = createElement('input', {'type': 'button', 'value': 'Play!'});
+            goButton.addEventListener('click', startNewGame, false);
+            preGameControls.appendChild(goButton);
+
+            let game = null;
+            let gameWon = true;
+            let gameAnimating = false;
+
+            function animateGame() {
+                if (!game) {
+                    gameAnimating = false;
+                    return;
+                }
+                gameAnimating = true;
+                game.draw(ctx);
+                requestAnimationFrame(animateGame);
+            }
+
+            function updateGame() {
+                const result = game.nextRound();
+                if (!gameWon && result === 'won') {
+                    gameDiv.appendChild(preGameControls);
+                    gameWon = true;
+                }
+            }
+
+            function startNewGame() {
+                let numPlayers = 3;
+                let value = parseInt(numPlayersInput.value);
+                if (!isNaN(value)) {
+                    numPlayers = value;
+                }
+                numPlayers = Math.max(3, Math.min(numPlayers, maxPlayers));
+                gameDiv.innerHTML = '';
+                gameDiv.appendChild(canvas);
+                game = new Game(numPlayers, gameWidth, gameHeight);
+                gameWon = false;
+                if (!gameAnimating) {
+                    animateGame();
+                }
+            }
+        </script>
+    </body>
+<html>
