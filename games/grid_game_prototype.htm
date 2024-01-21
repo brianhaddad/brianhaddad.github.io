@@ -22,12 +22,51 @@
                     '#50d1af',
                 ];
 
+                let hoverHighlighted = false;
+
+                const collidePoint = (px, py) => {
+                    const left = x - (tileSize/2);
+                    const top = y - (tileSize/2);
+                    const withinHorizontal = px > left && px < left + tileSize;
+                    const withinVertical = py > top && py < top + tileSize;
+                    return withinHorizontal && withinVertical;
+                };
+
+                this.checkHover = (posX, posY) => {
+                    hoverHighlighted = collidePoint(posX, posY);
+                };
+
                 this.draw = (ctx) => {
                     //TODO: maybe cell types that get drawn differently?
+                    const topLayerDrawCalls = [];
                     ctx.save();
                     ctx.fillStyle = tempColors[(col + row)%tempColors.length];
                     ctx.fillRect(x - (tileSize/2), y - (tileSize/2), tileSize, tileSize);
+                    if (hoverHighlighted) {
+                        topLayerDrawCalls.push((ctx) => {
+                            const w = 6;
+                            const hw = w / 2;
+                            ctx.save();
+                            ctx.strokeStyle = '#ffffff';
+                            ctx.lineWidth = w;
+                            ctx.beginPath();
+                            ctx.roundRect(x - (tileSize/2) - hw, y - (tileSize/2) - hw, tileSize + w, tileSize + w, 8);
+                            ctx.stroke();
+                            ctx.restore();
+                        });
+                        topLayerDrawCalls.push((ctx) => {
+                            ctx.save();
+                            ctx.translate(x, y);
+                            ctx.font = "bold 12px Arial";
+                            ctx.fillStyle = "#000000";
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(`${col}, ${row}`, 0, 0);
+                            ctx.restore();
+                        });
+                    }
                     ctx.restore();
+                    return topLayerDrawCalls;
                 };
             }
 
@@ -47,10 +86,26 @@
                     }
                 }
 
+                this.mouseMove = (mouseX, mouseY) => {
+                    //TODO: temp? Just a proof of concept placeholder...
+                    for (const cell of cells) {
+                        cell.checkHover(mouseX, mouseY);
+                    }
+                };
+
+                this.update = (dt) => {
+                    //
+                };
+
                 this.draw = (ctx) => {
                     //TODO: Grid needs different layers beyond the tiles/cells.
+                    const topLayer = [];
                     for (const cell of cells) {
-                        cell.draw(ctx);
+                        const newTopLayerItems = cell.draw(ctx);
+                        topLayer.push(...newTopLayerItems);
+                    }
+                    for (const top of topLayer) {
+                        top(ctx);
                     }
                 };
             }
@@ -78,6 +133,7 @@
 
                         case 'mousemove':
                             //TODO: pass the mouse position around looking for something to highlight?
+                            grid.mouseMove(mouseX, mouseY);
                             break;
 
                         default:
@@ -86,8 +142,9 @@
                     }
                 };
 
-                this.update = (deltaTime) => {
+                this.update = (dt) => {
                     //TODO: game logic
+                    grid.update(dt);
                 };
 
                 this.draw = (ctx) => {
