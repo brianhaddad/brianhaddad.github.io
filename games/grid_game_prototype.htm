@@ -7,7 +7,44 @@
     <body>
         <script src="../scripts/html_tools.js"></script>
         <script>
-            function GridCell(gX, gY, posX, posY, pxTileSize) {
+            function drawCenteredBoldText(ctx, text, x, y) {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.font = "bold 12px Arial";
+                ctx.fillStyle = "#000000";
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(text, 0, 0);
+                ctx.restore();
+            }
+
+            function drawStar(ctx, x, y, radius) {
+                const innerRadius = radius * 0.382; // Inner radius for a visually pleasing star
+                const outerAngle = 2 * Math.PI / 5; // Angle between outer points
+                const innerAngle = Math.PI / 5; // Angle between inner and outer points
+
+                ctx.translate(x, y);
+                ctx.rotate(-Math.PI/2);
+
+                ctx.beginPath();
+                for (let i = 0; i < 5; i++) {
+                    const outerPointX = radius * Math.cos(i * outerAngle);
+                    const outerPointY = radius * Math.sin(i * outerAngle);
+                    const innerPointX = innerRadius * Math.cos((i * outerAngle) + innerAngle);
+                    const innerPointY = innerRadius * Math.sin((i * outerAngle) + innerAngle);
+
+                    ctx.lineTo(outerPointX, outerPointY);
+                    ctx.lineTo(innerPointX, innerPointY);
+                }
+                ctx.closePath();
+                ctx.fill(); // Fill the star with the current fillStyle
+            }
+
+            const cellTypes = {
+                center: 'centerCell',
+            };
+
+            function GridCell(gX, gY, posX, posY, pxTileSize, cellType) {
                 const col = gX;
                 const row = gY;
                 const x = Math.floor(posX);
@@ -34,39 +71,50 @@
 
                 this.checkHover = (posX, posY) => {
                     hoverHighlighted = collidePoint(posX, posY);
+                    return hoverHighlighted ? this : null;
                 };
 
                 this.draw = (ctx) => {
                     //TODO: maybe cell types that get drawn differently?
                     const topLayerDrawCalls = [];
                     ctx.save();
-                    ctx.fillStyle = tempColors[(col + row)%tempColors.length];
-                    ctx.fillRect(x - (tileSize/2), y - (tileSize/2), tileSize, tileSize);
-                    if (hoverHighlighted) {
-                        topLayerDrawCalls.push((ctx) => {
-                            const w = 6;
-                            const hw = w / 2;
-                            ctx.save();
-                            ctx.strokeStyle = '#ffffff';
-                            ctx.lineWidth = w;
-                            ctx.beginPath();
-                            ctx.roundRect(x - (tileSize/2) - hw, y - (tileSize/2) - hw, tileSize + w, tileSize + w, 8);
-                            ctx.stroke();
-                            ctx.restore();
-                        });
-                        topLayerDrawCalls.push((ctx) => {
-                            ctx.save();
-                            ctx.translate(x, y);
-                            ctx.font = "bold 12px Arial";
-                            ctx.fillStyle = "#000000";
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'middle';
-                            ctx.fillText(`${col}, ${row}`, 0, 0);
-                            ctx.restore();
-                        });
+
+                    switch (cellType) {
+                        case cellTypes.center:
+                            ctx.fillStyle = '#000000';
+                            ctx.fillRect(x - (tileSize/2), y - (tileSize/2), tileSize, tileSize);
+
+                            ctx.fillStyle = '#ffff00';
+                            drawStar(ctx, x, y, tileSize/3);
+                            break;
+
+                        default:
+                            ctx.fillStyle = tempColors[(col + row)%tempColors.length];
+                            ctx.fillRect(x - (tileSize/2), y - (tileSize/2), tileSize, tileSize);
                     }
+                    //TODO: keep this for effects that need to go over the main board:
+                    //if (hoverHighlighted) {
+                    //    topLayerDrawCalls.push((ctx) => {
+                    //    });
+                    //    topLayerDrawCalls.push((ctx) => {
+                    //    });
+                    //}
                     ctx.restore();
                     return topLayerDrawCalls;
+                };
+
+                this.drawHoverHighlight = (ctx) => {
+                    const w = 6;
+                    const hw = w / 2;
+                    ctx.save();
+                    ctx.strokeStyle = 'rgba(255,255,255,.75)';
+                    ctx.lineWidth = w;
+                    ctx.beginPath();
+                    ctx.roundRect(x - (tileSize/2) - hw, y - (tileSize/2) - hw, tileSize + w, tileSize + w, 8);
+                    ctx.stroke();
+                    ctx.restore();
+                    //TODO: optional?
+                    //drawCenteredBoldText(ctx, `${col}, ${row}`, x, y);
                 };
             }
 
@@ -77,19 +125,37 @@
                 const cols = numCols;
                 const tileSize = pxTileSize;
                 const cells = [];
+                const hasCenter = (rows % 2 === 1) && (cols % 2 === 1);
+
+                let highlightedCell = null;
 
                 for (let r = 0; r < rows; r++) {
                     for (let c = 0; c < cols; c++) {
+                        let cellType = '';
+                        if (hasCenter && r === Math.floor(rows/2) && c === Math.floor(cols/2)) {
+                            cellType = cellTypes.center;
+                        }
                         const posX = x + (tileSize * (c - ((cols - 1) / 2)));
                         const posY = y + (tileSize * (r - ((rows - 1) / 2)));
-                        cells.push(new GridCell(c, r, posX, posY, tileSize));
+                        cells.push(new GridCell(c, r, posX, posY, tileSize, cellType));
                     }
                 }
 
                 this.mouseMove = (mouseX, mouseY) => {
                     //TODO: temp? Just a proof of concept placeholder...
+                    let currentlyHighlighted = null;
                     for (const cell of cells) {
-                        cell.checkHover(mouseX, mouseY);
+                        currentlyHighlighted ??= cell.checkHover(mouseX, mouseY);
+                    }
+                    if (highlightedCell !== currentlyHighlighted) {
+                        highlightedCell = currentlyHighlighted;
+                        //TODO: events for mouse entering/leaving cells?
+                        //if (highlightedCell !== null) {
+                        //    console.log('entered a new cell');
+                        //}
+                        //else {
+                        //    console.log('left a cell');
+                        //}
                     }
                 };
 
@@ -106,6 +172,9 @@
                     }
                     for (const top of topLayer) {
                         top(ctx);
+                    }
+                    if (highlightedCell) {
+                        highlightedCell.drawHoverHighlight(ctx);
                     }
                 };
             }
