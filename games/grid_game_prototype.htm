@@ -1,0 +1,141 @@
+<!doctype HTML>
+<html>
+    <head>
+        <title>Grid Game Prototype</title>
+        <link rel="stylesheet" href="../css/mvp.css">
+    </head>
+    <body>
+        <script src="../scripts/html_tools.js"></script>
+        <script>
+            function GridCell(gX, gY, posX, posY, pxTileSize) {
+                const col = gX;
+                const row = gY;
+                const x = Math.floor(posX);
+                const y = Math.floor(posY);
+                const tileSize = pxTileSize;
+                const tempColors = [
+                    '#f42c23',
+                    '#2cf423',
+                    '#2c23f4',
+                    '#af50d1',
+                    '#50afd1',
+                    '#50d1af',
+                ];
+
+                this.draw = (ctx) => {
+                    //TODO: maybe cell types that get drawn differently?
+                    ctx.save();
+                    ctx.fillStyle = tempColors[(col + row)%tempColors.length];
+                    ctx.fillRect(x - (tileSize/2), y - (tileSize/2), tileSize, tileSize);
+                    ctx.restore();
+                };
+            }
+
+            function Grid(posX, posY, numRows, numCols, pxTileSize) {
+                const x = Math.floor(posX);
+                const y = Math.floor(posY);
+                const rows = numRows;
+                const cols = numCols;
+                const tileSize = pxTileSize;
+                const cells = [];
+
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        const posX = x + (tileSize * (c - ((cols - 1) / 2)));
+                        const posY = y + (tileSize * (r - ((rows - 1) / 2)));
+                        cells.push(new GridCell(c, r, posX, posY, tileSize));
+                    }
+                }
+
+                this.draw = (ctx) => {
+                    //TODO: Grid needs different layers beyond the tiles/cells.
+                    for (const cell of cells) {
+                        cell.draw(ctx);
+                    }
+                };
+            }
+
+            function Game(width, height) {
+                const w = width;
+                const h = height;
+                const x = w / 2;
+                const y = h / 2;
+                const gridSize = 13;
+                const grid = new Grid(x, y, gridSize, gridSize, Math.floor(Math.min(w, h) / (gridSize + 2)));
+
+                this.mouseEvent = (mouseX, mouseY, eventType) => {
+                    switch (eventType) {
+                        case 'click':
+                            //TODO: left click
+                            //If something was already highlighted (identified as the item the mouse is over)
+                            //maybe just have that item activate after confirming that the new coordinate is still
+                            //inside?
+                            break;
+
+                        case 'contextmenu':
+                            //TODO: this is right clicking!
+                            break;
+
+                        case 'mousemove':
+                            //TODO: pass the mouse position around looking for something to highlight?
+                            break;
+
+                        default:
+                            //TODO: lol nothing? WHO KNOWS?!?
+                            console.log(eventType);
+                    }
+                };
+
+                this.update = (deltaTime) => {
+                    //TODO: game logic
+                };
+
+                this.draw = (ctx) => {
+                    ctx.clearRect(0, 0, w, y);
+                    ctx.fillStyle = '#2cb242';
+                    ctx.fillRect(0, 0, w, h);
+                    grid.draw(ctx);
+                };
+            }
+
+            const gameWidth = 800;
+            const gameHeight = 600;
+
+            const gameDiv = createElement('div', {'style': `width:${gameWidth}px;height:100%;padding:0px;margin:0px auto;display:flex;flex-wrap:wrap;flex-direction:column;`}, null);
+            document.body.appendChild(gameDiv);
+
+            const canvas = createElement('canvas', {'width': gameWidth, 'height': gameHeight}, null);
+            canvas.addEventListener('click', gameMouseEvent, false);
+            canvas.addEventListener('mousemove', gameMouseEvent, false);
+            canvas.addEventListener('contextmenu', gameMouseEvent, false);
+            const ctx = canvas.getContext('2d');
+            gameDiv.appendChild(canvas);
+
+            function gameMouseEvent(evt) {
+                var rect = canvas.getBoundingClientRect();
+                evt.preventDefault();
+                game.mouseEvent(evt.clientX - rect.left, evt.clientY - rect.top, evt.type);
+            }
+
+            let game = null;
+
+            let lastUpdate = null;
+            function animateGame() {
+                const nowUpdate = Date.now();
+                const dt = nowUpdate - lastUpdate;
+                lastUpdate = nowUpdate;
+                game.update(dt);
+                game.draw(ctx);
+                requestAnimationFrame(animateGame);
+            }
+
+            function startNewGame() {
+                game = new Game(gameWidth, gameHeight);
+                lastUpdate = Date.now();
+                animateGame();
+            }
+
+            startNewGame();
+        </script>
+    </body>
+<html>
