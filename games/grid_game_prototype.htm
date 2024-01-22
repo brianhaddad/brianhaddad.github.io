@@ -23,6 +23,7 @@
                 const outerAngle = 2 * Math.PI / 5; // Angle between outer points
                 const innerAngle = Math.PI / 5; // Angle between inner and outer points
 
+                ctx.save();
                 ctx.translate(x, y);
                 ctx.rotate(-Math.PI/2);
 
@@ -38,6 +39,7 @@
                 }
                 ctx.closePath();
                 ctx.fill(); // Fill the star with the current fillStyle
+                ctx.restore();
             }
 
             const cellTypes = {
