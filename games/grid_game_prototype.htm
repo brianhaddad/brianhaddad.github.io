@@ -7,6 +7,24 @@
     <body>
         <script src="../scripts/html_tools.js"></script>
         <script>
+            /*******************
+             * Alright, here's how this is going to go:
+             * D4: (special) move 3 spaces in any direction and can jump over other pieces. Deals its health in damage even if it dies.
+             * D6: (grunt) move 1 space in any direction.
+             * D12: (special) take up to 5 moves during a turn, can change directions while moving but cannot jump over other pieces.
+             * D20: (tank) move 1 space forward/back/left/right.
+             * 
+             * Except for the D4, you can only attack a die with equal or lesser face value.
+             * When attacking equal, no matter the types of dice, both roll. The higher number wins (reroll for ties) and their new face value is kept.
+             * Example: a D6 with a face value of 4 attacks a D4 with a face value of 4. They both roll. The D6 gets 3 and the D4 gets 2. The D4 is defeated
+             * but the D6 keeps its new lower value of 3.
+             * 
+             * game modes: (come up with better names)
+             * king of the hill: keep a piece on the center square. use special translucent D6?D12? to count down turns until victory.
+             * all out war: annihilate the opponent.
+             * capture the flag: protect your translucent flag/die and if someone else captures it they have to transport it back to their base.
+             * 
+             */
             function drawCenteredBoldText(ctx, text, x, y) {
                 ctx.save();
                 ctx.translate(x, y);
@@ -45,6 +63,21 @@
             const cellTypes = {
                 center: 'centerCell',
             };
+
+            function D(value) {
+                this.type = 'D' + value;
+                this.faceValue = 1;
+
+                const faces = [];
+                for (let i = 0; i < value; i++) {
+                    faces.push(i+1);
+                }
+
+                //Probably needs to be publicly exposed, but maybe through contextual/symantic methods?
+                const rollMe = () => {
+                    this.faceValue = faces[Math.floor(Math.random() * faces.length)];
+                };
+            }
 
             function GridCell(gX, gY, posX, posY, pxTileSize, cellType) {
                 const col = gX;
@@ -137,6 +170,7 @@
                         if (hasCenter && r === Math.floor(rows/2) && c === Math.floor(cols/2)) {
                             cellType = cellTypes.center;
                         }
+                        //TODO: store a 2-d array of these points for future use!
                         const posX = x + (tileSize * (c - ((cols - 1) / 2)));
                         const posY = y + (tileSize * (r - ((rows - 1) / 2)));
                         cells.push(new GridCell(c, r, posX, posY, tileSize, cellType));
