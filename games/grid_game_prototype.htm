@@ -154,6 +154,7 @@
             }
 
             function Grid(posX, posY, numRows, numCols, pxTileSize) {
+                //TODO: need a way to resize/scale the tileSize?
                 const x = Math.floor(posX);
                 const y = Math.floor(posY);
                 const rows = numRows;
@@ -164,6 +165,7 @@
 
                 let highlightedCell = null;
 
+                //TODO: need to allow reflow of the layout for resizing?
                 for (let r = 0; r < rows; r++) {
                     for (let c = 0; c < cols; c++) {
                         let cellType = '';
@@ -220,8 +222,22 @@
                 const h = height;
                 const x = w / 2;
                 const y = h / 2;
-                const gridSize = 13;
-                const grid = new Grid(x, y, gridSize, gridSize, Math.floor(Math.min(w, h) / (gridSize + 2)));
+
+                let gridSize = 13;
+                let grid = new Grid(x, y, gridSize, gridSize, Math.floor(Math.min(w, h) / (gridSize + 2)));
+
+                this.setup = (gameMode) => {
+                    //TODO: eventually need to pass in player army description somehow
+                    switch (gameMode) {
+                        case '':
+                            //TODO: different modes might have different grids or at least grid sizes?
+                            break;
+
+                        default:
+                            gridSize = 13;
+                            grid = new Grid(x, y, gridSize, gridSize, Math.floor(Math.min(w, h) / (gridSize + 2)));
+                    }
+                };
 
                 this.mouseEvent = (mouseX, mouseY, eventType) => {
                     switch (eventType) {
@@ -273,6 +289,8 @@
             const ctx = canvas.getContext('2d');
             gameDiv.appendChild(canvas);
 
+            const gameSetupControls = makeFieldset('Game Setup');
+
             function gameMouseEvent(evt) {
                 var rect = canvas.getBoundingClientRect();
                 evt.preventDefault();
@@ -293,6 +311,9 @@
 
             function startNewGame() {
                 game = new Game(gameWidth, gameHeight);
+                gameDiv.appendChild(gameSetupControls);
+                //on submit with the start buton, do this:
+                //gameDiv.removeChild(gameSetupControls);
                 lastUpdate = Date.now();
                 animateGame();
             }
