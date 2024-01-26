@@ -46,12 +46,12 @@
                 captureThePrincess: 'Capture the Princess',
             };
 
-            function drawCenteredBoldText(ctx, text, x, y) {
+            function drawCenteredBoldText(ctx, text, x, y, color) {
                 ctx.save();
                 ctx.translate(x, y);
                 //TODO: allow color and font size to be passed in?
-                ctx.font = "bold 12px Arial";
-                ctx.fillStyle = "#000000";
+                ctx.font = 'bold 12px Arial';
+                ctx.fillStyle = color;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(text, 0, 0);
@@ -82,8 +82,36 @@
                 ctx.restore();
             }
 
+            function drawNgon(ctx, x, y, n, radius) {
+                //TODO: option to include an outline?
+                const outerAngle = 2 * Math.PI / n;
+                let rotation = -Math.PI/2;
+                if (n % 2 === 0) {
+                    rotation = -Math.PI/4;
+                }
+                if (n > 3 && n % 3 === 0) {
+                    rotation = -Math.PI/3;
+                }
+
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(rotation);
+
+                ctx.beginPath();
+                ctx.moveTo(radius, 0);
+                for (let i = 0; i < n; i++) {
+                    const outerPointX = radius * Math.cos(i * outerAngle);
+                    const outerPointY = radius * Math.sin(i * outerAngle);
+
+                    ctx.lineTo(outerPointX, outerPointY);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            }
+
             function drawPlus(ctx, x, y, r) {
-                //TODO: draw plus symbol
                 ctx.save();
                 const w = .3;
                 const p = w * r;
@@ -115,11 +143,15 @@
                 ctx.restore();
             }
 
-            function D(value) {
+            function D(value, posX, posY, drawRadius) {
                 const name = 'D' + value; 
                 this.getType = () => name;
                 let displayValue = 1;
                 this.getFaceValue = () => displayValue;
+
+                const x = Math.floor(posX);
+                const y = Math.floor(posY);
+                const r = Math.floor(drawRadius);
 
                 const faces = [];
                 for (let i = 0; i < value; i++) {
@@ -128,30 +160,29 @@
 
                 //TODO: methods for moving, including animating a move to a new location
 
-                //Probably needs to be publicly exposed, but maybe through contextual/symantic methods?
-                const rollMe = () => {
-                    this.faceValue = faces[Math.floor(Math.random() * faces.length)];
+                this.roll = () => {
+                    displayValue = faces[Math.floor(Math.random() * faces.length)];
                 };
 
                 this.draw = (ctx) => {
                     switch (name) {
                         case 'D4':
-                            //TODO: draw a triangle
+                            drawNgon(ctx, x, y, 3, r);
                             break;
 
                         case 'D6':
-                            //TODO: draw a square
+                            drawNgon(ctx, x, y, 4, r);
                             break;
 
                         case 'D12':
-                            //TODO: draw a pentagon
+                            drawNgon(ctx, x, y, 5, r);
                             break;
 
                         case 'D20':
-                            //TODO: draw a hexagon
+                            drawNgon(ctx, x, y, 6, r);
                             break;
                     }
-                    //TODO: draw the face value
+                    drawCenteredBoldText(ctx, displayValue, x, y, 'rgba(255,255,255,.7)');
                 }
             }
 
@@ -283,11 +314,19 @@
                 const tileSize = pxTileSize;
                 const cells = [];
                 const hasCenter = (rows % 2 === 1) && (cols % 2 === 1);
+                const healingSpotRowInset = 1;
+                const gridPositionOffsets = [];
+
+                const redPlayerDice = [];
+                const bluePlayerDice = [];
+
+                const isHealingRow = (r) => (r == healingSpotRowInset || r == (rows - 1) - healingSpotRowInset);
 
                 let highlightedCell = null;
 
                 //TODO: need to allow reflow of the layout for resizing?
                 for (let r = 0; r < rows; r++) {
+                    gridPositionOffsets[r] = [];
                     for (let c = 0; c < cols; c++) {
                         let cellType = '';
                         if (hasCenter && r === Math.floor(rows/2) && c === Math.floor(cols/2)) {
@@ -295,23 +334,79 @@
                         }
                         if (c < 2) {
                             cellType = cellTypes.redBase;
-                            if (c == 0 && (r == 1 || r == rows - 2)) {
+                            if (c == 0 && isHealingRow(r)) {
                                 cellType = cellTypes.redHeal;
                             }
                         }
                         if (c >= cols - 2) {
                             cellType = cellTypes.blueBase;
-                            if (c == cols - 1 && (r == 1 || r == rows - 2)) {
+                            if (c == cols - 1 && isHealingRow(r)) {
                                 cellType = cellTypes.blueHeal;
                             }
                         }
-                        //TODO: store a 2-d array of these points for future use!
-                        const posX = x + (tileSize * (c - ((cols - 1) / 2)));
-                        const posY = y + (tileSize * (r - ((rows - 1) / 2)));
+                        const offset = {
+                            x: (c - ((cols - 1) / 2)),
+                            y: (r - ((rows - 1) / 2))
+                        };
+                        const posX = x + (tileSize * offset.x);
+                        const posY = y + (tileSize * offset.y);
                         const makeDark = (r % 2) == (c % 2);
                         cells.push(new GridCell(c, r, posX, posY, tileSize, cellType, makeDark));
+                        gridPositionOffsets[r][c] = offset; //TODO: might move to using this for more things
                     }
                 }
+
+                //TODO: temp code
+                //D(value, posX, posY, drawRadius)
+                let pos = gridPositionOffsets[0][0];
+                let die = new D(4, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die.roll();
+                redPlayerDice.push(die);
+                pos = gridPositionOffsets[0][1];
+                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die.roll();
+                redPlayerDice.push(die);
+                pos = gridPositionOffsets[0][2];
+                die = new D(12, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die.roll();
+                redPlayerDice.push(die);
+                pos = gridPositionOffsets[0][3];
+                die = new D(20, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die.roll();
+                redPlayerDice.push(die);
+                pos = gridPositionOffsets[0][11];
+                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die.roll();
+                redPlayerDice.push(die);
+                pos = gridPositionOffsets[0][12];
+                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die.roll();
+                redPlayerDice.push(die);
+
+                pos = gridPositionOffsets[12][12];
+                die = new D(4, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die.roll();
+                bluePlayerDice.push(die);
+                pos = gridPositionOffsets[12][11];
+                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die.roll();
+                bluePlayerDice.push(die);
+                pos = gridPositionOffsets[12][10];
+                die = new D(12, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die.roll();
+                bluePlayerDice.push(die);
+                pos = gridPositionOffsets[12][9];
+                die = new D(20, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die.roll();
+                bluePlayerDice.push(die);
+                pos = gridPositionOffsets[12][1];
+                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die.roll();
+                bluePlayerDice.push(die);
+                pos = gridPositionOffsets[12][0];
+                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die.roll();
+                bluePlayerDice.push(die);
 
                 this.mouseMove = (mouseX, mouseY) => {
                     //TODO: temp? Just a proof of concept placeholder...
@@ -335,6 +430,9 @@
                     //
                 };
 
+                const redDiceColor = '#ff0000';
+                const blueDiceColor = '#0000ff';
+
                 this.draw = (ctx) => {
                     //TODO: Grid needs different layers beyond the tiles/cells.
                     const topLayer = [];
@@ -345,6 +443,23 @@
                     for (const top of topLayer) {
                         top(ctx);
                     }
+                    //TODO: should dice go under or over the top layer that comes back from the grid draw call??
+                    //TODO: also, draw whoever's turn it is first! maybe put these calls in their own functions.
+                    
+                    //TODO: move the styles into the dice themselves to allow for the special translucent "princess" die for each team.
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = '#000000';
+                    ctx.fillStyle = redDiceColor;
+                    for (const red of redPlayerDice) {
+                        red.draw(ctx);
+                    }
+                    ctx.fillStyle = blueDiceColor;
+                    for (const blue of bluePlayerDice) {
+                        blue.draw(ctx);
+                    }
+                    //TODO: need a way to only draw highlighting when an action can be taken
+                    //eventually valid moves should highlight while invalid moves should not
+                    //also before selecting a piece to move, empty tiles and tiles with enemy pieces should not highlight
                     if (highlightedCell) {
                         highlightedCell.drawHoverHighlight(ctx);
                     }
