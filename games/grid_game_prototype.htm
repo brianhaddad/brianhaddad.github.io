@@ -1,12 +1,13 @@
 <!doctype HTML>
 <html>
     <head>
-        <title>Grid Game Prototype</title>
+        <title>Pirates Vs. Mermaids</title>
         <link rel="stylesheet" href="../css/mvp.css">
     </head>
     <body>
         <script src="../scripts/html_tools.js"></script>
         <script>
+            //TODO: rename terminology for pirates vs mermaids!
             /*******************
              * Alright, here's how this is going to go:
              * D4: (spy) move 3 spaces in any direction and can jump over other pieces. deals its health in damage even if it dies.
@@ -19,10 +20,20 @@
              * Example: a D6 with a face value of 4 attacks a D4 with a face value of 4. They both roll. The D6 gets 3 and the D4 gets 2. The D4 is defeated
              * but the D6 keeps its new lower value of 3.
              * 
-             * game modes: (come up with better names)
-             * king of the castle: keep a piece on the center square. use special translucent D6?D12? to count down turns until victory.
+             * The game will come with one each of a special translucent, colored D12 to match the rest of the team dice.
+             * This special die is the "princess" die used for capture the princess and king of the bay.
+             * When used in Annihilation mode she has the following special abilities:
+             * Her movement can be like a normal D12 or she has the option to move as far as she wants in any straight line (think Queen in chess)
+             * At any moment she can swap her face value with any other die, either to her advantage or to the other teammate's advantage:
+             * examples: princess shows 12 and swaps with a D6 showing a 3 just as it's being attacked. The D6 value goes to max (6, can't go above max) and the princess goes to 3
+             * or, princess shows 2 and a D20 shows 18, after the swap the princess shows full (12, can't go past max) and the D20 is down to 2.
+             * 
+             * game modes: (come up with better names, each has a different point allotment)
+             * king of the bay: keep a piece on the center square. use special translucent D6?D12? to count down turns until victory.
              * annihilate: annihilate the opponent. not sure if princess-die is able to participate. does she have any special abilities?
+             *   perhaps this has the highest point allotment?
              * capture the princess: protect your translucent princess-die and if someone else captures it they have to transport it back to their base.
+             *   maybe this mode has smaller armies? max 45 points?
              * 
              * game phases:
              * players build their army. each die has a value (D6 = 6, obviously) and there is a maxiumum value per army (to be determined)
@@ -43,7 +54,7 @@
             };
 
             const gameModes = {
-                kingOfTheCastle: 'King of the Castle',
+                kingOfTheBay: 'King of the Bay',
                 annihilation: 'Annihilation',
                 captureThePrincess: 'Capture the Princess',
             };
@@ -137,9 +148,8 @@
                 ctx.restore();
             }
 
-            function D(value, posX, posY, drawRadius) {
-                //TODO: should probably recieve its color information and store it
-                //maybe stroke is determined by hover/highlight?
+            function D(value, posX, posY, drawRadius, drawDieColor, drawTextColor) {
+                //TODO: maybe stroke is determined by hover/highlight?
                 //Draw a little bigger on highlight and while moving to a new position?
                 const name = 'D' + value; 
                 this.getType = () => name;
@@ -149,6 +159,9 @@
                 const x = Math.floor(posX);
                 const y = Math.floor(posY);
                 const r = Math.floor(drawRadius);
+
+                const dieColor = drawDieColor;
+                const textColor = drawTextColor;
 
                 const faces = [];
                 for (let i = 0; i < value; i++) {
@@ -162,6 +175,8 @@
                 };
 
                 this.draw = (ctx) => {
+                    ctx.save();
+                    ctx.fillStyle = dieColor;
                     switch (name) {
                         case 'D4':
                             drawNgon(ctx, x, y, 3, r);
@@ -179,16 +194,17 @@
                             drawNgon(ctx, x, y, 6, r);
                             break;
                     }
-                    drawCenteredBoldText(ctx, displayValue, x, y, 'rgba(255,255,255,.7)');
+                    drawCenteredBoldText(ctx, displayValue, x, y, textColor);
+                    ctx.restore();
                 }
             }
 
             function GridCell(gX, gY, posX, posY, pxTileSize, cellType, makeDark) {
                 const centerSquareColor = '#000000';
                 const centerStarColor = '#ffff00';
-                const redBaseColor = '#f83772';
-                const blueBaseColor = '#7237f8';
-                const boardDefaultColor = '#ffffff';
+                const leftBaseColor = '#993211';
+                const rightBaseColor = '#ff6060';
+                const boardDefaultColor = '#0486dc';
                 const lightenColor = 'rgba(255,255,255,.7)';
                 const darkenColor = 'rgba(0,0,0,.7)';
 
@@ -248,24 +264,24 @@
                             break;
 
                         case cellTypes.redBase:
-                            ctx.fillStyle = redBaseColor;
+                            ctx.fillStyle = leftBaseColor;
                             fillBaseColorRect(ctx);
                             break;
 
                         case cellTypes.redHeal:
-                            ctx.fillStyle = redBaseColor;
+                            ctx.fillStyle = leftBaseColor;
                             fillBaseColorRect(ctx);
                             ctx.fillStyle = lightenColor;
                             drawPlus(ctx, x, y, tileSize/3);
                             break;
 
                         case cellTypes.blueBase:
-                            ctx.fillStyle = blueBaseColor;
+                            ctx.fillStyle = rightBaseColor;
                             fillBaseColorRect(ctx);
                             break;
 
                         case cellTypes.blueHeal:
-                            ctx.fillStyle = blueBaseColor;
+                            ctx.fillStyle = rightBaseColor;
                             fillBaseColorRect(ctx);
                             ctx.fillStyle = lightenColor;
                             drawPlus(ctx, x, y, tileSize/3);
@@ -314,8 +330,13 @@
                 const healingSpotRowInset = 1;
                 const gridPositionOffsets = [];
 
-                const redPlayerDice = [];
-                const bluePlayerDice = [];
+                const leftPlayerDice = [];
+                const rightPlayerDice = [];
+
+                const leftDiceColor = '#301020';
+                const leftDiceTextColor = 'rgba(255,255,255,.7)';
+                const rightDiceColor = '#2e9b57';
+                const rightDiceTextColor = 'rgba(0,0,0,.85)';
 
                 const isHealingRow = (r) => (r == healingSpotRowInset || r == (rows - 1) - healingSpotRowInset);
 
@@ -356,54 +377,54 @@
                 //TODO: temp code
                 //D(value, posX, posY, drawRadius)
                 let pos = gridPositionOffsets[0][0];
-                let die = new D(4, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                let die = new D(4, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, leftDiceColor, leftDiceTextColor);
                 die.roll();
-                redPlayerDice.push(die);
+                leftPlayerDice.push(die);
                 pos = gridPositionOffsets[0][1];
-                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, leftDiceColor, leftDiceTextColor);
                 die.roll();
-                redPlayerDice.push(die);
+                leftPlayerDice.push(die);
                 pos = gridPositionOffsets[0][2];
-                die = new D(12, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die = new D(12, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, leftDiceColor, leftDiceTextColor);
                 die.roll();
-                redPlayerDice.push(die);
+                leftPlayerDice.push(die);
                 pos = gridPositionOffsets[0][3];
-                die = new D(20, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die = new D(20, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, leftDiceColor, leftDiceTextColor);
                 die.roll();
-                redPlayerDice.push(die);
+                leftPlayerDice.push(die);
                 pos = gridPositionOffsets[0][11];
-                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, leftDiceColor, leftDiceTextColor);
                 die.roll();
-                redPlayerDice.push(die);
+                leftPlayerDice.push(die);
                 pos = gridPositionOffsets[0][12];
-                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, leftDiceColor, leftDiceTextColor);
                 die.roll();
-                redPlayerDice.push(die);
+                leftPlayerDice.push(die);
 
                 pos = gridPositionOffsets[12][12];
-                die = new D(4, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die = new D(4, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, rightDiceColor, rightDiceTextColor);
                 die.roll();
-                bluePlayerDice.push(die);
+                rightPlayerDice.push(die);
                 pos = gridPositionOffsets[12][11];
-                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, rightDiceColor, rightDiceTextColor);
                 die.roll();
-                bluePlayerDice.push(die);
+                rightPlayerDice.push(die);
                 pos = gridPositionOffsets[12][10];
-                die = new D(12, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die = new D(12, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, rightDiceColor, rightDiceTextColor);
                 die.roll();
-                bluePlayerDice.push(die);
+                rightPlayerDice.push(die);
                 pos = gridPositionOffsets[12][9];
-                die = new D(20, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die = new D(20, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, rightDiceColor, rightDiceTextColor);
                 die.roll();
-                bluePlayerDice.push(die);
+                rightPlayerDice.push(die);
                 pos = gridPositionOffsets[12][1];
-                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, rightDiceColor, rightDiceTextColor);
                 die.roll();
-                bluePlayerDice.push(die);
+                rightPlayerDice.push(die);
                 pos = gridPositionOffsets[12][0];
-                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5);
+                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, rightDiceColor, rightDiceTextColor);
                 die.roll();
-                bluePlayerDice.push(die);
+                rightPlayerDice.push(die);
 
                 this.mouseMove = (mouseX, mouseY) => {
                     //TODO: temp? Just a proof of concept placeholder...
@@ -427,9 +448,6 @@
                     //
                 };
 
-                const redDiceColor = '#ff0000';
-                const blueDiceColor = '#0000ff';
-
                 this.draw = (ctx) => {
                     //TODO: Grid needs different layers beyond the tiles/cells.
                     const topLayer = [];
@@ -446,12 +464,10 @@
                     //TODO: move the styles into the dice themselves to allow for the special translucent "princess" die for each team.
                     ctx.lineWidth = 2;
                     ctx.strokeStyle = '#000000';
-                    ctx.fillStyle = redDiceColor;
-                    for (const red of redPlayerDice) {
+                    for (const red of leftPlayerDice) {
                         red.draw(ctx);
                     }
-                    ctx.fillStyle = blueDiceColor;
-                    for (const blue of bluePlayerDice) {
+                    for (const blue of rightPlayerDice) {
                         blue.draw(ctx);
                     }
                     //TODO: need a way to only draw highlighting when an action can be taken
