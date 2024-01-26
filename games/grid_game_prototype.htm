@@ -59,6 +59,23 @@
                 captureThePrincess: 'Capture the Princess',
             };
 
+            const themeColors = {
+                boardDefaultColor: '#12a6ec',
+                leftBaseColor: '#c96231',
+                leftDiceColor: '#301020',
+                leftDiceTextColor: 'rgba(255,255,255,.7)',
+                rightBaseColor: '#ff6060',
+                rightDiceColor: '#2e9b57',
+                rightDiceTextColor: 'rgba(0,0,0,.85)',
+                centerSquareColor: '#000000',
+                centerStarColor: '#ffff00',
+                lightenColor: 'rgba(255,255,255,.7)',
+                darkenColor: 'rgba(0,0,0,.7)',
+                defaultHoverHighlight: 'rgba(255,255,100,.75)',
+                defaultDiceOutline: '#000000',
+                tableBackgroundColor: '#2cb242',
+            };
+
             function drawCenteredBoldText(ctx, text, x, y, color) {
                 ctx.save();
                 ctx.translate(x, y);
@@ -200,14 +217,6 @@
             }
 
             function GridCell(gX, gY, posX, posY, pxTileSize, cellType, makeDark) {
-                const centerSquareColor = '#000000';
-                const centerStarColor = '#ffff00';
-                const leftBaseColor = '#993211';
-                const rightBaseColor = '#ff6060';
-                const boardDefaultColor = '#0486dc';
-                const lightenColor = 'rgba(255,255,255,.7)';
-                const darkenColor = 'rgba(0,0,0,.7)';
-
                 const col = gX;
                 const row = gY;
                 const x = Math.floor(posX);
@@ -244,7 +253,7 @@
                         return;
                     }
                     ctx.save();
-                    ctx.fillStyle = darkenColor;
+                    ctx.fillStyle = themeColors.darkenColor;
                     fillTileSquare(ctx);
                     ctx.restore();
                 };
@@ -256,39 +265,39 @@
 
                     switch (cellType) {
                         case cellTypes.center:
-                            ctx.fillStyle = centerSquareColor;
+                            ctx.fillStyle = themeColors.centerSquareColor;
                             fillBaseColorRect(ctx);
 
-                            ctx.fillStyle = centerStarColor;
+                            ctx.fillStyle = themeColors.centerStarColor;
                             drawStar(ctx, x, y, tileSize/3);
                             break;
 
                         case cellTypes.redBase:
-                            ctx.fillStyle = leftBaseColor;
+                            ctx.fillStyle = themeColors.leftBaseColor;
                             fillBaseColorRect(ctx);
                             break;
 
                         case cellTypes.redHeal:
-                            ctx.fillStyle = leftBaseColor;
+                            ctx.fillStyle = themeColors.leftBaseColor;
                             fillBaseColorRect(ctx);
-                            ctx.fillStyle = lightenColor;
+                            ctx.fillStyle = themeColors.lightenColor;
                             drawPlus(ctx, x, y, tileSize/3);
                             break;
 
                         case cellTypes.blueBase:
-                            ctx.fillStyle = rightBaseColor;
+                            ctx.fillStyle = themeColors.rightBaseColor;
                             fillBaseColorRect(ctx);
                             break;
 
                         case cellTypes.blueHeal:
-                            ctx.fillStyle = rightBaseColor;
+                            ctx.fillStyle = themeColors.rightBaseColor;
                             fillBaseColorRect(ctx);
-                            ctx.fillStyle = lightenColor;
+                            ctx.fillStyle = themeColors.lightenColor;
                             drawPlus(ctx, x, y, tileSize/3);
                             break;
 
                         default:
-                            ctx.fillStyle = boardDefaultColor;
+                            ctx.fillStyle = themeColors.boardDefaultColor;
                             fillBaseColorRect(ctx);
                     }
                     //TODO: keep this for effects that need to go over the main board:
@@ -307,7 +316,7 @@
                     const w = 6;
                     const hw = w / 2;
                     ctx.save();
-                    ctx.strokeStyle = 'rgba(255,255,100,.75)';
+                    ctx.strokeStyle = themeColors.defaultHoverHighlight;
                     ctx.lineWidth = w;
                     ctx.beginPath();
                     ctx.roundRect(x - (tileSize/2) - hw, y - (tileSize/2) - hw, tileSize + w, tileSize + w, 8);
@@ -332,11 +341,6 @@
 
                 const leftPlayerDice = [];
                 const rightPlayerDice = [];
-
-                const leftDiceColor = '#301020';
-                const leftDiceTextColor = 'rgba(255,255,255,.7)';
-                const rightDiceColor = '#2e9b57';
-                const rightDiceTextColor = 'rgba(0,0,0,.85)';
 
                 const isHealingRow = (r) => (r == healingSpotRowInset || r == (rows - 1) - healingSpotRowInset);
 
@@ -377,52 +381,52 @@
                 //TODO: temp code
                 //D(value, posX, posY, drawRadius)
                 let pos = gridPositionOffsets[0][0];
-                let die = new D(4, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, leftDiceColor, leftDiceTextColor);
+                let die = new D(4, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, themeColors.leftDiceColor, themeColors.leftDiceTextColor);
                 die.roll();
                 leftPlayerDice.push(die);
                 pos = gridPositionOffsets[0][1];
-                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, leftDiceColor, leftDiceTextColor);
+                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, themeColors.leftDiceColor, themeColors.leftDiceTextColor);
                 die.roll();
                 leftPlayerDice.push(die);
                 pos = gridPositionOffsets[0][2];
-                die = new D(12, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, leftDiceColor, leftDiceTextColor);
+                die = new D(12, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, themeColors.leftDiceColor, themeColors.leftDiceTextColor);
                 die.roll();
                 leftPlayerDice.push(die);
                 pos = gridPositionOffsets[0][3];
-                die = new D(20, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, leftDiceColor, leftDiceTextColor);
+                die = new D(20, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, themeColors.leftDiceColor, themeColors.leftDiceTextColor);
                 die.roll();
                 leftPlayerDice.push(die);
                 pos = gridPositionOffsets[0][11];
-                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, leftDiceColor, leftDiceTextColor);
+                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, themeColors.leftDiceColor, themeColors.leftDiceTextColor);
                 die.roll();
                 leftPlayerDice.push(die);
                 pos = gridPositionOffsets[0][12];
-                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, leftDiceColor, leftDiceTextColor);
+                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, themeColors.leftDiceColor, themeColors.leftDiceTextColor);
                 die.roll();
                 leftPlayerDice.push(die);
 
                 pos = gridPositionOffsets[12][12];
-                die = new D(4, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, rightDiceColor, rightDiceTextColor);
+                die = new D(4, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, themeColors.rightDiceColor, themeColors.rightDiceTextColor);
                 die.roll();
                 rightPlayerDice.push(die);
                 pos = gridPositionOffsets[12][11];
-                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, rightDiceColor, rightDiceTextColor);
+                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, themeColors.rightDiceColor, themeColors.rightDiceTextColor);
                 die.roll();
                 rightPlayerDice.push(die);
                 pos = gridPositionOffsets[12][10];
-                die = new D(12, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, rightDiceColor, rightDiceTextColor);
+                die = new D(12, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, themeColors.rightDiceColor, themeColors.rightDiceTextColor);
                 die.roll();
                 rightPlayerDice.push(die);
                 pos = gridPositionOffsets[12][9];
-                die = new D(20, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, rightDiceColor, rightDiceTextColor);
+                die = new D(20, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, themeColors.rightDiceColor, themeColors.rightDiceTextColor);
                 die.roll();
                 rightPlayerDice.push(die);
                 pos = gridPositionOffsets[12][1];
-                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, rightDiceColor, rightDiceTextColor);
+                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, themeColors.rightDiceColor, themeColors.rightDiceTextColor);
                 die.roll();
                 rightPlayerDice.push(die);
                 pos = gridPositionOffsets[12][0];
-                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, rightDiceColor, rightDiceTextColor);
+                die = new D(6, x + (pos.x * tileSize), y + (pos.y * tileSize), (tileSize * 2) / 5, themeColors.rightDiceColor, themeColors.rightDiceTextColor);
                 die.roll();
                 rightPlayerDice.push(die);
 
@@ -463,7 +467,7 @@
                     
                     //TODO: move the styles into the dice themselves to allow for the special translucent "princess" die for each team.
                     ctx.lineWidth = 2;
-                    ctx.strokeStyle = '#000000';
+                    ctx.strokeStyle = themeColors.defaultDiceOutline;
                     for (const red of leftPlayerDice) {
                         red.draw(ctx);
                     }
@@ -532,7 +536,7 @@
 
                 this.draw = (ctx) => {
                     ctx.clearRect(0, 0, w, y);
-                    ctx.fillStyle = '#2cb242';
+                    ctx.fillStyle = themeColors.tableBackgroundColor;
                     ctx.fillRect(0, 0, w, h);
                     grid.draw(ctx);
                 };
