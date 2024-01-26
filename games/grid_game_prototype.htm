@@ -9,29 +9,31 @@
         <script>
             /*******************
              * Alright, here's how this is going to go:
-             * D4: (special) move 3 spaces in any direction and can jump over other pieces. Deals its health in damage even if it dies.
-             * D6: (grunt) move 1 space in any direction.
-             * D12: (special) take up to 5 moves during a turn, can change directions while moving but cannot jump over other pieces.
-             * D20: (tank) move 1 space forward/back/left/right.
+             * D4: (spy) move 3 spaces in any direction and can jump over other pieces. deals its health in damage even if it dies.
+             * D6: (grunt) move 2 spaces in any direction.
+             * D12: (general? commander?) take up to 5 moves during a turn, can change directions while moving but cannot jump over other pieces.
+             * D20: (armored unit) move 1 space forward/back/left/right. failed attacks simply mean the die does not move. only removed from the board by failing to defend.
              * 
              * Except for the D4, you can only attack a die with equal or lesser face value.
-             * When attacking equal, no matter the types of dice, both roll. The higher number wins (reroll for ties) and their new face value is kept.
+             * When attacking equal values, no matter the types of dice, both roll. higher value wins (reroll for ties) and their new face value is kept while the loser is removed from play.
              * Example: a D6 with a face value of 4 attacks a D4 with a face value of 4. They both roll. The D6 gets 3 and the D4 gets 2. The D4 is defeated
              * but the D6 keeps its new lower value of 3.
              * 
              * game modes: (come up with better names)
-             * king of the hill: keep a piece on the center square. use special translucent D6?D12? to count down turns until victory.
-             * all out war: annihilate the opponent.
-             * capture the flag: protect your translucent flag/die and if someone else captures it they have to transport it back to their base.
+             * king of the castle: keep a piece on the center square. use special translucent D6?D12? to count down turns until victory.
+             * annihilate: annihilate the opponent. not sure if princess-die is able to participate. does she have any special abilities?
+             * capture the princess: protect your translucent princess-die and if someone else captures it they have to transport it back to their base.
              * 
              * game phases:
              * players build their army. each die has a value (D6 = 6, obviously) and there is a maxiumum value per army (to be determined)
              * also maximum of 2x the grid height number of dice per player (26 for 13x13)
              * once they have their armies selected then the colored dice are presented to the players to be placed in their home base (the two right-most or left-most columns)
+             * players take turns positioning dice, and if one player has many more to position they just keep going until all are placed.
+             * (simple click to select and click to place, no repositioning allowed!)
              * once all dice are placed, the game begins. not sure if it should be like chess where one side always goes first...
              * 
              */
-            //TODO: safe spots? lol
+            //TODO: safe spots?
             const cellTypes = {
                 center: 'centerCell',
                 redBase: 'redBase',
@@ -49,7 +51,7 @@
             function drawCenteredBoldText(ctx, text, x, y, color) {
                 ctx.save();
                 ctx.translate(x, y);
-                //TODO: allow color and font size to be passed in?
+                //TODO: allow font size to be passed in?
                 ctx.font = 'bold 12px Arial';
                 ctx.fillStyle = color;
                 ctx.textAlign = 'center';
@@ -113,30 +115,22 @@
 
             function drawPlus(ctx, x, y, r) {
                 ctx.save();
-                const w = .3;
-                const p = w * r;
+                const p = .3 * r;
                 ctx.translate(x, y);
 
                 ctx.beginPath();
-                
                 ctx.moveTo(-p, r);
                 ctx.lineTo(p, r);
-
                 ctx.lineTo(p, p);
                 ctx.lineTo(r, p);
-
                 ctx.lineTo(r, -p);
                 ctx.lineTo(p, -p);
-
                 ctx.lineTo(p, -r);
                 ctx.lineTo(-p, -r);
-
                 ctx.lineTo(-p, -p);
                 ctx.lineTo(-r, -p);
-                
                 ctx.lineTo(-r, p);
                 ctx.lineTo(-p, p);
-
                 ctx.closePath();
                 ctx.fill();
                 
@@ -144,6 +138,9 @@
             }
 
             function D(value, posX, posY, drawRadius) {
+                //TODO: should probably recieve its color information and store it
+                //maybe stroke is determined by hover/highlight?
+                //Draw a little bigger on highlight and while moving to a new position?
                 const name = 'D' + value; 
                 this.getType = () => name;
                 let displayValue = 1;
