@@ -127,12 +127,12 @@
                 leftD6: (x, y, o, t) => new D(dieFaces.leftD6, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.leftDiceColor, themeColors.leftDiceTextColor),
                 leftD12: (x, y, o, t) => new D(dieFaces.leftD12, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.leftDiceColor, themeColors.leftDiceTextColor),
                 leftD20: (x, y, o, t) => new D(dieFaces.leftD20, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.leftDiceColor, themeColors.leftDiceTextColor),
-                leftSpecialD12: (x, y, o, t) => new D(dieFaces.leftD12, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.leftSpecialDiceColor, themeColors.leftDiceTextColor),
+                leftSpecialD12: (x, y, o, t) => new D(dieFaces.leftD12, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.leftSpecialDiceColor, themeColors.leftDiceTextColor, true),
                 rightD4: (x, y, o, t) => new D(dieFaces.rightD4, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.rightDiceColor, themeColors.rightDiceTextColor),
                 rightD6: (x, y, o, t) => new D(dieFaces.rightD6, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.rightDiceColor, themeColors.rightDiceTextColor),
                 rightD12: (x, y, o, t) => new D(dieFaces.rightD12, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.rightDiceColor, themeColors.rightDiceTextColor),
                 rightD20: (x, y, o, t) => new D(dieFaces.rightD20, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.rightDiceColor, themeColors.rightDiceTextColor),
-                rightSpecialD12: (x, y, o, t) => new D(dieFaces.rightD12, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.rightSpecialDiceColor, themeColors.rightDiceTextColor),
+                rightSpecialD12: (x, y, o, t) => new D(dieFaces.rightD12, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.rightSpecialDiceColor, themeColors.rightDiceTextColor, true),
             };
 
             const gameModes = {
@@ -173,11 +173,11 @@
                 boardDefaultColor: 'rgb(18,166,236)',
                 leftBaseColor: 'rgb(205,98,49)',
                 leftDiceColor: 'rgb(48,16,32)',
-                leftSpecialDiceColor: 'rgba(48,16,32,.8)',
+                leftSpecialDiceColor: 'rgba(48,16,32,.5)',
                 leftDiceTextColor: 'rgba(255,255,255,.7)',
                 rightBaseColor: 'rgb(255,96,96)',
                 rightDiceColor: 'rgb(46,155,87)',
-                rightSpecialDiceColor: 'rgba(46,155,87,.8)',
+                rightSpecialDiceColor: 'rgba(46,155,87,.5)',
                 rightDiceTextColor: 'rgba(0,0,0,.85)',
                 centerSquareColor: 'rgb(0,0,0)',
                 centerStarColor: 'rgb(255,255,0)',
@@ -189,6 +189,13 @@
                 armySizeBarBackground: 'rgba(0,0,0,.25)',
                 armySizeBarGoodForeground: 'rgb(23,248,44)',
                 armySizeBarBadForeground: 'rgb(248,23,44)',
+                sparkleColor1: 'rgb(255,255,255)',
+                sparkleColor2: 'rgb(255,150,255)',
+                sparkleColor3: 'rgb(150,255,255)',
+                sparkleColor4: 'rgb(255,255,150)',
+                sparkleColor5: 'rgb(255,150,150)',
+                sparkleColor6: 'rgb(150,255,150)',
+                sparkleColor7: 'rgb(150,150,255)',
             };
 
             function drawCenteredBoldText(ctx, text, x, y, color) {
@@ -280,14 +287,56 @@
                 ctx.restore();
             }
 
-            function D(value, posX, posY, drawRadius, drawDieColor, drawTextColor) {
+            function SparkleEffect(r) {
+                const sparkles = [];
+                const radius = r;
+                const colors = [
+                    themeColors.sparkleColor1,
+                    themeColors.sparkleColor2,
+                    themeColors.sparkleColor3,
+                    themeColors.sparkleColor4,
+                    themeColors.sparkleColor5,
+                    themeColors.sparkleColor6,
+                    themeColors.sparkleColor7,
+                ];
+
+                const getSparkle = () => {
+                    const baseSize = radius / 3;
+                    const xOff = Math.floor(Math.random() * 2 * radius) - radius;
+                    const yOff = Math.floor(Math.random() * 2 * radius) - radius;
+                    const width = (Math.random() * (baseSize / 2)) + (baseSize / 2);
+                    const height = (Math.random() * (baseSize / 2)) + (baseSize / 2);
+                    const rotation = Math.random() * Math.PI;
+                    const color = colors[Math.floor(Math.random() * colors.length)];
+                    return { x: xOff, y: yOff, w: width, h: height, r: rotation, c: color };
+                };
+
+                for (let i = 0; i < 10; i++) {
+                    sparkles.push(getSparkle());
+                }
+
+                this.draw = (ctx, x, y) => {
+                    for (const sparkle of sparkles) {
+                        ctx.save();
+                        ctx.translate(x + sparkle.x, y + sparkle.y);
+                        ctx.rotate(sparkle.r);
+                        ctx.fillStyle = sparkle.c;
+                        ctx.fillRect(-(sparkle.w/2), -(sparkle.h/2), sparkle.w, sparkle.h);
+                        ctx.restore();
+                    }
+                };
+            }
+
+            function D(value, posX, posY, drawRadius, drawDieColor, drawTextColor, isSpecial) {
                 //TODO: maybe stroke is determined by hover/highlight?
                 //Draw a little bigger on highlight and while moving to a new position?
-                //TODO: need to know whether it is special die, translucent background isn't enough, need a special effect! (sparkles? lol)
+                const iAmSpecial = isSpecial === true;
                 const name = 'D' + value; 
                 this.getType = () => name;
                 let displayValue = 1;
                 this.getFaceValue = () => displayValue;
+
+                const effects = [];
 
                 const x = Math.floor(posX);
                 const y = Math.floor(posY);
@@ -299,6 +348,10 @@
                 const faces = [];
                 for (let i = 0; i < value; i++) {
                     faces.push(i+1);
+                }
+
+                if (iAmSpecial && name === 'D12') {
+                    effects.push(new SparkleEffect(r / 2));
                 }
 
                 //TODO: methods for moving, including animating a move to a new location
@@ -320,6 +373,11 @@
                             break;
 
                         case 'D12':
+                            if (iAmSpecial) {
+                                for (const effect of effects) {
+                                    effect.draw(ctx, x, y);
+                                }
+                            }
                             drawNgon(ctx, x, y, 5, r);
                             break;
 
