@@ -17,6 +17,24 @@ function makeDetail(summaryText, child, isOpen) {
     return details;
 }
 
+function makeSelect(name, options) {
+    const select = createElement('select', { 'name': name }, null);
+    for (const v in options) {
+        const option = createElement('option', { 'value': v }, options[v]);
+        select.appendChild(option);
+    }
+    return select;
+}
+
+function makeNumberSelect(name, min, max) {
+    const select = createElement('select', { 'name': name }, null);
+    for (let i = min; i <= max; i++) {
+        const option = createElement('option', { 'value': i }, i.toString());
+        select.appendChild(option);
+    }
+    return select;
+}
+
 function createElement(type, attributes, innerHTML) {
     const element = document.createElement(type);
     for (const a in attributes) {
