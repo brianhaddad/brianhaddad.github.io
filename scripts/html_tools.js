@@ -18,7 +18,7 @@ function makeDetail(summaryText, child, isOpen) {
 }
 
 function makeSelect(name, options) {
-    const select = createElement('select', { 'name': name }, null);
+    const select = createElement('select', { 'name': name, 'id': name }, null);
     for (const v in options) {
         const option = createElement('option', { 'value': v }, options[v]);
         select.appendChild(option);
@@ -27,7 +27,7 @@ function makeSelect(name, options) {
 }
 
 function makeNumberSelect(name, min, max) {
-    const select = createElement('select', { 'name': name }, null);
+    const select = createElement('select', { 'name': name, 'id': name }, null);
     for (let i = min; i <= max; i++) {
         const option = createElement('option', { 'value': i }, i.toString());
         select.appendChild(option);

@@ -1,7 +1,7 @@
 <!doctype HTML>
 <html>
     <head>
-        <title>Pirates Vs. Mermaids</title>
+        <title>Pirates vs. Mermaids</title>
         <link rel="stylesheet" href="../css/mvp.css">
     </head>
     <body>
@@ -739,7 +739,7 @@
                     leftArmySize = 0;
                     rightArmySize = 0;
                     for (const id in dieValues) {
-                        if (leftArmy.hasOwnProperty(id)){
+                        if (leftArmy.hasOwnProperty(id)) {
                             delete leftArmy[id];
                         }
                         if (rightArmy.hasOwnProperty(id)) {
@@ -840,8 +840,11 @@
                 requestAnimationFrame(animateGame);
             }
 
+            //TODO: need a way to start from a stored gamestate?
+            //use localstorage to store a game state that is kept up to date, that way a refreshed page doesn't ruin an in-progress game
             function startNewGame() {
                 game = new Game(gameWidth, gameHeight);
+                //TODO: only append if gamestate is in setup?
                 gameDiv.appendChild(gameSetupControls);
                 //on submit with the start buton, do this:
                 lastUpdate = Date.now();
