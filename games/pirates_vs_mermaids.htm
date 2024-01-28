@@ -199,7 +199,7 @@
             };
 
             const gameWidth = 800;
-            const gameHeight = 600;
+            const gameHeight = 800;
             const gameGridSize = 13;
 
             function drawCenteredBoldText(ctx, text, x, y, color) {
@@ -304,7 +304,7 @@
                     themeColors.sparkleColor7,
                 ];
 
-                const getSparkle = () => {
+                const makeSparkle = () => {
                     const baseSize = radius / 3;
                     const xOff = Math.floor(Math.random() * 2 * radius) - radius;
                     const yOff = Math.floor(Math.random() * 2 * radius) - radius;
@@ -315,8 +315,8 @@
                     return { x: xOff, y: yOff, w: width, h: height, r: rotation, c: color };
                 };
 
-                for (let i = 0; i < 10; i++) {
-                    sparkles.push(getSparkle());
+                for (let i = 0; i < 24; i++) {
+                    sparkles.push(makeSparkle());
                 }
 
                 this.draw = (ctx, x, y) => {
@@ -886,6 +886,7 @@
             const ctx = canvas.getContext('2d');
             gameDiv.appendChild(canvas);
 
+            //TODO: also need in-game component (at least for outputting game events/details)
             const gameSetupControls = makeFieldset('Game Setup');
             const setupManager = new GameSetupManager(gameSetupControls, finishSetup);
 
