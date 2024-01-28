@@ -198,6 +198,10 @@
                 sparkleColor7: 'rgb(150,150,255)',
             };
 
+            const gameWidth = 800;
+            const gameHeight = 600;
+            const gameGridSize = 13;
+
             function drawCenteredBoldText(ctx, text, x, y, color) {
                 ctx.save();
                 ctx.translate(x, y);
@@ -655,14 +659,14 @@
                 };
             }
 
-            function Game(width, height) {
+            function Game(width, height, gridDimension) {
                 const w = width;
                 const h = height;
                 const x = w / 2;
                 const y = h / 2;
 
-                let gridSize = 13;
-                let grid = new Grid(x, y, gridSize, gridSize, Math.floor(Math.min(w, h) / (gridSize + 2)));
+                const gridSize = gridDimension;
+                const grid = new Grid(x, y, gridSize, gridSize, Math.floor(Math.min(w, h) / (gridSize + 2)));
 
                 let gameMode = '';
                 let gamePhase = gamePhases.setup;
@@ -704,9 +708,10 @@
                 };
 
                 this.draw = (ctx) => {
-                    ctx.clearRect(0, 0, w, y);
-                    ctx.fillStyle = themeColors.tableBackgroundColor;
-                    ctx.fillRect(0, 0, w, h);
+                    ctx.clearRect(0, 0, w, h);
+                    //TODO: trace a border around the board?
+                    //ctx.fillStyle = themeColors.tableBackgroundColor;
+                    //ctx.fillRect(0, 0, w, h);
                     grid.draw(ctx);
                 };
             }
@@ -754,15 +759,20 @@
                 let currentGameMode = '';
                 let maxArmySize = 0;
                 let leftArmySize = 0;
+                let leftArmyCount = 0;
                 let rightArmySize = 0;
+                let rightArmyCount = 0;
                 const leftArmy = {};
                 const rightArmy = {};
 
                 //TODO: need different minimum requirements per game mode?
+                //TODO: if the player somehow exceeds the dice count max, there is currently no way to give feedback in the UI.
                 const validate = () => leftArmySize <= maxArmySize
                                     && leftArmySize > 0
+                                    && leftArmyCount <= gameGridSize * 2
                                     && rightArmySize <= maxArmySize
-                                    && rightArmySize > 0;
+                                    && rightArmySize > 0
+                                    && rightArmyCount <= gameGridSize * 2;
 
                 const populateDiceSelectors = () => {
                     for (const id in dieDescriptions) {
@@ -795,7 +805,9 @@
                 const updateArmy = () => {
                     maxArmySize = armySizeByGameMode[currentGameMode];
                     leftArmySize = 0;
+                    leftArmyCount = 0;
                     rightArmySize = 0;
+                    rightArmyCount = 0;
                     for (const id in dieValues) {
                         if (leftArmy.hasOwnProperty(id)) {
                             delete leftArmy[id];
@@ -809,10 +821,12 @@
                             if (id.indexOf('left') === 0) {
                                 leftArmy[id] = numDice;
                                 leftArmySize += value;
+                                leftArmyCount += numDice;
                             }
                             else {
                                 rightArmy[id] = numDice;
                                 rightArmySize += value;
+                                rightArmyCount += numDice;
                             }
                         }
                     }
@@ -862,9 +876,6 @@
                 };
             }
 
-            const gameWidth = 800;
-            const gameHeight = 600;
-
             const gameDiv = createElement('div', {'style': `width:${gameWidth}px;height:100%;padding:0px;margin:0px auto;display:flex;flex-wrap:wrap;flex-direction:column;`}, null);
             document.body.appendChild(gameDiv);
 
@@ -900,8 +911,10 @@
 
             //TODO: need a way to start from a stored gamestate?
             //use localstorage to store a game state that is kept up to date, that way a refreshed page doesn't ruin an in-progress game
+            //this will require never storing pixel coordinates though, so need to factor out the game x,y coords and the tileSize
+            //and pass those values in for every draw call, plus we'll need a way to convert mouse position into the same offset system for the tiles
             function startNewGame() {
-                game = new Game(gameWidth, gameHeight);
+                game = new Game(gameWidth, gameHeight, gameGridSize);
                 //TODO: only append if gamestate is in setup?
                 gameDiv.appendChild(gameSetupControls);
                 //on submit with the start buton, do this:
