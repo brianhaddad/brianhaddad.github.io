@@ -31,6 +31,7 @@
              *   perhaps this has the highest point allotment?
              * capture the princess: protect your translucent princess-die and if someone else captures it they have to transport it back to their base. (her point display doesn't matter)
              *   maybe this mode has smaller armies? max 45 points? 64?
+             *   can the player ever move the princess in this mode? should it operate basically like chess where the princess is the "king"?
              * 
              * questions:
              * does the center square do anything special in annihilate or capture the flag modes?
@@ -118,21 +119,17 @@
                 rightSpecialD12: 12,
             };
 
-            const dieSize = (tileSize) => (tileSize * 2) / 5;
-            const dieX = (x, tileSize, offset) => x + (offset.x * tileSize);
-            const dieY = (y, tileSize, offset) => y + (offset.y * tileSize);
-
             const dieBuilders = {
-                leftD4: (x, y, o, t) => new D(dieFaces.leftD4, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.leftDiceColor, themeColors.leftDiceTextColor),
-                leftD6: (x, y, o, t) => new D(dieFaces.leftD6, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.leftDiceColor, themeColors.leftDiceTextColor),
-                leftD12: (x, y, o, t) => new D(dieFaces.leftD12, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.leftDiceColor, themeColors.leftDiceTextColor),
-                leftD20: (x, y, o, t) => new D(dieFaces.leftD20, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.leftDiceColor, themeColors.leftDiceTextColor),
-                leftSpecialD12: (x, y, o, t) => new D(dieFaces.leftD12, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.leftSpecialDiceColor, themeColors.leftDiceTextColor, true),
-                rightD4: (x, y, o, t) => new D(dieFaces.rightD4, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.rightDiceColor, themeColors.rightDiceTextColor),
-                rightD6: (x, y, o, t) => new D(dieFaces.rightD6, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.rightDiceColor, themeColors.rightDiceTextColor),
-                rightD12: (x, y, o, t) => new D(dieFaces.rightD12, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.rightDiceColor, themeColors.rightDiceTextColor),
-                rightD20: (x, y, o, t) => new D(dieFaces.rightD20, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.rightDiceColor, themeColors.rightDiceTextColor),
-                rightSpecialD12: (x, y, o, t) => new D(dieFaces.rightD12, dieX(x, t, o), dieY(y, t, o), dieSize(t), themeColors.rightSpecialDiceColor, themeColors.rightDiceTextColor, true),
+                leftD4: (o) => new D(dieFaces.leftD4, o, themeColors.leftDiceColor, themeColors.leftDiceTextColor),
+                leftD6: (o) => new D(dieFaces.leftD6, o, themeColors.leftDiceColor, themeColors.leftDiceTextColor),
+                leftD12: (o) => new D(dieFaces.leftD12, o, themeColors.leftDiceColor, themeColors.leftDiceTextColor),
+                leftD20: (o) => new D(dieFaces.leftD20, o, themeColors.leftDiceColor, themeColors.leftDiceTextColor),
+                leftSpecialD12: (o) => new D(dieFaces.leftD12, o, themeColors.leftSpecialDiceColor, themeColors.leftDiceTextColor, true),
+                rightD4: (o) => new D(dieFaces.rightD4, o, themeColors.rightDiceColor, themeColors.rightDiceTextColor),
+                rightD6: (o) => new D(dieFaces.rightD6, o, themeColors.rightDiceColor, themeColors.rightDiceTextColor),
+                rightD12: (o) => new D(dieFaces.rightD12, o, themeColors.rightDiceColor, themeColors.rightDiceTextColor),
+                rightD20: (o) => new D(dieFaces.rightD20, o, themeColors.rightDiceColor, themeColors.rightDiceTextColor),
+                rightSpecialD12: (o) => new D(dieFaces.rightD12, o, themeColors.rightSpecialDiceColor, themeColors.rightDiceTextColor, true),
             };
 
             const gameModes = {
@@ -170,6 +167,7 @@
             };
 
             const themeColors = {
+                boardBorderColor: 'rgb(0,0,0)',
                 boardDefaultColor: 'rgb(18,166,236)',
                 leftBaseColor: 'rgb(205,98,49)',
                 leftDiceColor: 'rgb(48,16,32)',
@@ -185,7 +183,6 @@
                 darkenColor: 'rgba(0,0,0,.7)',
                 defaultHoverHighlight: 'rgba(255,255,100,.75)',
                 defaultDiceOutline: 'rgb(0,0,0)',
-                tableBackgroundColor: 'rgb(44,178,66)',
                 armySizeBarBackground: 'rgba(0,0,0,.25)',
                 armySizeBarGoodForeground: 'rgb(23,248,44)',
                 armySizeBarBadForeground: 'rgb(248,23,44)',
@@ -239,7 +236,7 @@
             }
 
             function drawNgon(ctx, x, y, n, radius) {
-                //TODO: option to include an outline?
+                //TODO: option to include a highlight outline?
                 const outerAngle = 2 * Math.PI / n;
                 let rotation = -Math.PI/2;
                 if (n % 2 === 0) {
@@ -291,9 +288,8 @@
                 ctx.restore();
             }
 
-            function SparkleEffect(r) {
+            function SparkleEffect() {
                 const sparkles = [];
-                const radius = r;
                 const colors = [
                     themeColors.sparkleColor1,
                     themeColors.sparkleColor2,
@@ -305,9 +301,9 @@
                 ];
 
                 const makeSparkle = () => {
-                    const baseSize = radius / 3;
-                    const xOff = Math.floor(Math.random() * 2 * radius) - radius;
-                    const yOff = Math.floor(Math.random() * 2 * radius) - radius;
+                    const baseSize = 1 / 6;
+                    const xOff = Math.random() - .5;
+                    const yOff = Math.random() - .5;
                     const width = (Math.random() * (baseSize / 2)) + (baseSize / 2);
                     const height = (Math.random() * (baseSize / 2)) + (baseSize / 2);
                     const rotation = Math.random() * Math.PI;
@@ -319,19 +315,19 @@
                     sparkles.push(makeSparkle());
                 }
 
-                this.draw = (ctx, x, y) => {
+                this.draw = (ctx, x, y, r) => {
                     for (const sparkle of sparkles) {
                         ctx.save();
-                        ctx.translate(x + sparkle.x, y + sparkle.y);
+                        ctx.translate(x + (sparkle.x * r), y + (sparkle.y * r));
                         ctx.rotate(sparkle.r);
                         ctx.fillStyle = sparkle.c;
-                        ctx.fillRect(-(sparkle.w/2), -(sparkle.h/2), sparkle.w, sparkle.h);
+                        ctx.fillRect(-((sparkle.w * r)/2), -((sparkle.h * r)/2), sparkle.w * r, sparkle.h * r);
                         ctx.restore();
                     }
                 };
             }
 
-            function D(value, posX, posY, drawRadius, drawDieColor, drawTextColor, isSpecial) {
+            function D(value, gridOffset, drawDieColor, drawTextColor, isSpecial) {
                 //TODO: maybe stroke is determined by hover/highlight?
                 //Draw a little bigger on highlight and while moving to a new position?
                 const iAmSpecial = isSpecial === true;
@@ -339,12 +335,17 @@
                 this.getType = () => name;
                 let displayValue = 1;
                 this.getFaceValue = () => displayValue;
+                
+                const offset = gridOffset;
+                const pos = (cx, cy, tileSize) => {
+                    return {
+                        x: cx + (tileSize * offset.x),
+                        y: cy + (tileSize * offset.y),
+                        r: (tileSize * 2) / 5
+                    };
+                };
 
                 const effects = [];
-
-                const x = Math.floor(posX);
-                const y = Math.floor(posY);
-                const r = Math.floor(drawRadius);
 
                 const dieColor = drawDieColor;
                 const textColor = drawTextColor;
@@ -355,7 +356,7 @@
                 }
 
                 if (iAmSpecial && name === 'D12') {
-                    effects.push(new SparkleEffect(r / 2));
+                    effects.push(new SparkleEffect());
                 }
 
                 //TODO: methods for moving, including animating a move to a new location
@@ -364,7 +365,11 @@
                     displayValue = faces[Math.floor(Math.random() * faces.length)];
                 };
 
-                this.draw = (ctx) => {
+                this.draw = (ctx, cx, cy, tileSize) => {
+                    const p = pos(cx, cy, tileSize);
+                    const x = p.x;
+                    const y = p.y;
+                    const r = p.r;
                     ctx.save();
                     ctx.fillStyle = dieColor;
                     switch (name) {
@@ -379,7 +384,7 @@
                         case 'D12':
                             if (iAmSpecial) {
                                 for (const effect of effects) {
-                                    effect.draw(ctx, x, y);
+                                    effect.draw(ctx, x, y, r);
                                 }
                             }
                             drawNgon(ctx, x, y, 5, r);
@@ -394,57 +399,65 @@
                 }
             }
 
-            function GridCell(gX, gY, posX, posY, pxTileSize, cellType, makeDark) {
+            function GridCell(gX, gY, gridOffset, cellType, makeDark) {
                 const col = gX;
                 const row = gY;
-                const x = Math.floor(posX);
-                const y = Math.floor(posY);
-                const tileSize = pxTileSize;
+                const offset = gridOffset;
                 const dark = makeDark;
+
+                const pos = (cx, cy, tileSize) => {
+                    return {
+                        x: cx + (tileSize * offset.x),
+                        y: cy + (tileSize * offset.y)
+                    };
+                };
 
                 let hoverHighlighted = false;
 
-                const collidePoint = (px, py) => {
-                    const left = x - (tileSize/2);
-                    const top = y - (tileSize/2);
+                const collidePoint = (px, py, cx, cy, tileSize) => {
+                    const myPos = pos(cx, cy, tileSize);
+                    const left = myPos.x - (tileSize/2);
+                    const top = myPos.y - (tileSize/2);
                     const withinHorizontal = px > left && px < left + tileSize;
                     const withinVertical = py > top && py < top + tileSize;
                     return withinHorizontal && withinVertical;
                 };
 
-                this.checkHover = (posX, posY) => {
-                    hoverHighlighted = collidePoint(posX, posY);
+                this.checkHover = (posX, posY, cx, cy, tileSize) => {
+                    hoverHighlighted = collidePoint(posX, posY, cx, cy, tileSize);
                     return hoverHighlighted ? this : null;
                 };
 
-                const fillBaseColorRect = (ctx) => {
-                    fillTileSquare(ctx);
-                    darken(ctx);
+                const fillBaseColorRect = (ctx, x, y, tileSize) => {
+                    fillTileSquare(ctx, x, y, tileSize);
+                    darken(ctx, x, y, tileSize);
                 };
 
-                const fillTileSquare = (ctx) => {
+                const fillTileSquare = (ctx, x, y, tileSize) => {
                     ctx.fillRect(x - (tileSize/2), y - (tileSize/2), tileSize, tileSize);
                 };
 
-                const darken = (ctx) => {
+                const darken = (ctx, x, y, tileSize) => {
                     if (!dark) {
                         return;
                     }
                     ctx.save();
                     ctx.fillStyle = themeColors.darkenColor;
-                    fillTileSquare(ctx);
+                    fillTileSquare(ctx, x, y, tileSize);
                     ctx.restore();
                 };
 
-                this.draw = (ctx) => {
-                    //TODO: maybe cell types that get drawn differently?
+                this.draw = (ctx, cx, cy, tileSize) => {
+                    const myPos = pos(cx, cy, tileSize);
+                    const x = myPos.x;
+                    const y = myPos.y;
                     const topLayerDrawCalls = [];
                     ctx.save();
 
                     switch (cellType) {
                         case cellTypes.center:
                             ctx.fillStyle = themeColors.centerSquareColor;
-                            fillBaseColorRect(ctx);
+                            fillBaseColorRect(ctx, x, y, tileSize);
 
                             ctx.fillStyle = themeColors.centerStarColor;
                             drawStar(ctx, x, y, (tileSize*4)/9);
@@ -452,31 +465,31 @@
 
                         case cellTypes.leftBase:
                             ctx.fillStyle = themeColors.leftBaseColor;
-                            fillBaseColorRect(ctx);
+                            fillBaseColorRect(ctx, x, y, tileSize);
                             break;
 
                         case cellTypes.leftHeal:
                             ctx.fillStyle = themeColors.leftBaseColor;
-                            fillBaseColorRect(ctx);
+                            fillBaseColorRect(ctx, x, y, tileSize);
                             ctx.fillStyle = themeColors.lightenColor;
                             drawPlus(ctx, x, y, (tileSize*4)/9);
                             break;
 
                         case cellTypes.rightBase:
                             ctx.fillStyle = themeColors.rightBaseColor;
-                            fillBaseColorRect(ctx);
+                            fillBaseColorRect(ctx, x, y, tileSize);
                             break;
 
                         case cellTypes.rightHeal:
                             ctx.fillStyle = themeColors.rightBaseColor;
-                            fillBaseColorRect(ctx);
+                            fillBaseColorRect(ctx, x, y, tileSize);
                             ctx.fillStyle = themeColors.lightenColor;
                             drawPlus(ctx, x, y, (tileSize*4)/9);
                             break;
 
                         default:
                             ctx.fillStyle = themeColors.boardDefaultColor;
-                            fillBaseColorRect(ctx);
+                            fillBaseColorRect(ctx, x, y, tileSize);
                     }
                     //TODO: keep this for effects that need to go over the main board:
                     //if (hoverHighlighted) {
@@ -489,7 +502,10 @@
                     return topLayerDrawCalls;
                 };
 
-                this.drawHoverHighlight = (ctx) => {
+                this.drawHoverHighlight = (ctx, cx, cy, tileSize) => {
+                    const myPos = pos(cx, cy, tileSize);
+                    const x = myPos.x;
+                    const y = myPos.y;
                     //TODO: draw a different color depending on the player?
                     const w = 6;
                     const hw = w / 2;
@@ -500,21 +516,16 @@
                     ctx.roundRect(x - (tileSize/2) - hw, y - (tileSize/2) - hw, tileSize + w, tileSize + w, 8);
                     ctx.stroke();
                     ctx.restore();
-                    //TODO: optional?
-                    //drawCenteredBoldText(ctx, `${col}, ${row}`, x, y);
                 };
             }
 
-            function Grid(posX, posY, numRows, numCols, pxTileSize) {
-                //TODO: need a way to resize/scale the tileSize?
-                const x = Math.floor(posX);
-                const y = Math.floor(posY);
+            function Grid(numRows, numCols) {
                 const rows = numRows;
                 const cols = numCols;
-                const tileSize = pxTileSize;
                 const cells = [];
                 const hasCenter = (rows % 2 === 1) && (cols % 2 === 1);
                 const healingSpotRowInset = 1;
+                const playerBaseCols = 2;
                 const gridPositionOffsets = [];
 
                 const leftPlayerDice = [];
@@ -524,7 +535,6 @@
 
                 let highlightedCell = null;
 
-                //TODO: need to allow reflow of the layout for resizing?
                 for (let r = 0; r < rows; r++) {
                     gridPositionOffsets[r] = [];
                     for (let c = 0; c < cols; c++) {
@@ -532,13 +542,13 @@
                         if (hasCenter && r === Math.floor(rows/2) && c === Math.floor(cols/2)) {
                             cellType = cellTypes.center;
                         }
-                        if (c < 2) {
+                        if (c < playerBaseCols) {
                             cellType = cellTypes.leftBase;
                             if (c == 0 && isHealingRow(r)) {
                                 cellType = cellTypes.leftHeal;
                             }
                         }
-                        if (c >= cols - 2) {
+                        if (c >= cols - playerBaseCols) {
                             cellType = cellTypes.rightBase;
                             if (c == cols - 1 && isHealingRow(r)) {
                                 cellType = cellTypes.rightHeal;
@@ -548,69 +558,53 @@
                             x: (c - ((cols - 1) / 2)),
                             y: (r - ((rows - 1) / 2))
                         };
-                        const posX = x + (tileSize * offset.x);
-                        const posY = y + (tileSize * offset.y);
                         const makeDark = (r % 2) == (c % 2);
-                        cells.push(new GridCell(c, r, posX, posY, tileSize, cellType, makeDark));
-                        gridPositionOffsets[r][c] = offset; //TODO: might move to using this for more things
+                        cells.push(new GridCell(c, r, offset, cellType, makeDark));
+                        gridPositionOffsets[r][c] = offset;
                     }
                 }
 
-                this.generatePlayerDice = (leftPlayerArmy, rightPlayerArmy) => {
-                    //TODO: remove r/c
-                    //TODO: place them out of bounds or in some kind of holding position off grid (generate new offsets?)
-                    //even better, place them randomly in the ocean? :P
-                    //TODO: need to detect and highligh mouseover for dice!
-                    //TODO: for capture the flag game mode we still need to add the special die!
+                this.generatePlayerDice = (leftPlayerArmy, rightPlayerArmy, gameMode) => {
+                    //TODO: temporary? We're going to place the armies randomly in the ocean to be placed in their bases.
+                    //The trouble might be detecting when all dice have been placed within their respective base.
+                    //If that becomes too difficult, might need to pivot to just showing the player one of their dice and having them
+                    //click a spot in their base to put it.
+                    //Going with this for now though because it will force me to write the movement code for moving the dice around. :)
+                    const offsetPool = [];
+                    for (let r = 0; r < rows; r++) {
+                        for (let c = playerBaseCols; c < cols - playerBaseCols; c++) {
+                            offsetPool.push(gridPositionOffsets[r][c]);
+                        }
+                    }
                     //TODO: for king of the hill the special die should be held in a separate variable and drawn off grid... maybe in the game object?
-                    let r = 0;
-                    let c = 0;
+                    if (gameModes[gameMode] === gameModes.captureTheFlag) {
+                        leftPlayerArmy['leftSpecialD12'] = 1;
+                        rightPlayerArmy['rightSpecialD12'] = 1;
+                    }
                     for (const id in leftPlayerArmy) {
                         for (let i = 0; i < leftPlayerArmy[id]; i++) {
-                            //TODO: offset needs to be handled differently at first
-                            const offset = gridPositionOffsets[r][c];
-                            const die = dieBuilders[id](x, y, offset, tileSize);
+                            const offset = offsetPool.splice(Math.floor(Math.random() * offsetPool.length), 1)[0];
+                            const die = dieBuilders[id](offset);
                             die.roll();
                             leftPlayerDice.push(die);
-                            //TODO: temporary code
-                            c++;
-                            if (c >= cols) {
-                                c = 0;
-                                r++;
-                                if (r >= rows) {
-                                    r = 0;
-                                    //TODO: also we're in trouble
-                                }
-                            }
                         }
                     }
                     
                     for (const id in rightPlayerArmy) {
                         for (let i = 0; i < rightPlayerArmy[id]; i++) {
-                            //TODO: offset needs to be handled differently at first
-                            const offset = gridPositionOffsets[r][c];
-                            const die = dieBuilders[id](x, y, offset, tileSize);
+                            const offset = offsetPool.splice(Math.floor(Math.random() * offsetPool.length), 1)[0];
+                            const die = dieBuilders[id](offset);
                             die.roll();
                             rightPlayerDice.push(die);
-                            //TODO: temporary code
-                            c++;
-                            if (c >= cols) {
-                                c = 0;
-                                r++;
-                                if (r >= rows) {
-                                    r = 0;
-                                    //TODO: also we're in trouble
-                                }
-                            }
                         }
                     }
                 };
 
-                this.mouseMove = (mouseX, mouseY) => {
+                this.mouseMove = (mouseX, mouseY, x, y, tileSize) => {
                     //TODO: temp? Just a proof of concept placeholder...
                     let currentlyHighlighted = null;
                     for (const cell of cells) {
-                        currentlyHighlighted ??= cell.checkHover(mouseX, mouseY);
+                        currentlyHighlighted ??= cell.checkHover(mouseX, mouseY, x, y, tileSize);
                     }
                     if (highlightedCell !== currentlyHighlighted) {
                         highlightedCell = currentlyHighlighted;
@@ -628,52 +622,54 @@
                     //
                 };
 
-                this.draw = (ctx) => {
+                this.draw = (ctx, x, y, tileSize) => {
                     //TODO: Grid needs different layers beyond the tiles/cells.
                     const topLayer = [];
                     for (const cell of cells) {
-                        const newTopLayerItems = cell.draw(ctx);
+                        const newTopLayerItems = cell.draw(ctx, x, y, tileSize);
                         topLayer.push(...newTopLayerItems);
                     }
                     for (const top of topLayer) {
-                        top(ctx);
+                        top(ctx, x, y, tileSize);
                     }
                     //TODO: should dice go under or over the top layer that comes back from the grid draw call??
                     //TODO: also, draw whoever's turn it is first! maybe put these calls in their own functions.
                     
-                    //TODO: move the styles into the dice themselves to allow for the special translucent "princess" die for each team.
+                    //TODO: move the stroke styles into the die draw call.
                     ctx.lineWidth = 2;
                     ctx.strokeStyle = themeColors.defaultDiceOutline;
                     for (const red of leftPlayerDice) {
-                        red.draw(ctx);
+                        red.draw(ctx, x, y, tileSize);
                     }
                     for (const blue of rightPlayerDice) {
-                        blue.draw(ctx);
+                        blue.draw(ctx, x, y, tileSize);
                     }
                     //TODO: need a way to only draw highlighting when an action can be taken
                     //eventually valid moves should highlight while invalid moves should not
                     //also before selecting a piece to move, empty tiles and tiles with enemy pieces should not highlight
                     if (highlightedCell) {
-                        highlightedCell.drawHoverHighlight(ctx);
+                        highlightedCell.drawHoverHighlight(ctx, x, y, tileSize);
                     }
                 };
             }
 
             function Game(width, height, gridDimension) {
-                const w = width;
-                const h = height;
-                const x = w / 2;
-                const y = h / 2;
-
+                let w = width;
+                let h = height;
                 const gridSize = gridDimension;
-                const grid = new Grid(x, y, gridSize, gridSize, Math.floor(Math.min(w, h) / (gridSize + 2)));
+
+                const x = () => w / 2;
+                const y = () => h / 2;
+                const pxTileSize = () => Math.floor(Math.min(w, h) / (gridSize + 2));
+
+                const grid = new Grid(gridSize, gridSize);
 
                 let gameMode = '';
                 let gamePhase = gamePhases.setup;
 
                 this.setup = (newGameMode, leftArmyNumbers, rightArmyNumbers) => {
                     gameMode = newGameMode;
-                    grid.generatePlayerDice(leftArmyNumbers, rightArmyNumbers);
+                    grid.generatePlayerDice(leftArmyNumbers, rightArmyNumbers, gameMode);
                     //TODO: need to implement phase logic! Also, who goes first? Right or left? Methinks right. :)
                     gamePhase = gamePhases.rightPlaceDie;
                 };
@@ -693,7 +689,7 @@
 
                         case 'mousemove':
                             //TODO: pass the mouse position around looking for something to highlight?
-                            grid.mouseMove(mouseX, mouseY);
+                            grid.mouseMove(mouseX, mouseY, x(), y(), pxTileSize());
                             break;
 
                         default:
@@ -708,11 +704,16 @@
                 };
 
                 this.draw = (ctx) => {
+                    const cx = x();
+                    const cy = y();
+                    const tileSize = pxTileSize();
+                    const boardSize = tileSize * gridSize;
+                    const borderThickness = tileSize / 3;
+                    const p = (boardSize / 2) + borderThickness;
                     ctx.clearRect(0, 0, w, h);
-                    //TODO: trace a border around the board?
-                    //ctx.fillStyle = themeColors.tableBackgroundColor;
-                    //ctx.fillRect(0, 0, w, h);
-                    grid.draw(ctx);
+                    ctx.fillStyle = themeColors.boardBorderColor;
+                    ctx.fillRect(cx - p, cy - p, p * 2, p * 2);
+                    grid.draw(ctx, cx, cy, tileSize);
                 };
             }
 
@@ -767,6 +768,7 @@
 
                 //TODO: need different minimum requirements per game mode?
                 //TODO: if the player somehow exceeds the dice count max, there is currently no way to give feedback in the UI.
+                //TODO: for testing purposes maybe include a checkbox in the UI that can override the validation?
                 const validate = () => leftArmySize <= maxArmySize
                                     && leftArmySize > 0
                                     && leftArmyCount <= gameGridSize * 2
