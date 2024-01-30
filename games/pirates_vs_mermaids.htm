@@ -44,6 +44,9 @@
              * (simple click to select and click to place, no repositioning allowed!)
              * once all dice are placed, the game begins. not sure if it should be like chess where one side always goes first...
              * 
+             * junior version:
+             * 7x7 board, no D4 or D12 (just D6 and D20), one base column
+             * 
              */
             //TODO: safe spots?
             const cellTypes = {
@@ -151,9 +154,14 @@
                 captureTheFlag: 64,
             };
 
+            const playerId = {
+                left: 'left',
+                right: 'right',
+            };
+
             const playerNames = {
-                leftPlayer: `Pirate`,
-                rightPlayer: `Mermaid`,
+                left: `Pirate`,
+                right: `Mermaid`,
             };
 
             const gamePhases = {
@@ -182,7 +190,10 @@
                 lightenColor: 'rgba(255,255,255,.7)',
                 darkenColor: 'rgba(0,0,0,.7)',
                 defaultHoverHighlight: 'rgba(255,255,100,.75)',
+                leftHoverHighlight: 'rgba(255,255,255,.75)',
+                rightHoverHighlight: 'rgba(255,186,186,.85)',
                 defaultDiceOutline: 'rgb(0,0,0)',
+                highlightedDiceOutline: 'rgb(100,100,20)',
                 armySizeBarBackground: 'rgba(0,0,0,.25)',
                 armySizeBarGoodForeground: 'rgb(23,248,44)',
                 armySizeBarBadForeground: 'rgb(248,23,44)',
@@ -199,9 +210,8 @@
             const gameHeight = 800;
             const gameGridSize = 13;
 
-            function drawCenteredBoldText(ctx, text, x, y, color) {
+            function drawCenteredBoldText(ctx, text, color) {
                 ctx.save();
-                ctx.translate(x, y);
                 //TODO: allow font size to be passed in?
                 ctx.font = 'bold 12px Arial';
                 ctx.fillStyle = color;
@@ -235,8 +245,7 @@
                 ctx.restore();
             }
 
-            function drawNgon(ctx, x, y, n, radius) {
-                //TODO: option to include a highlight outline?
+            function drawNgon(ctx, n, radius) {
                 const outerAngle = 2 * Math.PI / n;
                 let rotation = -Math.PI/2;
                 if (n % 2 === 0) {
@@ -247,7 +256,6 @@
                 }
 
                 ctx.save();
-                ctx.translate(x, y);
                 ctx.rotate(rotation);
 
                 ctx.beginPath();
@@ -315,10 +323,10 @@
                     sparkles.push(makeSparkle());
                 }
 
-                this.draw = (ctx, x, y, r) => {
+                this.draw = (ctx, r) => {
                     for (const sparkle of sparkles) {
                         ctx.save();
-                        ctx.translate(x + (sparkle.x * r), y + (sparkle.y * r));
+                        ctx.translate(sparkle.x * r, sparkle.y * r);
                         ctx.rotate(sparkle.r);
                         ctx.fillStyle = sparkle.c;
                         ctx.fillRect(-((sparkle.w * r)/2), -((sparkle.h * r)/2), sparkle.w * r, sparkle.h * r);
@@ -328,13 +336,16 @@
             }
 
             function D(value, gridOffset, drawDieColor, drawTextColor, isSpecial) {
-                //TODO: maybe stroke is determined by hover/highlight?
-                //Draw a little bigger on highlight and while moving to a new position?
+                const selectedScale = 1.25;
                 const iAmSpecial = isSpecial === true;
                 const name = 'D' + value; 
                 this.getType = () => name;
                 let displayValue = 1;
                 this.getFaceValue = () => displayValue;
+
+                let isHighlighted = false;
+                this.highlight = () => isHighlighted = true;
+                this.unhighlight = () => isHighlighted = false;
                 
                 const offset = gridOffset;
                 const pos = (cx, cy, tileSize) => {
@@ -344,6 +355,8 @@
                         r: (tileSize * 2) / 5
                     };
                 };
+
+                this.getOffset = () => offset;
 
                 const effects = [];
 
@@ -371,32 +384,38 @@
                     const y = p.y;
                     const r = p.r;
                     ctx.save();
+                    ctx.translate(x, y);
+                    if (isHighlighted) {
+                        ctx.scale(selectedScale, selectedScale);
+                    }
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = isHighlighted ? themeColors.highlightedDiceOutline : themeColors.defaultDiceOutline;
                     ctx.fillStyle = dieColor;
                     switch (name) {
                         case 'D4':
-                            drawNgon(ctx, x, y, 3, r);
+                            drawNgon(ctx, 3, r);
                             break;
 
                         case 'D6':
-                            drawNgon(ctx, x, y, 4, r);
+                            drawNgon(ctx, 4, r);
                             break;
 
                         case 'D12':
                             if (iAmSpecial) {
                                 for (const effect of effects) {
-                                    effect.draw(ctx, x, y, r);
+                                    effect.draw(ctx, r);
                                 }
                             }
-                            drawNgon(ctx, x, y, 5, r);
+                            drawNgon(ctx, 5, r);
                             break;
 
                         case 'D20':
-                            drawNgon(ctx, x, y, 6, r);
+                            drawNgon(ctx, 6, r);
                             break;
                     }
-                    drawCenteredBoldText(ctx, displayValue, x, y, textColor);
+                    drawCenteredBoldText(ctx, displayValue, textColor);
                     ctx.restore();
-                }
+                };
             }
 
             function GridCell(gX, gY, gridOffset, cellType, makeDark) {
@@ -422,6 +441,8 @@
                     const withinVertical = py > top && py < top + tileSize;
                     return withinHorizontal && withinVertical;
                 };
+
+                this.isSamePosition = (gridOffset) => offset.x === gridOffset.x && offset.y === gridOffset.y;
 
                 this.checkHover = (posX, posY, cx, cy, tileSize) => {
                     hoverHighlighted = collidePoint(posX, posY, cx, cy, tileSize);
@@ -502,15 +523,20 @@
                     return topLayerDrawCalls;
                 };
 
-                this.drawHoverHighlight = (ctx, cx, cy, tileSize) => {
+                this.drawHoverHighlight = (ctx, cx, cy, tileSize, player) => {
                     const myPos = pos(cx, cy, tileSize);
                     const x = myPos.x;
                     const y = myPos.y;
-                    //TODO: draw a different color depending on the player?
                     const w = 6;
                     const hw = w / 2;
                     ctx.save();
                     ctx.strokeStyle = themeColors.defaultHoverHighlight;
+                    if (player === playerId.left) {
+                        ctx.strokeStyle = themeColors.leftHoverHighlight;
+                    }
+                    if (player === playerId.right) {
+                        ctx.strokeStyle = themeColors.rightHoverHighlight;
+                    }
                     ctx.lineWidth = w;
                     ctx.beginPath();
                     ctx.roundRect(x - (tileSize/2) - hw, y - (tileSize/2) - hw, tileSize + w, tileSize + w, 8);
@@ -530,10 +556,16 @@
 
                 const leftPlayerDice = [];
                 const rightPlayerDice = [];
+                let player = '';
+
+                this.setPlayer = (newPlayer) => {
+                    player = newPlayer;
+                };
 
                 const isHealingRow = (r) => (r == healingSpotRowInset || r == (rows - 1) - healingSpotRowInset);
 
                 let highlightedCell = null;
+                let highlightedDie = null;
 
                 for (let r = 0; r < rows; r++) {
                     gridPositionOffsets[r] = [];
@@ -600,6 +632,15 @@
                     }
                 };
 
+                const getHighlightedDie = (army) => {
+                    for (const die of army) {
+                        if (highlightedCell.isSamePosition(die.getOffset())) {
+                            return die;
+                        }
+                    }
+                    return null;
+                };
+
                 this.mouseMove = (mouseX, mouseY, x, y, tileSize) => {
                     //TODO: temp? Just a proof of concept placeholder...
                     let currentlyHighlighted = null;
@@ -608,12 +649,23 @@
                     }
                     if (highlightedCell !== currentlyHighlighted) {
                         highlightedCell = currentlyHighlighted;
-                        //TODO: events for mouse entering/leaving cells?
-                        //if (highlightedCell !== null) {
-                        //    console.log('entered a new cell');
-                        //}
+                        if (highlightedDie !== null) {
+                            highlightedDie.unhighlight();
+                        }
+                        if (highlightedCell !== null) {
+                            //mouse has entered a cell
+                            if (player === playerId.left) {
+                                highlightedDie = getHighlightedDie(leftPlayerDice);
+                            }
+                            if (player === playerId.right) {
+                                highlightedDie = getHighlightedDie(rightPlayerDice);
+                            }
+                            if (highlightedDie !== null) {
+                                highlightedDie.highlight();
+                            }
+                        }
                         //else {
-                        //    console.log('left a cell');
+                        //    console.log('mouse has left a cell');
                         //}
                     }
                 };
@@ -622,8 +674,21 @@
                     //
                 };
 
+                const drawLeftPlayer = (ctx, x, y, tileSize) => {
+                    for (const left of leftPlayerDice) {
+                        left.draw(ctx, x, y, tileSize);
+                    }
+                };
+
+                const drawRightPlayer = (ctx, x, y, tileSize) => {
+                    for (const right of rightPlayerDice) {
+                        right.draw(ctx, x, y, tileSize);
+                    }
+                };
+
                 this.draw = (ctx, x, y, tileSize) => {
                     //TODO: Grid needs different layers beyond the tiles/cells.
+                    //in particular, any die that is traveling needs to be drawn on top of static dice, even on their own team!
                     const topLayer = [];
                     for (const cell of cells) {
                         const newTopLayerItems = cell.draw(ctx, x, y, tileSize);
@@ -633,22 +698,20 @@
                         top(ctx, x, y, tileSize);
                     }
                     //TODO: should dice go under or over the top layer that comes back from the grid draw call??
-                    //TODO: also, draw whoever's turn it is first! maybe put these calls in their own functions.
                     
-                    //TODO: move the stroke styles into the die draw call.
-                    ctx.lineWidth = 2;
-                    ctx.strokeStyle = themeColors.defaultDiceOutline;
-                    for (const red of leftPlayerDice) {
-                        red.draw(ctx, x, y, tileSize);
+                    if (player === playerId.left) {
+                        drawRightPlayer(ctx, x, y, tileSize);
+                        drawLeftPlayer(ctx, x, y, tileSize);
                     }
-                    for (const blue of rightPlayerDice) {
-                        blue.draw(ctx, x, y, tileSize);
+                    else {
+                        drawLeftPlayer(ctx, x, y, tileSize);
+                        drawRightPlayer(ctx, x, y, tileSize);
                     }
                     //TODO: need a way to only draw highlighting when an action can be taken
                     //eventually valid moves should highlight while invalid moves should not
                     //also before selecting a piece to move, empty tiles and tiles with enemy pieces should not highlight
                     if (highlightedCell) {
-                        highlightedCell.drawHoverHighlight(ctx, x, y, tileSize);
+                        highlightedCell.drawHoverHighlight(ctx, x, y, tileSize, player);
                     }
                 };
             }
@@ -667,11 +730,26 @@
                 let gameMode = '';
                 let gamePhase = gamePhases.setup;
 
+                const setGamePhase = (newGamePhase) => {
+                    gamePhase = newGamePhase;
+                    switch (gamePhase) {
+                        case gamePhases.leftPlaceDie:
+                        case gamePhases.leftPlayerTurn:
+                            grid.setPlayer(playerId.left);
+                            break;
+                            
+                        case gamePhases.rightPlaceDie:
+                        case gamePhases.rightPlayerTurn:
+                            grid.setPlayer(playerId.right);
+                            break;
+                    }
+                };
+
                 this.setup = (newGameMode, leftArmyNumbers, rightArmyNumbers) => {
                     gameMode = newGameMode;
                     grid.generatePlayerDice(leftArmyNumbers, rightArmyNumbers, gameMode);
-                    //TODO: need to implement phase logic! Also, who goes first? Right or left? Methinks right. :)
-                    gamePhase = gamePhases.rightPlaceDie;
+                    //TODO: Who really goes first? Right or left? Methinks right. :) Roll dice to decide? I DON'T WANT TO DECIDE THIS!
+                    setGamePhase(gamePhases.rightPlaceDie);
                 };
 
                 this.mouseEvent = (mouseX, mouseY, eventType) => {
@@ -727,7 +805,7 @@
                 gameSetupControls.appendChild(gameSetupTop);
 
                 gameSetupTop.appendChild(gameModeSelector);
-                //TODO: a third dropdown for board size? (just for testing purposes?)
+                //TODO: a third dropdown for board size? (just for testing purposes?) junior mode?
                 gameSetupTop.appendChild(doneButton);
 
                 const leftPlayerSetupFieldset = makeFieldset(`${playerNames.leftPlayer} Army`);
@@ -766,10 +844,14 @@
                 const leftArmy = {};
                 const rightArmy = {};
 
+                //TODO: for testing purposes maybe include a checkbox in the UI that can override the validation?
+                //Also include some pre-made army configuration buttons for quick setup?
+                let validationOverride = false;
+                const validate = () => validationOverride || trueValidate();
+                
                 //TODO: need different minimum requirements per game mode?
                 //TODO: if the player somehow exceeds the dice count max, there is currently no way to give feedback in the UI.
-                //TODO: for testing purposes maybe include a checkbox in the UI that can override the validation?
-                const validate = () => leftArmySize <= maxArmySize
+                const trueValidate = () => leftArmySize <= maxArmySize
                                     && leftArmySize > 0
                                     && leftArmyCount <= gameGridSize * 2
                                     && rightArmySize <= maxArmySize
