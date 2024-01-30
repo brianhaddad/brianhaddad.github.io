@@ -796,6 +796,12 @@
             }
 
             function GameSetupManager (gameSetupControls, finishFunction) {
+                const autoPopulateArmyOptions = {
+                    largeBalanced: 'Large Balanced',
+                    mediumBalanced: 'Medium Balanced',
+                    smallBalanced: 'Small Balanced',
+                    clearAll: 'Clear',
+                };
                 const doneButton = createElement('button', {}, 'Start Game!');
                 doneButton.addEventListener('click', () => finishFunction());
 
@@ -808,18 +814,28 @@
                 //TODO: a third dropdown for board size? (just for testing purposes?) junior mode?
                 gameSetupTop.appendChild(doneButton);
 
-                const leftPlayerSetupFieldset = makeFieldset(`${playerNames.leftPlayer} Army`);
+                const leftPlayerSetupFieldset = makeFieldset(`${playerNames.left} Army`);
                 const leftPlayerArmySizeIndicator = new ArmySizeIndicator(leftPlayerSetupFieldset);
                 const leftPlayerSetup = createElement('div', {}, null);
                 leftPlayerSetupFieldset.appendChild(leftPlayerSetup);
 
-                const rightPlayerSetupFieldset = makeFieldset(`${playerNames.rightPlayer} Army`);
+                const quickActionButtonsFieldset = makeFieldset(`Quickies`);
+                const buttonListDiv = createElement('div', { 'style': `display:flex;flex-direction:column;` }, null);
+                quickActionButtonsFieldset.appendChild(buttonListDiv);
+                for (const opt in autoPopulateArmyOptions) {
+                    const butt = createElement('input', { 'type': 'button', 'value': autoPopulateArmyOptions[opt] }, null);
+                    butt.addEventListener('click', () => setArmyLoadout(autoPopulateArmyOptions[opt]));
+                    buttonListDiv.appendChild(butt);
+                }
+
+                const rightPlayerSetupFieldset = makeFieldset(`${playerNames.right} Army`);
                 const rightPlayerArmySizeIndicator = new ArmySizeIndicator(rightPlayerSetupFieldset);
                 const rightPlayerSetup = createElement('div', {}, null);
                 rightPlayerSetupFieldset.appendChild(rightPlayerSetup);
 
                 const playerSetupContainer = createElement('div', {'style': `display:flex;flex-direction:row;justify-content:space-between;align-content:stretch;align-items:stretch;`}, null);
                 playerSetupContainer.appendChild(leftPlayerSetupFieldset);
+                playerSetupContainer.appendChild(quickActionButtonsFieldset);
                 playerSetupContainer.appendChild(rightPlayerSetupFieldset);
                 gameSetupControls.appendChild(playerSetupContainer);
 
@@ -843,6 +859,77 @@
                 let rightArmyCount = 0;
                 const leftArmy = {};
                 const rightArmy = {};
+
+                const setArmyLoadout = (quickArmyType) => {
+                    switch (quickArmyType) {
+                        case autoPopulateArmyOptions.largeBalanced:
+                            diceSelectors['leftD4'].selectedIndex = 6;
+                            diceSelectors['leftD6'].selectedIndex = 4;
+                            diceSelectors['leftD12'].selectedIndex = 2;
+                            diceSelectors['leftD20'].selectedIndex = 2;
+                            diceSelectors['leftSpecialD12'].selectedIndex = 1;
+                            diceSelectors['rightD4'].selectedIndex = 6;
+                            diceSelectors['rightD6'].selectedIndex = 4;
+                            diceSelectors['rightD12'].selectedIndex = 2;
+                            diceSelectors['rightD20'].selectedIndex = 2;
+                            diceSelectors['rightSpecialD12'].selectedIndex = 1;
+                            if (gameModeSelect.selectedIndex === 1) {
+                                updateArmy();
+                            }
+                            else {
+                                gameModeSelect.selectedIndex = 1;
+                                setGameMode();
+                            }
+                            break;
+
+                        case autoPopulateArmyOptions.mediumBalanced:
+                            diceSelectors['leftD4'].selectedIndex = 7;
+                            diceSelectors['leftD6'].selectedIndex = 4;
+                            diceSelectors['leftD12'].selectedIndex = 2;
+                            diceSelectors['leftD20'].selectedIndex = 1;
+                            diceSelectors['leftSpecialD12'].selectedIndex = 0;
+                            diceSelectors['rightD4'].selectedIndex = 7;
+                            diceSelectors['rightD6'].selectedIndex = 4;
+                            diceSelectors['rightD12'].selectedIndex = 2;
+                            diceSelectors['rightD20'].selectedIndex = 1;
+                            diceSelectors['rightSpecialD12'].selectedIndex = 0;
+                            if (gameModeSelect.selectedIndex === 0) {
+                                updateArmy();
+                            }
+                            else {
+                                gameModeSelect.selectedIndex = 0;
+                                setGameMode();
+                            }
+                            break;
+
+                        case autoPopulateArmyOptions.smallBalanced:
+                            diceSelectors['leftD4'].selectedIndex = 3;
+                            diceSelectors['leftD6'].selectedIndex = 3;
+                            diceSelectors['leftD12'].selectedIndex = 1;
+                            diceSelectors['leftD20'].selectedIndex = 1;
+                            diceSelectors['leftSpecialD12'].selectedIndex = 0;
+                            diceSelectors['rightD4'].selectedIndex = 3;
+                            diceSelectors['rightD6'].selectedIndex = 3;
+                            diceSelectors['rightD12'].selectedIndex = 1;
+                            diceSelectors['rightD20'].selectedIndex = 1;
+                            diceSelectors['rightSpecialD12'].selectedIndex = 0;
+                            if (gameModeSelect.selectedIndex === 2) {
+                                updateArmy();
+                            }
+                            else {
+                                gameModeSelect.selectedIndex = 2;
+                                setGameMode();
+                            }
+                            break;
+
+                        case autoPopulateArmyOptions.clearAll:
+                            for (const id in diceSelectors) {
+                                diceSelectors[id].selectedIndex = 0;
+                            }
+                            updateArmy();
+                            break;
+                    }
+                }
 
                 //TODO: for testing purposes maybe include a checkbox in the UI that can override the validation?
                 //Also include some pre-made army configuration buttons for quick setup?
