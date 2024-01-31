@@ -601,7 +601,9 @@
                 const playerBaseCols = 2;
                 const gridPositionOffsets = [];
                 const leftPlayerBaseOffsets = [];
+                const leftPlayerCaptureOffsets = [];
                 const rightPlayerBaseOffsets = [];
+                const rightPlayerCaptureOffsets = [];
 
                 const leftPlayerDice = [];
                 const rightPlayerDice = [];
@@ -649,6 +651,32 @@
                             rightPlayerBaseOffsets.push(offset);
                         }
                     }
+                }
+
+                //TODO: any die that... dies (lol) gets removed from the player army and placed in a death position
+                //based on these arrays of positions: leftPlayerDeathOffsets and rightPlayerDeathOffsets
+                //I think if left captures right, the captured die should be removed from right and added to left
+                const captureOffsetStep = 1/playerBaseCols;
+                const startingLeftCaptureOffset = gridPositionOffsets[0][0];
+                let capturePosX = startingLeftCaptureOffset.x - 1;
+                let dY = captureOffsetStep;
+                let captureStartY = startingLeftCaptureOffset.y;
+                for (let i = -1; i < rows * playerBaseCols; i++) {
+                    leftPlayerCaptureOffsets.push({
+                        x: capturePosX,
+                        y: captureStartY + (i * dY)
+                    });
+                }
+
+                const startingRightCaptureOffset = gridPositionOffsets[rows-1][cols-1];
+                capturePosX = startingRightCaptureOffset.x + 1;
+                dY = -captureOffsetStep;
+                captureStartY = startingRightCaptureOffset.y;
+                for (let i = -1; i < rows * playerBaseCols; i++) {
+                    rightPlayerCaptureOffsets.push({
+                        x: capturePosX,
+                        y: captureStartY + (i * dY)
+                    });
                 }
 
                 const anyLeftDiceInPos = (checkPos) => {
@@ -756,6 +784,7 @@
                         }
                         if (highlightedCell !== null) {
                             //mouse has entered a cell
+                            //TODO: disallow highlighting a die that has been placed in the player base while in the arrangement phase?
                             if (player === playerId.left) {
                                 highlightedDie = getHighlightedDie(leftPlayerDice);
                             }
