@@ -185,13 +185,15 @@
                 rightDiceColor: 'rgb(46,155,87)',
                 rightSpecialDiceColor: 'rgba(46,155,87,.5)',
                 rightDiceTextColor: 'rgba(0,0,0,.85)',
-                centerSquareColor: 'rgb(0,0,0)',
+                centerSquareColor: 'rgb(25,67,112)',
                 centerStarColor: 'rgb(255,255,0)',
                 lightenColor: 'rgba(255,255,255,.7)',
                 darkenColor: 'rgba(0,0,0,.7)',
                 defaultHoverHighlight: 'rgba(255,255,100,.75)',
                 leftHoverHighlight: 'rgba(255,255,255,.75)',
                 rightHoverHighlight: 'rgba(255,186,186,.85)',
+                leftValidMoveHighlight: 'rgba(255,255,255,.25)',
+                rightValidMoveHighlight: 'rgba(255,186,186,.35)',
                 defaultDiceOutline: 'rgb(0,0,0)',
                 highlightedDiceOutline: 'rgb(100,100,20)',
                 armySizeBarBackground: 'rgba(0,0,0,.25)',
@@ -245,6 +247,10 @@
                 ctx.restore();
             }
 
+            function fillTileSquare(ctx, x, y, tileSize) {
+                ctx.fillRect(x - (tileSize/2), y - (tileSize/2), tileSize, tileSize);
+            }
+
             function drawNgon(ctx, n, radius) {
                 const outerAngle = 2 * Math.PI / n;
                 let rotation = -Math.PI/2;
@@ -296,6 +302,13 @@
                 ctx.restore();
             }
 
+            function offsetToPixelPosition(offset, cx, cy, tileSize) {
+                return {
+                        x: cx + (tileSize * offset.x),
+                        y: cy + (tileSize * offset.y)
+                    };
+            }
+
             function SparkleEffect() {
                 const sparkles = [];
                 const colors = [
@@ -337,6 +350,7 @@
 
             function D(value, gridOffset, drawDieColor, drawTextColor, isSpecial) {
                 const selectedScale = 1.25;
+                const liftedScale = 1.5;
                 const iAmSpecial = isSpecial === true;
                 const name = 'D' + value; 
                 this.getType = () => name;
@@ -346,17 +360,30 @@
                 let isHighlighted = false;
                 this.highlight = () => isHighlighted = true;
                 this.unhighlight = () => isHighlighted = false;
+
+                let isLifted = false;
+                this.lift = () => isLifted = true;
+                this.setDown = () => isLifted = false;
                 
-                const offset = gridOffset;
+                const offset = {
+                    x: gridOffset.x,
+                    y: gridOffset.y,
+                };
                 const pos = (cx, cy, tileSize) => {
+                    const p = offsetToPixelPosition(offset, cx, cy, tileSize);
                     return {
-                        x: cx + (tileSize * offset.x),
-                        y: cy + (tileSize * offset.y),
+                        x: p.x,
+                        y: p.y,
                         r: (tileSize * 2) / 5
                     };
                 };
 
-                this.getOffset = () => offset;
+                this.getOffset = () => {
+                    return {
+                        x: offset.x,
+                        y: offset.y,
+                    };
+                };
 
                 const effects = [];
 
@@ -372,22 +399,42 @@
                     effects.push(new SparkleEffect());
                 }
 
-                //TODO: methods for moving, including animating a move to a new location
+                //TODO: ANIMATE! use a target offset variable...
+                //include an animation pixelspace offset and once the animation is done then
+                //the offset location is updated to the target location
+                this.moveTo = (newX, newY, animateMe) => {
+                    if (!animateMe) {
+                        offset.x = newX;
+                        offset.y = newY;
+                        isLifted = false;
+                    }
+                    else {
+                        //TODO: if animateMe is true, set up the animation (won't animate if dragging)
+                        offset.x = newX;
+                        offset.y = newY;
+                        isLifted = false;
+                    }
+                };
 
                 this.roll = () => {
                     displayValue = faces[Math.floor(Math.random() * faces.length)];
                 };
 
-                this.draw = (ctx, cx, cy, tileSize) => {
+                this.draw = (ctx, cx, cy, tileSize, isForcedPosition, forceX, forceY) => {
                     const p = pos(cx, cy, tileSize);
-                    const x = p.x;
-                    const y = p.y;
+                    const x = isForcedPosition === true ? forceX : p.x;
+                    const y = isForcedPosition === true ? forceY : p.y;
                     const r = p.r;
                     ctx.save();
                     ctx.translate(x, y);
+                    let scale = 1;
                     if (isHighlighted) {
-                        ctx.scale(selectedScale, selectedScale);
+                        scale = selectedScale;
                     }
+                    if (isLifted) {
+                        scale = liftedScale;
+                    }
+                    ctx.scale(scale, scale);
                     ctx.lineWidth = 2;
                     ctx.strokeStyle = isHighlighted ? themeColors.highlightedDiceOutline : themeColors.defaultDiceOutline;
                     ctx.fillStyle = dieColor;
@@ -421,15 +468,13 @@
             function GridCell(gX, gY, gridOffset, cellType, makeDark) {
                 const col = gX;
                 const row = gY;
-                const offset = gridOffset;
+                const offset = {
+                    x: gridOffset.x,
+                    y: gridOffset.y,
+                };
                 const dark = makeDark;
 
-                const pos = (cx, cy, tileSize) => {
-                    return {
-                        x: cx + (tileSize * offset.x),
-                        y: cy + (tileSize * offset.y)
-                    };
-                };
+                const pos = (cx, cy, tileSize) => offsetToPixelPosition(offset, cx, cy, tileSize);
 
                 let hoverHighlighted = false;
 
@@ -443,6 +488,12 @@
                 };
 
                 this.isSamePosition = (gridOffset) => offset.x === gridOffset.x && offset.y === gridOffset.y;
+                this.getOffset = () => {
+                    return {
+                        x: offset.x,
+                        y: offset.y,
+                    };
+                };
 
                 this.checkHover = (posX, posY, cx, cy, tileSize) => {
                     hoverHighlighted = collidePoint(posX, posY, cx, cy, tileSize);
@@ -452,10 +503,6 @@
                 const fillBaseColorRect = (ctx, x, y, tileSize) => {
                     fillTileSquare(ctx, x, y, tileSize);
                     darken(ctx, x, y, tileSize);
-                };
-
-                const fillTileSquare = (ctx, x, y, tileSize) => {
-                    ctx.fillRect(x - (tileSize/2), y - (tileSize/2), tileSize, tileSize);
                 };
 
                 const darken = (ctx, x, y, tileSize) => {
@@ -553,6 +600,8 @@
                 const healingSpotRowInset = 1;
                 const playerBaseCols = 2;
                 const gridPositionOffsets = [];
+                const leftPlayerBaseOffsets = [];
+                const rightPlayerBaseOffsets = [];
 
                 const leftPlayerDice = [];
                 const rightPlayerDice = [];
@@ -593,8 +642,54 @@
                         const makeDark = (r % 2) == (c % 2);
                         cells.push(new GridCell(c, r, offset, cellType, makeDark));
                         gridPositionOffsets[r][c] = offset;
+                        if (cellType === cellTypes.leftBase || cellType === cellTypes.leftHeal) {
+                            leftPlayerBaseOffsets.push(offset);
+                        }
+                        if (cellType === cellTypes.rightBase || cellType === cellTypes.rightHeal) {
+                            rightPlayerBaseOffsets.push(offset);
+                        }
                     }
                 }
+
+                const anyLeftDiceInPos = (checkPos) => {
+                    for (const die of leftPlayerDice) {
+                        const diePos = die.getOffset();
+                        if (checkPos.x === diePos.x && checkPos.y === diePos.y) {
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+
+                const anyRightDiceInPos = (checkPos) => {
+                    for (const die of rightPlayerDice) {
+                        const diePos = die.getOffset();
+                        if (checkPos.x === diePos.x && checkPos.y === diePos.y) {
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+
+                this.allLeftDiceArePlacedInBase = () => {
+                    for (const die of leftPlayerDice) {
+                        const diePos = die.getOffset();
+                        if (leftPlayerBaseOffsets.find(pos => pos.x === diePos.x && pos.y === diePos.y) === undefined) {
+                            return false;
+                        }
+                    }
+                    return true;
+                };
+
+                this.allRightDiceArePlacedInBase = () => {
+                    for (const die of rightPlayerDice) {
+                        const diePos = die.getOffset();
+                        if (rightPlayerBaseOffsets.find(pos => pos.x === diePos.x && pos.y === diePos.y) === undefined) {
+                            return false;
+                        }
+                    }
+                    return true;
+                };
 
                 this.generatePlayerDice = (leftPlayerArmy, rightPlayerArmy, gameMode) => {
                     //TODO: temporary? We're going to place the armies randomly in the ocean to be placed in their bases.
@@ -641,8 +736,15 @@
                     return null;
                 };
 
+                let mx = 0;
+                let my = 0;
+
                 this.mouseMove = (mouseX, mouseY, x, y, tileSize) => {
-                    //TODO: temp? Just a proof of concept placeholder...
+                    if (movingDieIsBeingDragged) {
+                        mx = mouseX;
+                        my = mouseY;
+                    }
+                    //TODO: cursor style manipulation/replacement?
                     let currentlyHighlighted = null;
                     for (const cell of cells) {
                         currentlyHighlighted ??= cell.checkHover(mouseX, mouseY, x, y, tileSize);
@@ -674,21 +776,100 @@
                     //
                 };
 
+                const isHighlightedDie = (checkDie) => {
+                    if (highlightedDie !== null || movingDie !== null) {
+                        const interestedDie = movingDie === null ? highlightedDie : movingDie;
+                        const highlightLoc = interestedDie.getOffset();
+                        const checkLoc = checkDie.getOffset();
+                        return highlightLoc.x === checkLoc.x && highlightLoc.y === checkLoc.y;
+                    }
+                    return false;
+                };
+
                 const drawLeftPlayer = (ctx, x, y, tileSize) => {
                     for (const left of leftPlayerDice) {
-                        left.draw(ctx, x, y, tileSize);
+                        if (!isHighlightedDie(left)) {
+                            left.draw(ctx, x, y, tileSize);
+                        }
                     }
                 };
 
                 const drawRightPlayer = (ctx, x, y, tileSize) => {
                     for (const right of rightPlayerDice) {
-                        right.draw(ctx, x, y, tileSize);
+                        if (!isHighlightedDie(right)) {
+                            right.draw(ctx, x, y, tileSize);
+                        }
                     }
                 };
 
-                this.draw = (ctx, x, y, tileSize) => {
+                let validMoves = [];
+
+                this.setValidMoves = (gamePhase) => {
+                    validMoves = [];
+                    switch (gamePhase) {
+                        case gamePhases.leftPlaceDie:
+                            validMoves = leftPlayerBaseOffsets.filter(x => !anyLeftDiceInPos(x));
+                            break;
+
+                        case gamePhases.rightPlaceDie:
+                            validMoves = rightPlayerBaseOffsets.filter(x => !anyRightDiceInPos(x));
+                            break;
+                            
+                        case gamePhases.leftPlayerTurn:
+                        case gamePhases.rightPlayerTurn:
+                            //TODO: will depend on the currently selected die
+                            if (highlightedDie !== null) {
+                                //TODO: some kind of "get movement pattern" method?
+                            }
+                            break;
+                    }
+                };
+
+                const isValidMove = (gridTile) => {
+                    for (const pos of validMoves) {
+                        if (gridTile.isSamePosition(pos)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+
+                this.attemptMoveDie = () => {
+                    if (movingDie === null || highlightedCell === null) {
+                        return false;
+                    }
+                    if (!isValidMove(highlightedCell)) {
+                        movingDie.setDown();
+                        movingDie = null;
+                        movingDieIsBeingDragged = false;
+                        return false;
+                    }
+                    const newOffset = highlightedCell.getOffset();
+                    movingDie.moveTo(newOffset.x, newOffset.y, !movingDieIsBeingDragged);
+                    movingDie = null;
+                    movingDieIsBeingDragged = false;
+                    return true;
+                };
+
+                let movingDie = null;
+                let movingDieIsBeingDragged = false;
+
+                this.lockHighlightedDie = (isDragging) => {
+                    if (!this.highlightingDie()) {
+                        return;
+                    }
+                    if (movingDie !== null) {
+                        movingDie.setDown();
+                    }
+                    movingDieIsBeingDragged = isDragging === true;
+                    movingDie = highlightedDie;
+                    movingDie.lift();
+                };
+
+                this.highlightingDie = () => highlightedDie !== null && movingDie === null;
+
+                this.draw = (ctx, x, y, tileSize, showValidMoves) => {
                     //TODO: Grid needs different layers beyond the tiles/cells.
-                    //in particular, any die that is traveling needs to be drawn on top of static dice, even on their own team!
                     const topLayer = [];
                     for (const cell of cells) {
                         const newTopLayerItems = cell.draw(ctx, x, y, tileSize);
@@ -698,6 +879,17 @@
                         top(ctx, x, y, tileSize);
                     }
                     //TODO: should dice go under or over the top layer that comes back from the grid draw call??
+                    if (showValidMoves === true) {
+                        ctx.save();
+                        ctx.fillStyle = (player === playerId.left)
+                        ? themeColors.leftValidMoveHighlight
+                        : themeColors.rightValidMoveHighlight;
+                        for (const pos of validMoves) {
+                            const p = offsetToPixelPosition(pos, x, y, tileSize);
+                            fillTileSquare(ctx, p.x, p.y, tileSize);
+                        }
+                        ctx.restore();
+                    }
                     
                     if (player === playerId.left) {
                         drawRightPlayer(ctx, x, y, tileSize);
@@ -707,19 +899,48 @@
                         drawLeftPlayer(ctx, x, y, tileSize);
                         drawRightPlayer(ctx, x, y, tileSize);
                     }
-                    //TODO: need a way to only draw highlighting when an action can be taken
-                    //eventually valid moves should highlight while invalid moves should not
-                    //also before selecting a piece to move, empty tiles and tiles with enemy pieces should not highlight
-                    if (highlightedCell) {
+                    if (highlightedCell !== null && showValidMoves && isValidMove(highlightedCell)) {
                         highlightedCell.drawHoverHighlight(ctx, x, y, tileSize, player);
+                    }
+                    if (!movingDieIsBeingDragged && highlightedDie !== null) {
+                        highlightedDie.draw(ctx, x, y, tileSize);
+                    }
+                    if (!movingDieIsBeingDragged && movingDie !== null) {
+                        movingDie.draw(ctx, x, y, tileSize);
+                    }
+                    if (movingDieIsBeingDragged && movingDie !== null) {
+                        movingDie.draw(ctx, 0, 0, tileSize, true, mx, my);
                     }
                 };
             }
 
-            function Game(width, height, gridDimension) {
+            function Game(width, height, gridDimension, gameStatusContainer) {
                 let w = width;
                 let h = height;
                 const gridSize = gridDimension;
+                const statusContainer = gameStatusContainer;
+                const container = createElement('div', { 'style': `width:100%;display:flex;flex-direction:row;justify-content:space-between;flex-wrap:wrap;` }, null);
+                statusContainer.appendChild(container);
+                const statusOutputs = {
+                    gameMode: 'Game Mode',
+                    gamePhase: 'Game Phase',
+                    playerTurn: 'Player Turn',
+                    //TODO: have the Grid supply the army information
+                    //leftPlayerStatus: `${playerNames.left} Army Status`,
+                    //rightPlayerStatus: `${playerNames.right} Army Status`,
+                };
+
+                for (const outputId in statusOutputs) {
+                    const fs = makeFieldset(statusOutputs[outputId]);
+                    statusOutputs[outputId] = new SimpleTextOutput(fs);
+                    container.appendChild(fs);
+                }
+
+                const updateStatusDisplay = () => {
+                    statusOutputs.gameMode.updateText(gameModes[gameMode]);
+                    statusOutputs.gamePhase.updateText(gamePhase);
+                    statusOutputs.playerTurn.updateText(playerNames[currentPlayerTurn]);
+                };
 
                 const x = () => w / 2;
                 const y = () => h / 2;
@@ -729,18 +950,45 @@
 
                 let gameMode = '';
                 let gamePhase = gamePhases.setup;
+                let currentPlayerTurn = '';
 
                 const setGamePhase = (newGamePhase) => {
                     gamePhase = newGamePhase;
                     switch (gamePhase) {
                         case gamePhases.leftPlaceDie:
                         case gamePhases.leftPlayerTurn:
-                            grid.setPlayer(playerId.left);
+                            currentPlayerTurn = playerId.left;
                             break;
                             
                         case gamePhases.rightPlaceDie:
                         case gamePhases.rightPlayerTurn:
-                            grid.setPlayer(playerId.right);
+                            currentPlayerTurn = playerId.right;
+                            break;
+                    }
+                    grid.setPlayer(currentPlayerTurn);
+                    grid.setValidMoves(gamePhase);
+                    updateStatusDisplay();
+                };
+
+                const changeGamePhase = () => {
+                    const currentGamePhase = gamePhase;
+                    switch (currentGamePhase) {
+                        case gamePhases.leftPlaceDie:
+                            if (!grid.allRightDiceArePlacedInBase()) {
+                                setGamePhase(gamePhases.rightPlaceDie);
+                            }
+                            else if (grid.allLeftDiceArePlacedInBase()) {
+                                setGamePhase(gamePhases.rightPlayerTurn); //TODO: who really goes first?
+                            }
+                            break;
+
+                        case gamePhases.rightPlaceDie:
+                            if (!grid.allLeftDiceArePlacedInBase()) {
+                                setGamePhase(gamePhases.leftPlaceDie);
+                            }
+                            else if (grid.allRightDiceArePlacedInBase()) {
+                                setGamePhase(gamePhases.rightPlayerTurn); //TODO: who really goes first?
+                            }
                             break;
                     }
                 };
@@ -752,13 +1000,42 @@
                     setGamePhase(gamePhases.rightPlaceDie);
                 };
 
+                const mouseStates = {
+                    idle: 'idle',
+                    down: 'down',
+                    dragging: 'dragging',
+                };
+                let mouseState = mouseStates.idle;
+                let showValidMoves = false;
+
                 this.mouseEvent = (mouseX, mouseY, eventType) => {
+                    const highlightingDie = grid.highlightingDie();
+                    let changePhase = false;
                     switch (eventType) {
-                        case 'click':
-                            //TODO: left click
-                            //If something was already highlighted (identified as the item the mouse is over)
-                            //maybe just have that item activate after confirming that the new coordinate is still
-                            //inside?
+                        case 'mousedown':
+                            mouseState = mouseStates.down;
+                            showValidMoves = false;
+                            break;
+
+                        case 'mouseup':
+                            if (mouseState === mouseStates.down) {
+                                mouseState = mouseStates.idle;
+                                if (highlightingDie) {
+                                    showValidMoves = true;
+                                    grid.lockHighlightedDie(false);
+                                }
+                                else {
+                                    changePhase = grid.attemptMoveDie();
+                                    showValidMoves = false;
+                                }
+                                //console.log('click event'); //put into click to place mode
+                            }
+                            if (mouseState === mouseStates.dragging) {
+                                mouseState = mouseStates.idle;
+                                changePhase = grid.attemptMoveDie();
+                                showValidMoves = false;
+                                //console.log('end drag');
+                            }
                             break;
 
                         case 'contextmenu':
@@ -766,13 +1043,22 @@
                             break;
 
                         case 'mousemove':
-                            //TODO: pass the mouse position around looking for something to highlight?
+                            //TODO: might want to only begin drag if mouse has been held a certain amount of time or if it travels a minimum distance.
+                            if (highlightingDie && mouseState === mouseStates.down) {
+                                mouseState = mouseStates.dragging;
+                                showValidMoves = true;
+                                grid.lockHighlightedDie(true);
+                                //console.log('drag event begin');
+                            }
                             grid.mouseMove(mouseX, mouseY, x(), y(), pxTileSize());
                             break;
 
                         default:
                             //TODO: lol nothing? WHO KNOWS?!?
                             console.log(eventType);
+                    }
+                    if (changePhase) {
+                        changeGamePhase();
                     }
                 };
 
@@ -791,7 +1077,7 @@
                     ctx.clearRect(0, 0, w, h);
                     ctx.fillStyle = themeColors.boardBorderColor;
                     ctx.fillRect(cx - p, cy - p, p * 2, p * 2);
-                    grid.draw(ctx, cx, cy, tileSize);
+                    grid.draw(ctx, cx, cy, tileSize, showValidMoves);
                 };
             }
 
@@ -1047,19 +1333,35 @@
                 };
             }
 
+            function SimpleTextOutput(parent) {
+                let value = ``;
+                const me = createElement('span', {}, value);
+                parent.appendChild(me);
+
+                this.updateText = (newValue) => {
+                    if (newValue !== value) {
+                        value = newValue;
+                        me.innerHTML = value;
+                    }
+                };
+            }
+
             const gameDiv = createElement('div', {'style': `width:${gameWidth}px;height:100%;padding:0px;margin:0px auto;display:flex;flex-wrap:wrap;flex-direction:column;`}, null);
             document.body.appendChild(gameDiv);
 
             const canvas = createElement('canvas', {'width': gameWidth, 'height': gameHeight}, null);
-            canvas.addEventListener('click', gameMouseEvent, false);
+            //canvas.addEventListener('click', gameMouseEvent, false);
             canvas.addEventListener('mousemove', gameMouseEvent, false);
+            canvas.addEventListener('mousedown', gameMouseEvent, false);
+            canvas.addEventListener('mouseup', gameMouseEvent, false);
             canvas.addEventListener('contextmenu', gameMouseEvent, false);
             const ctx = canvas.getContext('2d');
             gameDiv.appendChild(canvas);
 
-            //TODO: also need in-game component (at least for outputting game events/details)
             const gameSetupControls = makeFieldset('Game Setup');
             const setupManager = new GameSetupManager(gameSetupControls, finishSetup);
+
+            const gameOutput = makeFieldset('Game Status');
 
             function gameMouseEvent(evt) {
                 if (game) {
@@ -1086,10 +1388,9 @@
             //this will require never storing pixel coordinates though, so need to factor out the game x,y coords and the tileSize
             //and pass those values in for every draw call, plus we'll need a way to convert mouse position into the same offset system for the tiles
             function startNewGame() {
-                game = new Game(gameWidth, gameHeight, gameGridSize);
+                game = new Game(gameWidth, gameHeight, gameGridSize, gameOutput);
                 //TODO: only append if gamestate is in setup?
                 gameDiv.appendChild(gameSetupControls);
-                //on submit with the start buton, do this:
                 lastUpdate = Date.now();
                 animateGame();
             }
@@ -1098,7 +1399,7 @@
                 if (setupManager.isValidSetup()) {
                     gameDiv.removeChild(gameSetupControls);
                     game.setup(setupManager.getCurrentGameMode(), setupManager.getLeftArmy(), setupManager.getRightArmy());
-                    //TODO: need controls for in-game?
+                    gameDiv.appendChild(gameOutput);
                 }
             }
 
