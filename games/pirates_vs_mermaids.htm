@@ -10,7 +10,7 @@
             //TODO: it's getting kind of long... maybe start thinking about separate files?
             /*******************
              * Alright, here's how this is going to go:
-             * D4: (spy) move 3 spaces in any direction and can jump over other pieces. deals its health in damage even if it dies.
+             * D4: (spy) move 3 spaces in any? (limit to diagonals?) direction and can jump over other pieces. deals its health in damage even if it dies.
              * D6: (grunt) move 2 spaces in any direction.
              * D12: (general? commander?) take up to 5 moves during a turn, can change directions while moving but cannot jump over other pieces.
              * D20: (armored unit) move 1 space forward/back/left/right. failed attacks simply mean the die does not move. only removed from the board by failing to defend.
@@ -122,16 +122,178 @@
                 rightSpecialD12: 12,
             };
 
+            function validMove(xPos, yPos, isAnAttack) {
+                return {
+                    x: xPos,
+                    y: yPos,
+                    isAttack: isAnAttack,
+                };
+            }
+
+            function addMove(validMoves, newMove) {
+                if (!validMoves.find(m => m.x === newMove.x && m.y === newMove.y)) {
+                    validMoves.push(newMove);
+                }
+            }
+
+            function evalPosition(validMoves, nx, ny, myValue, enemyPositions, friendlyPositions, validBoardPosEvaluation, canPassToken, canAttackLosingBattle) {
+                const enemy = enemyPositions.find(e => e.x === nx && e.y === ny);
+                if (enemy && (enemy.value <= myValue || canAttackLosingBattle)) {
+                    const attackMove = validMove(nx, ny, true);
+                    if (!validBoardPosEvaluation(attackMove)) {
+                        return false;
+                    }
+                    addMove(validMoves, attackMove);
+                    if (!canPassToken) {
+                        return false;
+                    }
+                }
+                if (enemy && enemy.value > myValue && !canAttackLosingBattle) {
+                    return canPassToken;
+                }
+                const friend = friendlyPositions.find(f => f.x === nx && f.y === ny);
+                if (friend) {
+                    return canPassToken;
+                }
+                const newMove = validMove(nx, ny);
+                if (!validBoardPosEvaluation(newMove)) {
+                    return false;
+                }
+                addMove(validMoves, newMove);
+                return true;
+            }
+
+            function trueOmnidirectionalMovement(startPos, enemyPositions, friendlyPositions, validBoardPosEvaluation, moveDist, canPassToken, canAttackLosingBattle) {
+                //TODO: recursive flood fill of some kind, ya? Keepin' track of spots already checked, ya?
+                    const validMoves = [];
+                    let x = startPos.x;
+                    let y = startPos.y;
+                    const myValue = startPos.value;
+                    return validMoves;
+            }
+
+            function orthogonalMovement(startPos, enemyPositions, friendlyPositions, validBoardPosEvaluation, moveDist, canPassToken, canAttackLosingBattle) {
+                const validMoves = [];
+                let x = startPos.x;
+                let y = startPos.y;
+                const myValue = startPos.value;
+
+                //right
+                for (let ox = 1; ox <= moveDist; ox++) {
+                    const nx = x + ox;
+                    const ny = y;
+                    if (!evalPosition(validMoves, nx, ny, myValue, enemyPositions, friendlyPositions, validBoardPosEvaluation, canPassToken, canAttackLosingBattle)) {
+                        break;
+                    }
+                }
+                
+                //left
+                for (let ox = -1; ox >= -moveDist; ox--) {
+                    const nx = x + ox;
+                    const ny = y;
+                    if (!evalPosition(validMoves, nx, ny, myValue, enemyPositions, friendlyPositions, validBoardPosEvaluation, canPassToken, canAttackLosingBattle)) {
+                        break;
+                    }
+                }
+                
+                //down
+                for (let oy = 1; oy <= moveDist; oy++) {
+                    const nx = x;
+                    const ny = y + oy;
+                    if (!evalPosition(validMoves, nx, ny, myValue, enemyPositions, friendlyPositions, validBoardPosEvaluation, canPassToken, canAttackLosingBattle)) {
+                        break;
+                    }
+                }
+                
+                //up
+                for (let oy = -1; oy >= -moveDist; oy--) {
+                    const nx = x;
+                    const ny = y + oy;
+                    if (!evalPosition(validMoves, nx, ny, myValue, enemyPositions, friendlyPositions, validBoardPosEvaluation, canPassToken, canAttackLosingBattle)) {
+                        break;
+                    }
+                }
+
+                return validMoves;
+            }
+
+            function diagonalMovement(startPos, enemyPositions, friendlyPositions, validBoardPosEvaluation, moveDist, canPassToken, canAttackLosingBattle) {
+                const validMoves = [];
+                let x = startPos.x;
+                let y = startPos.y;
+                const myValue = startPos.value;
+
+                //down/right
+                for (let o = 1; o <= moveDist; o++) {
+                    const nx = x + o;
+                    const ny = y + o;
+                    if (!evalPosition(validMoves, nx, ny, myValue, enemyPositions, friendlyPositions, validBoardPosEvaluation, canPassToken, canAttackLosingBattle)) {
+                        break;
+                    }
+                }
+
+                //up/left
+                for (let o = 1; o <= moveDist; o++) {
+                    const nx = x - o;
+                    const ny = y - o;
+                    if (!evalPosition(validMoves, nx, ny, myValue, enemyPositions, friendlyPositions, validBoardPosEvaluation, canPassToken, canAttackLosingBattle)) {
+                        break;
+                    }
+                }
+
+                //up/right
+                for (let o = 1; o <= moveDist; o++) {
+                    const nx = x + o;
+                    const ny = y - o;
+                    if (!evalPosition(validMoves, nx, ny, myValue, enemyPositions, friendlyPositions, validBoardPosEvaluation, canPassToken, canAttackLosingBattle)) {
+                        break;
+                    }
+                }
+
+                //down/right
+                for (let o = 1; o <= moveDist; o++) {
+                    const nx = x - o;
+                    const ny = y + o;
+                    if (!evalPosition(validMoves, nx, ny, myValue, enemyPositions, friendlyPositions, validBoardPosEvaluation, canPassToken, canAttackLosingBattle)) {
+                        break;
+                    }
+                }
+
+                return validMoves;
+            }
+
+            function MovementEvaluator(dist, canFly, canAttackUp, movementFunction) {
+                const moveDist = dist;
+                const canPassToken = canFly === true;
+                const canAttackLosingBattle = canAttackUp === true;
+                this.getMoves = (startPos, enemyPositions, friendlyPositions, validBoardPosEvaluator) =>
+                    movementFunction(startPos, enemyPositions, friendlyPositions, validBoardPosEvaluator, moveDist, canPassToken, canAttackLosingBattle);
+            }
+
+            const movementTypes = {
+                orthogonal: (dist, canFly, canAttackUp) => new MovementEvaluator(dist, canFly, canAttackUp, orthogonalMovement),
+                diagonal: (dist, canFly, canAttackUp) => new MovementEvaluator(dist, canFly, canAttackUp, diagonalMovement),
+                trueOmnidirectional: (dist, canFly, canAttackUp) => new MovementEvaluator(dist, canFly, canAttackUp, trueOmnidirectionalMovement),
+            };
+
+            const dieMovements = {
+                D4: [movementTypes.diagonal(3, true, true)],
+                D6: [movementTypes.orthogonal(2), movementTypes.diagonal(2)],
+                D12: [movementTypes.trueOmnidirectional(5)],
+                D20: [movementTypes.orthogonal(1)],
+                SpecialD12: [movementTypes.trueOmnidirectional(5), movementTypes.diagonal(99), movementTypes.orthogonal(99)],
+            };
+
             const dieBuilders = {
-                leftD4: (o) => new D(dieFaces.leftD4, o, themeColors.leftDiceColor, themeColors.leftDiceTextColor),
-                leftD6: (o) => new D(dieFaces.leftD6, o, themeColors.leftDiceColor, themeColors.leftDiceTextColor),
-                leftD12: (o) => new D(dieFaces.leftD12, o, themeColors.leftDiceColor, themeColors.leftDiceTextColor),
-                leftD20: (o) => new D(dieFaces.leftD20, o, themeColors.leftDiceColor, themeColors.leftDiceTextColor),
+                leftD4: (o) => new D(dieFaces.leftD4, o, themeColors.leftDiceColor, themeColors.leftDiceTextColor, false),
+                leftD6: (o) => new D(dieFaces.leftD6, o, themeColors.leftDiceColor, themeColors.leftDiceTextColor, false),
+                leftD12: (o) => new D(dieFaces.leftD12, o, themeColors.leftDiceColor, themeColors.leftDiceTextColor, false),
+                leftD20: (o) => new D(dieFaces.leftD20, o, themeColors.leftDiceColor, themeColors.leftDiceTextColor, false),
                 leftSpecialD12: (o) => new D(dieFaces.leftD12, o, themeColors.leftSpecialDiceColor, themeColors.leftDiceTextColor, true),
-                rightD4: (o) => new D(dieFaces.rightD4, o, themeColors.rightDiceColor, themeColors.rightDiceTextColor),
-                rightD6: (o) => new D(dieFaces.rightD6, o, themeColors.rightDiceColor, themeColors.rightDiceTextColor),
-                rightD12: (o) => new D(dieFaces.rightD12, o, themeColors.rightDiceColor, themeColors.rightDiceTextColor),
-                rightD20: (o) => new D(dieFaces.rightD20, o, themeColors.rightDiceColor, themeColors.rightDiceTextColor),
+                rightD4: (o) => new D(dieFaces.rightD4, o, themeColors.rightDiceColor, themeColors.rightDiceTextColor, false),
+                rightD6: (o) => new D(dieFaces.rightD6, o, themeColors.rightDiceColor, themeColors.rightDiceTextColor, false),
+                rightD12: (o) => new D(dieFaces.rightD12, o, themeColors.rightDiceColor, themeColors.rightDiceTextColor, false),
+                rightD20: (o) => new D(dieFaces.rightD20, o, themeColors.rightDiceColor, themeColors.rightDiceTextColor, false),
                 rightSpecialD12: (o) => new D(dieFaces.rightD12, o, themeColors.rightSpecialDiceColor, themeColors.rightDiceTextColor, true),
             };
 
@@ -192,8 +354,9 @@
                 defaultHoverHighlight: 'rgba(255,255,100,.75)',
                 leftHoverHighlight: 'rgba(255,255,255,.75)',
                 rightHoverHighlight: 'rgba(255,186,186,.85)',
-                leftValidMoveHighlight: 'rgba(255,255,255,.25)',
-                rightValidMoveHighlight: 'rgba(255,186,186,.35)',
+                leftValidMoveHighlight: 'rgba(255,255,255,.65)',
+                rightValidMoveHighlight: 'rgba(255,186,186,.75)',
+                attackValidMoveHighlight: 'rgba(255,0,0,.75)',
                 defaultDiceOutline: 'rgb(0,0,0)',
                 highlightedDiceOutline: 'rgb(100,100,20)',
                 armySizeBarBackground: 'rgba(0,0,0,.25)',
@@ -352,10 +515,14 @@
                 const selectedScale = 1.25;
                 const liftedScale = 1.5;
                 const iAmSpecial = isSpecial === true;
-                const name = 'D' + value; 
+                const maxValue = value;
+                const name = 'D' + value;
+                const getMovementType = () => isSpecial ? 'Special' + name : name;
                 this.getType = () => name;
                 let displayValue = 1;
                 this.getFaceValue = () => displayValue;
+                this.heal = () => displayValue = maxValue;
+                this.dealDamage = (dmg) => displayValue -= dmg;
 
                 let isHighlighted = false;
                 this.highlight = () => isHighlighted = true;
@@ -382,6 +549,7 @@
                     return {
                         x: offset.x,
                         y: offset.y,
+                        value: displayValue,
                     };
                 };
 
@@ -414,6 +582,17 @@
                         offset.y = newY;
                         isLifted = false;
                     }
+                };
+
+                this.getValidMoves = (enemyPositions, friendlyPositions, validBoardPosEvaluator) => {
+                    const validMoves = [];
+                    for (const evaluator of dieMovements[getMovementType()]) {
+                        const newMoves = evaluator
+                            .getMoves(this.getOffset(), enemyPositions, friendlyPositions, validBoardPosEvaluator)
+                            .filter(move => validMoves.filter(m => move.x === m.x && move.y === m.y).length === 0);
+                        validMoves.push(...newMoves);
+                    }
+                    return validMoves;
                 };
 
                 this.roll = () => {
@@ -465,7 +644,7 @@
                 };
             }
 
-            function GridCell(gX, gY, gridOffset, cellType, makeDark) {
+            function GridCell(gX, gY, gridOffset, myCellType, makeDark) {
                 const col = gX;
                 const row = gY;
                 const offset = {
@@ -473,6 +652,7 @@
                     y: gridOffset.y,
                 };
                 const dark = makeDark;
+                const cellType = myCellType;
 
                 const pos = (cx, cy, tileSize) => offsetToPixelPosition(offset, cx, cy, tileSize);
 
@@ -486,6 +666,9 @@
                     const withinVertical = py > top && py < top + tileSize;
                     return withinHorizontal && withinVertical;
                 };
+
+                this.isLeftHeal = () => cellType === cellTypes.leftHeal;
+                this.isRightHeal = () => cellType === cellTypes.rightHeal;
 
                 this.isSamePosition = (gridOffset) => offset.x === gridOffset.x && offset.y === gridOffset.y;
                 this.getOffset = () => {
@@ -604,9 +787,15 @@
                 const leftPlayerCaptureOffsets = [];
                 const rightPlayerBaseOffsets = [];
                 const rightPlayerCaptureOffsets = [];
+                let minOffsetX = numCols;
+                let maxOffsetX = 0;
+                let minOffsetY = numRows;
+                let maxOffsetY = 0;
 
                 const leftPlayerDice = [];
+                const leftPlayerCapturedDice = [];
                 const rightPlayerDice = [];
+                const rightPlayerCapturedDice = [];
                 let player = '';
 
                 this.setPlayer = (newPlayer) => {
@@ -650,12 +839,17 @@
                         if (cellType === cellTypes.rightBase || cellType === cellTypes.rightHeal) {
                             rightPlayerBaseOffsets.push(offset);
                         }
+                        
+                        //Yes, I realize this is entirely unnecessary and the values can just be calculated.
+                        //Maybe I'm doing it just for show. Maybe I'm doing it out of laziness. It's not like
+                        //this code runs every frame. :)
+                        minOffsetX = Math.min(minOffsetX, offset.x);
+                        maxOffsetX = Math.max(maxOffsetX, offset.x);
+                        minOffsetY = Math.min(minOffsetY, offset.y);
+                        maxOffsetY = Math.max(maxOffsetY, offset.y);
                     }
                 }
 
-                //TODO: any die that... dies (lol) gets removed from the player army and placed in a death position
-                //based on these arrays of positions: leftPlayerDeathOffsets and rightPlayerDeathOffsets
-                //I think if left captures right, the captured die should be removed from right and added to left
                 const captureOffsetStep = 1/playerBaseCols;
                 const startingLeftCaptureOffset = gridPositionOffsets[0][0];
                 let capturePosX = startingLeftCaptureOffset.x - 1;
@@ -815,25 +1009,14 @@
                     return false;
                 };
 
-                const drawLeftPlayer = (ctx, x, y, tileSize) => {
-                    for (const left of leftPlayerDice) {
-                        if (!isHighlightedDie(left)) {
-                            left.draw(ctx, x, y, tileSize);
-                        }
-                    }
-                };
-
-                const drawRightPlayer = (ctx, x, y, tileSize) => {
-                    for (const right of rightPlayerDice) {
-                        if (!isHighlightedDie(right)) {
-                            right.draw(ctx, x, y, tileSize);
-                        }
-                    }
-                };
-
                 let validMoves = [];
+                const validBoardPosEval = (pos) => 
+                    pos.x >= minOffsetX
+                    && pos.x <= maxOffsetX
+                    && pos.y >= minOffsetY
+                    && pos.y <= maxOffsetY;
 
-                this.setValidMoves = (gamePhase) => {
+                const setValidMoves = (gamePhase) => {
                     validMoves = [];
                     switch (gamePhase) {
                         case gamePhases.leftPlaceDie:
@@ -845,13 +1028,26 @@
                             break;
                             
                         case gamePhases.leftPlayerTurn:
+                            if (movingDie !== null) {
+                                validMoves = movingDie.getValidMoves(rightPlayerDice.map(d => d.getOffset()), leftPlayerDice.map(d => d.getOffset()), validBoardPosEval);
+                            }
+                            break;
+
                         case gamePhases.rightPlayerTurn:
-                            //TODO: will depend on the currently selected die
-                            if (highlightedDie !== null) {
-                                //TODO: some kind of "get movement pattern" method?
+                            if (movingDie !== null) {
+                                validMoves = movingDie.getValidMoves(leftPlayerDice.map(d => d.getOffset()), rightPlayerDice.map(d => d.getOffset()), validBoardPosEval);
                             }
                             break;
                     }
+                };
+
+                const getValidMove = (gridTile) => {
+                    for (const pos of validMoves) {
+                        if (gridTile.isSamePosition(pos)) {
+                            return pos;
+                        }
+                    }
+                    return null;
                 };
 
                 const isValidMove = (gridTile) => {
@@ -861,6 +1057,16 @@
                         }
                     }
                     return false;
+                };
+
+                const indexOf = (armyDice, searchLoc) => {
+                    for (let i = 0; i < armyDice.length; i++) {
+                        const compareLoc = armyDice[i].getOffset();
+                        if (compareLoc.x === searchLoc.x && compareLoc.y === searchLoc.y) {
+                            return i;
+                        }
+                    }
+                    return -1;
                 };
 
                 this.attemptMoveDie = () => {
@@ -874,6 +1080,97 @@
                         return false;
                     }
                     const newOffset = highlightedCell.getOffset();
+                    const isAttack = getValidMove(highlightedCell).isAttack === true;
+                    if (isAttack) {
+                        if (player === playerId.left) {
+                            const victimIndex = indexOf(rightPlayerDice, newOffset);
+                            if (victimIndex > -1 && rightPlayerDice[victimIndex].getFaceValue() < movingDie.getFaceValue()) {
+                                const victim = rightPlayerDice.splice(victimIndex, 1)[0];
+                                const jailLocation = leftPlayerCaptureOffsets.splice(0, 1)[0];
+                                victim.moveTo(jailLocation.x, jailLocation.y);
+                                leftPlayerCapturedDice.push(victim);
+                            }
+                            else if (victimIndex > -1 && rightPlayerDice[victimIndex].getFaceValue() > movingDie.getFaceValue()) {
+                                //TODO: should we trust that it should be an attack or verify that the attacker can do this?
+                                //out of laziness, right now we'll trust the move data lol
+                                rightPlayerDice[victimIndex].dealDamage(movingDie.getFaceValue());
+                                const attackerIndex = indexOf(leftPlayerDice, movingDie.getOffset());
+                                const deadAttacker = leftPlayerDice.splice(attackerIndex, 1)[0];
+                                const jailLocation = rightPlayerCaptureOffsets.splice(0, 1)[0];
+                                newOffset.x = jailLocation.x;
+                                newOffset.y = jailLocation.y;
+                                rightPlayerCapturedDice.push(deadAttacker);
+                            }
+                            else if (victimIndex > -1 && rightPlayerDice[victimIndex].getFaceValue() === movingDie.getFaceValue()) {
+                                //TODO: add an interface and animate this maybe?
+                                //roll the dice and whoever loses loses
+                                while (rightPlayerDice[victimIndex].getFaceValue() === movingDie.getFaceValue()) {
+                                    rightPlayerDice[victimIndex].roll()
+                                    movingDie.roll()
+                                    if (rightPlayerDice[victimIndex].getFaceValue() > movingDie.getFaceValue()) {
+                                        //moving die loses
+                                        const attackerIndex = indexOf(leftPlayerDice, movingDie.getOffset());
+                                        const deadAttacker = leftPlayerDice.splice(attackerIndex, 1)[0];
+                                        const jailLocation = rightPlayerCaptureOffsets.splice(0, 1)[0];
+                                        newOffset.x = jailLocation.x;
+                                        newOffset.y = jailLocation.y;
+                                        rightPlayerCapturedDice.push(deadAttacker);
+                                    }
+                                    else if (rightPlayerDice[victimIndex].getFaceValue() < movingDie.getFaceValue()) {
+                                        //attacked die loses
+                                        const victim = rightPlayerDice.splice(victimIndex, 1)[0];
+                                        const jailLocation = leftPlayerCaptureOffsets.splice(0, 1)[0];
+                                        victim.moveTo(jailLocation.x, jailLocation.y);
+                                        leftPlayerCapturedDice.push(victim);
+                                    }
+                                }
+                            }
+                        }
+                        if (player === playerId.right) {
+                            const victimIndex = indexOf(leftPlayerDice, newOffset);
+                            if (victimIndex > -1 && leftPlayerDice[victimIndex].getFaceValue() < movingDie.getFaceValue()) {
+                                const victim = leftPlayerDice.splice(victimIndex, 1)[0];
+                                const jailLocation = rightPlayerCaptureOffsets.splice(0, 1)[0];
+                                victim.moveTo(jailLocation.x, jailLocation.y);
+                                rightPlayerCapturedDice.push(victim);
+                            }
+                            else if (victimIndex > -1 && leftPlayerDice[victimIndex].getFaceValue() > movingDie.getFaceValue()) {
+                                //TODO: should we trust that it should be an attack or verify that the attacker can do this?
+                                //out of laziness, right now we'll trust the move data lol
+                                leftPlayerDice[victimIndex].dealDamage(movingDie.getFaceValue());
+                                const attackerIndex = indexOf(rightPlayerDice, movingDie.getOffset());
+                                const deadAttacker = rightPlayerDice.splice(attackerIndex, 1)[0];
+                                const jailLocation = leftPlayerCaptureOffsets.splice(0, 1)[0];
+                                newOffset.x = jailLocation.x;
+                                newOffset.y = jailLocation.y;
+                                leftPlayerCapturedDice.push(deadAttacker);
+                            }
+                            else if (victimIndex > -1 && leftPlayerDice[victimIndex].getFaceValue() === movingDie.getFaceValue()) {
+                                //TODO: add an interface and animate this maybe?
+                                //roll the dice and whoever loses loses
+                                while (leftPlayerDice[victimIndex].getFaceValue() === movingDie.getFaceValue()) {
+                                    leftPlayerDice[victimIndex].roll()
+                                    movingDie.roll()
+                                    if (leftPlayerDice[victimIndex].getFaceValue() > movingDie.getFaceValue()) {
+                                        //moving die loses
+                                        const attackerIndex = indexOf(rightPlayerDice, movingDie.getOffset());
+                                        const deadAttacker = rightPlayerDice.splice(attackerIndex, 1)[0];
+                                        const jailLocation = leftPlayerCaptureOffsets.splice(0, 1)[0];
+                                        newOffset.x = jailLocation.x;
+                                        newOffset.y = jailLocation.y;
+                                        leftPlayerCapturedDice.push(deadAttacker);
+                                    }
+                                    else if (leftPlayerDice[victimIndex].getFaceValue() < movingDie.getFaceValue()) {
+                                        //attacked die loses
+                                        const victim = leftPlayerDice.splice(victimIndex, 1)[0];
+                                        const jailLocation = rightPlayerCaptureOffsets.splice(0, 1)[0];
+                                        victim.moveTo(jailLocation.x, jailLocation.y);
+                                        rightPlayerCapturedDice.push(victim);
+                                    }
+                                }
+                            }
+                        }
+                    }
                     movingDie.moveTo(newOffset.x, newOffset.y, !movingDieIsBeingDragged);
                     movingDie = null;
                     movingDieIsBeingDragged = false;
@@ -883,7 +1180,7 @@
                 let movingDie = null;
                 let movingDieIsBeingDragged = false;
 
-                this.lockHighlightedDie = (isDragging) => {
+                this.lockHighlightedDie = (isDragging, gamePhase) => {
                     if (!this.highlightingDie()) {
                         return;
                     }
@@ -893,12 +1190,47 @@
                     movingDieIsBeingDragged = isDragging === true;
                     movingDie = highlightedDie;
                     movingDie.lift();
+                    setValidMoves(gamePhase);
                 };
 
                 this.highlightingDie = () => highlightedDie !== null && movingDie === null;
 
+                this.evaluateCellEffects = () => {
+                    for (const cell of cells) {
+                        const leftDie = leftPlayerDice.find(d => cell.isSamePosition(d.getOffset()));
+                        const rightDie = rightPlayerDice.find(d => cell.isSamePosition(d.getOffset()));
+                        if (leftDie && cell.isLeftHeal()) {
+                            leftDie.heal();
+                        }
+                        if (rightDie && cell.isRightHeal()) {
+                            rightDie.heal();
+                        }
+                    }
+                };
+
+                const drawLeftPlayer = (ctx, x, y, tileSize) => {
+                    for (const captive of leftPlayerCapturedDice) {
+                        captive.draw(ctx, x, y, tileSize);
+                    }
+                    for (const left of leftPlayerDice) {
+                        if (!isHighlightedDie(left)) {
+                            left.draw(ctx, x, y, tileSize);
+                        }
+                    }
+                };
+
+                const drawRightPlayer = (ctx, x, y, tileSize) => {
+                    for (const captive of rightPlayerCapturedDice) {
+                        captive.draw(ctx, x, y, tileSize);
+                    }
+                    for (const right of rightPlayerDice) {
+                        if (!isHighlightedDie(right)) {
+                            right.draw(ctx, x, y, tileSize);
+                        }
+                    }
+                };
+
                 this.draw = (ctx, x, y, tileSize, showValidMoves) => {
-                    //TODO: Grid needs different layers beyond the tiles/cells.
                     const topLayer = [];
                     for (const cell of cells) {
                         const newTopLayerItems = cell.draw(ctx, x, y, tileSize);
@@ -910,12 +1242,20 @@
                     //TODO: should dice go under or over the top layer that comes back from the grid draw call??
                     if (showValidMoves === true) {
                         ctx.save();
-                        ctx.fillStyle = (player === playerId.left)
-                        ? themeColors.leftValidMoveHighlight
-                        : themeColors.rightValidMoveHighlight;
+                        const defaultFillStyle = (player === playerId.left)
+                            ? themeColors.leftValidMoveHighlight
+                            : themeColors.rightValidMoveHighlight;
+                        ctx.fillStyle = defaultFillStyle;
                         for (const pos of validMoves) {
+                            const isAttack = pos.hasOwnProperty('isAttack') && pos.isAttack === true;
+                            if (isAttack) {
+                                ctx.fillStyle = themeColors.attackValidMoveHighlight;
+                            }
                             const p = offsetToPixelPosition(pos, x, y, tileSize);
                             fillTileSquare(ctx, p.x, p.y, tileSize);
+                            if (isAttack) {
+                                ctx.fillStyle = defaultFillStyle;
+                            }
                         }
                         ctx.restore();
                     }
@@ -985,17 +1325,24 @@
                     gamePhase = newGamePhase;
                     switch (gamePhase) {
                         case gamePhases.leftPlaceDie:
+                            currentPlayerTurn = playerId.left;
+                            break;
+
                         case gamePhases.leftPlayerTurn:
+                            grid.evaluateCellEffects();
                             currentPlayerTurn = playerId.left;
                             break;
                             
                         case gamePhases.rightPlaceDie:
+                            currentPlayerTurn = playerId.right;
+                            break;
+
                         case gamePhases.rightPlayerTurn:
+                            grid.evaluateCellEffects();
                             currentPlayerTurn = playerId.right;
                             break;
                     }
                     grid.setPlayer(currentPlayerTurn);
-                    grid.setValidMoves(gamePhase);
                     updateStatusDisplay();
                 };
 
@@ -1018,6 +1365,16 @@
                             else if (grid.allRightDiceArePlacedInBase()) {
                                 setGamePhase(gamePhases.rightPlayerTurn); //TODO: who really goes first?
                             }
+                            break;
+
+                        case gamePhases.leftPlayerTurn:
+                            //TODO: based on gamemode, check for win condition
+                            setGamePhase(gamePhases.rightPlayerTurn);
+                            break;
+
+                        case gamePhases.rightPlayerTurn:
+                            //TODO: based on gamemode, check for win condition
+                            setGamePhase(gamePhases.leftPlayerTurn);
                             break;
                     }
                 };
@@ -1051,7 +1408,7 @@
                                 mouseState = mouseStates.idle;
                                 if (highlightingDie) {
                                     showValidMoves = true;
-                                    grid.lockHighlightedDie(false);
+                                    grid.lockHighlightedDie(false, gamePhase);
                                 }
                                 else {
                                     changePhase = grid.attemptMoveDie();
@@ -1076,7 +1433,7 @@
                             if (highlightingDie && mouseState === mouseStates.down) {
                                 mouseState = mouseStates.dragging;
                                 showValidMoves = true;
-                                grid.lockHighlightedDie(true);
+                                grid.lockHighlightedDie(true, gamePhase);
                                 //console.log('drag event begin');
                             }
                             grid.mouseMove(mouseX, mouseY, x(), y(), pxTileSize());
@@ -1092,7 +1449,7 @@
                 };
 
                 this.update = (dt) => {
-                    //TODO: game logic
+                    //TODO: game logic (might just be passing this up to the dice for animation purposes lol)
                     grid.update(dt);
                 };
 
