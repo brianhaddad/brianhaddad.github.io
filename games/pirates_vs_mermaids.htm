@@ -584,7 +584,14 @@
                     };
                 };
 
-                this.getOffset = () => {
+                this.getOffset = (wantTargetPosition) => {
+                    if (animating) {
+                        return {
+                            x: animateTo.x,
+                            y: animateTo.y,
+                            value: displayValue,
+                        };
+                    }
                     return {
                         x: offset.x,
                         y: offset.y,
@@ -949,7 +956,7 @@
 
                 this.allLeftDiceArePlacedInBase = () => {
                     for (const die of leftPlayerDice) {
-                        const diePos = die.getOffset();
+                        const diePos = die.getOffset(true);
                         if (leftPlayerBaseOffsets.find(pos => pos.x === diePos.x && pos.y === diePos.y) === undefined) {
                             return false;
                         }
@@ -959,7 +966,7 @@
 
                 this.allRightDiceArePlacedInBase = () => {
                     for (const die of rightPlayerDice) {
-                        const diePos = die.getOffset();
+                        const diePos = die.getOffset(true);
                         if (rightPlayerBaseOffsets.find(pos => pos.x === diePos.x && pos.y === diePos.y) === undefined) {
                             return false;
                         }
