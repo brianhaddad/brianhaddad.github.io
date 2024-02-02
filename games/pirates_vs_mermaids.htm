@@ -163,19 +163,36 @@
                 return true;
             }
 
+            function floodMoveStep(startPos, enemyPositions, friendlyPositions, validBoardPosEvaluation, moveDist, canPassToken, canAttackLosingBattle, validMoves) {
+                if (moveDist <= 0) {
+                    return;
+                }
+                const x = startPos.x;
+                const y = startPos.y;
+                const myValue = startPos.value;
+                for (let ox = -1; ox <= 1; ox++) {
+                    for (let oy = -1; oy <= 1; oy++) {
+                        const nx = x + ox;
+                        const ny = y + oy;
+                        const newMove = {x: nx, y: ny, value: myValue};
+                        if (validBoardPosEvaluation(newMove)
+                            && evalPosition(validMoves, nx, ny, myValue, enemyPositions, friendlyPositions, validBoardPosEvaluation, canPassToken, canAttackLosingBattle)) {
+                            floodMoveStep(newMove, enemyPositions, friendlyPositions, validBoardPosEvaluation, moveDist - 1, canPassToken, canAttackLosingBattle, validMoves);
+                        }
+                    }
+                }
+            }
+
             function trueOmnidirectionalMovement(startPos, enemyPositions, friendlyPositions, validBoardPosEvaluation, moveDist, canPassToken, canAttackLosingBattle) {
-                //TODO: recursive flood fill of some kind, ya? Keepin' track of spots already checked, ya?
-                    const validMoves = [];
-                    let x = startPos.x;
-                    let y = startPos.y;
-                    const myValue = startPos.value;
-                    return validMoves;
+                const validMoves = [];
+                floodMoveStep(startPos, enemyPositions, friendlyPositions, validBoardPosEvaluation, moveDist, canPassToken, canAttackLosingBattle, validMoves);
+                return validMoves.filter(m => !(m.x === startPos.x && m.y === startPos.y));
             }
 
             function orthogonalMovement(startPos, enemyPositions, friendlyPositions, validBoardPosEvaluation, moveDist, canPassToken, canAttackLosingBattle) {
                 const validMoves = [];
-                let x = startPos.x;
-                let y = startPos.y;
+                const x = startPos.x;
+                const y = startPos.y;
                 const myValue = startPos.value;
 
                 //right
@@ -219,8 +236,8 @@
 
             function diagonalMovement(startPos, enemyPositions, friendlyPositions, validBoardPosEvaluation, moveDist, canPassToken, canAttackLosingBattle) {
                 const validMoves = [];
-                let x = startPos.x;
-                let y = startPos.y;
+                const x = startPos.x;
+                const y = startPos.y;
                 const myValue = startPos.value;
 
                 //down/right
@@ -277,7 +294,7 @@
             };
 
             const dieMovements = {
-                D4: [movementTypes.diagonal(3, true, true)],
+                D4: [movementTypes.orthogonal(1), movementTypes.diagonal(3, true, true)],
                 D6: [movementTypes.orthogonal(2), movementTypes.diagonal(2)],
                 D12: [movementTypes.trueOmnidirectional(5)],
                 D20: [movementTypes.orthogonal(1)],
@@ -341,16 +358,16 @@
                 boardDefaultColor: 'rgb(18,166,236)',
                 leftBaseColor: 'rgb(205,98,49)',
                 leftDiceColor: 'rgb(48,16,32)',
-                leftSpecialDiceColor: 'rgba(48,16,32,.5)',
+                leftSpecialDiceColor: 'rgba(48,16,32,.7)',
                 leftDiceTextColor: 'rgba(255,255,255,.7)',
                 rightBaseColor: 'rgb(255,96,96)',
                 rightDiceColor: 'rgb(46,155,87)',
-                rightSpecialDiceColor: 'rgba(46,155,87,.5)',
+                rightSpecialDiceColor: 'rgba(46,155,87,.7)',
                 rightDiceTextColor: 'rgba(0,0,0,.85)',
-                centerSquareColor: 'rgb(25,67,112)',
-                centerStarColor: 'rgb(255,255,0)',
+                centerSquareColor: 'rgb(105,232,247)',
+                centerStarColor: 'rgb(205,255,208)',
                 lightenColor: 'rgba(255,255,255,.7)',
-                darkenColor: 'rgba(0,0,0,.7)',
+                darkenColor: 'rgba(0,16,0,.7)',
                 defaultHoverHighlight: 'rgba(255,255,100,.75)',
                 leftHoverHighlight: 'rgba(255,255,255,.75)',
                 rightHoverHighlight: 'rgba(255,186,186,.85)',
@@ -371,6 +388,7 @@
                 sparkleColor7: 'rgb(150,150,255)',
             };
 
+            const dieMoveAnimationTime = 500;
             const gameWidth = 800;
             const gameHeight = 800;
             const gameGridSize = 13;
@@ -545,6 +563,27 @@
                     };
                 };
 
+                let animating = false;
+                let animateTime = 0;
+                const animateTo = {x: 0, y: 0};
+                const drawPos = (cx, cy, tileSize) => {
+                    const p = pos(cx, cy, tileSize);
+                    if (!animating) {
+                        return p;
+                    }
+                    const targetPos = offsetToPixelPosition(animateTo, cx, cy, tileSize);
+                    const dx = targetPos.x - p.x;
+                    const dy = targetPos.y - p.y;
+                    const t = 1 - (animateTime/dieMoveAnimationTime);
+                    const f = t * t * (3.0 - 2.0 * t);
+                    
+                    return {
+                        x: p.x + (f * dx),
+                        y: p.y + (f * dy),
+                        r: (tileSize * 2) / 5
+                    };
+                };
+
                 this.getOffset = () => {
                     return {
                         x: offset.x,
@@ -567,9 +606,6 @@
                     effects.push(new SparkleEffect());
                 }
 
-                //TODO: ANIMATE! use a target offset variable...
-                //include an animation pixelspace offset and once the animation is done then
-                //the offset location is updated to the target location
                 this.moveTo = (newX, newY, animateMe) => {
                     if (!animateMe) {
                         offset.x = newX;
@@ -577,10 +613,10 @@
                         isLifted = false;
                     }
                     else {
-                        //TODO: if animateMe is true, set up the animation (won't animate if dragging)
-                        offset.x = newX;
-                        offset.y = newY;
-                        isLifted = false;
+                        animating = true;
+                        animateTime = dieMoveAnimationTime;
+                        animateTo.x = newX;
+                        animateTo.y = newY;
                     }
                 };
 
@@ -599,8 +635,20 @@
                     displayValue = faces[Math.floor(Math.random() * faces.length)];
                 };
 
-                this.draw = (ctx, cx, cy, tileSize, isForcedPosition, forceX, forceY) => {
-                    const p = pos(cx, cy, tileSize);
+                this.update = (dt) => {
+                    if (animating) {
+                        animateTime -= dt;
+                        if (animateTime <= 0) {
+                            animating = false;
+                            offset.x = animateTo.x;
+                            offset.y = animateTo.y;
+                            isLifted = false;
+                        }
+                    }
+                };
+
+                const actuallyDraw = (ctx, cx, cy, tileSize, isForcedPosition, forceX, forceY) => {
+                    const p = drawPos(cx, cy, tileSize);
                     const x = isForcedPosition === true ? forceX : p.x;
                     const y = isForcedPosition === true ? forceY : p.y;
                     const r = p.r;
@@ -641,6 +689,19 @@
                     }
                     drawCenteredBoldText(ctx, displayValue, textColor);
                     ctx.restore();
+                };
+
+                this.draw = (context, centerX, centerY, ts, isForcedPosition, forceX, forceY) => {
+                    const topLayerDrawCalls = [];
+                    if (isLifted) {
+                        topLayerDrawCalls.push((ctx, cx, cy, tileSize) => {
+                            actuallyDraw(ctx, cx, cy, tileSize, isForcedPosition, forceX, forceY);
+                        });
+                    }
+                    else {
+                        actuallyDraw(context, centerX, centerY, ts, isForcedPosition, forceX, forceY);
+                    }
+                    return topLayerDrawCalls;
                 };
             }
 
@@ -742,13 +803,6 @@
                             ctx.fillStyle = themeColors.boardDefaultColor;
                             fillBaseColorRect(ctx, x, y, tileSize);
                     }
-                    //TODO: keep this for effects that need to go over the main board:
-                    //if (hoverHighlighted) {
-                    //    topLayerDrawCalls.push((ctx) => {
-                    //    });
-                    //    topLayerDrawCalls.push((ctx) => {
-                    //    });
-                    //}
                     ctx.restore();
                     return topLayerDrawCalls;
                 };
@@ -914,11 +968,6 @@
                 };
 
                 this.generatePlayerDice = (leftPlayerArmy, rightPlayerArmy, gameMode) => {
-                    //TODO: temporary? We're going to place the armies randomly in the ocean to be placed in their bases.
-                    //The trouble might be detecting when all dice have been placed within their respective base.
-                    //If that becomes too difficult, might need to pivot to just showing the player one of their dice and having them
-                    //click a spot in their base to put it.
-                    //Going with this for now though because it will force me to write the movement code for moving the dice around. :)
                     const offsetPool = [];
                     for (let r = 0; r < rows; r++) {
                         for (let c = playerBaseCols; c < cols - playerBaseCols; c++) {
@@ -996,17 +1045,18 @@
                 };
 
                 this.update = (dt) => {
-                    //
-                };
-
-                const isHighlightedDie = (checkDie) => {
-                    if (highlightedDie !== null || movingDie !== null) {
-                        const interestedDie = movingDie === null ? highlightedDie : movingDie;
-                        const highlightLoc = interestedDie.getOffset();
-                        const checkLoc = checkDie.getOffset();
-                        return highlightLoc.x === checkLoc.x && highlightLoc.y === checkLoc.y;
+                    for (const die of leftPlayerDice) {
+                        die.update(dt);
                     }
-                    return false;
+                    for (const die of leftPlayerCapturedDice) {
+                        die.update(dt);
+                    }
+                    for (const die of rightPlayerDice) {
+                        die.update(dt);
+                    }
+                    for (const die of rightPlayerCapturedDice) {
+                        die.update(dt);
+                    }
                 };
 
                 let validMoves = [];
@@ -1087,7 +1137,7 @@
                             if (victimIndex > -1 && rightPlayerDice[victimIndex].getFaceValue() < movingDie.getFaceValue()) {
                                 const victim = rightPlayerDice.splice(victimIndex, 1)[0];
                                 const jailLocation = leftPlayerCaptureOffsets.splice(0, 1)[0];
-                                victim.moveTo(jailLocation.x, jailLocation.y);
+                                victim.moveTo(jailLocation.x, jailLocation.y, true);
                                 leftPlayerCapturedDice.push(victim);
                             }
                             else if (victimIndex > -1 && rightPlayerDice[victimIndex].getFaceValue() > movingDie.getFaceValue()) {
@@ -1102,7 +1152,6 @@
                                 rightPlayerCapturedDice.push(deadAttacker);
                             }
                             else if (victimIndex > -1 && rightPlayerDice[victimIndex].getFaceValue() === movingDie.getFaceValue()) {
-                                //TODO: add an interface and animate this maybe?
                                 //roll the dice and whoever loses loses
                                 while (rightPlayerDice[victimIndex].getFaceValue() === movingDie.getFaceValue()) {
                                     rightPlayerDice[victimIndex].roll()
@@ -1115,23 +1164,25 @@
                                         newOffset.x = jailLocation.x;
                                         newOffset.y = jailLocation.y;
                                         rightPlayerCapturedDice.push(deadAttacker);
+                                        break;
                                     }
                                     else if (rightPlayerDice[victimIndex].getFaceValue() < movingDie.getFaceValue()) {
                                         //attacked die loses
                                         const victim = rightPlayerDice.splice(victimIndex, 1)[0];
                                         const jailLocation = leftPlayerCaptureOffsets.splice(0, 1)[0];
-                                        victim.moveTo(jailLocation.x, jailLocation.y);
+                                        victim.moveTo(jailLocation.x, jailLocation.y, true);
                                         leftPlayerCapturedDice.push(victim);
+                                        break;
                                     }
                                 }
                             }
                         }
-                        if (player === playerId.right) {
+                        else if (player === playerId.right) {
                             const victimIndex = indexOf(leftPlayerDice, newOffset);
                             if (victimIndex > -1 && leftPlayerDice[victimIndex].getFaceValue() < movingDie.getFaceValue()) {
                                 const victim = leftPlayerDice.splice(victimIndex, 1)[0];
                                 const jailLocation = rightPlayerCaptureOffsets.splice(0, 1)[0];
-                                victim.moveTo(jailLocation.x, jailLocation.y);
+                                victim.moveTo(jailLocation.x, jailLocation.y, true);
                                 rightPlayerCapturedDice.push(victim);
                             }
                             else if (victimIndex > -1 && leftPlayerDice[victimIndex].getFaceValue() > movingDie.getFaceValue()) {
@@ -1146,7 +1197,6 @@
                                 leftPlayerCapturedDice.push(deadAttacker);
                             }
                             else if (victimIndex > -1 && leftPlayerDice[victimIndex].getFaceValue() === movingDie.getFaceValue()) {
-                                //TODO: add an interface and animate this maybe?
                                 //roll the dice and whoever loses loses
                                 while (leftPlayerDice[victimIndex].getFaceValue() === movingDie.getFaceValue()) {
                                     leftPlayerDice[victimIndex].roll()
@@ -1159,13 +1209,15 @@
                                         newOffset.x = jailLocation.x;
                                         newOffset.y = jailLocation.y;
                                         leftPlayerCapturedDice.push(deadAttacker);
+                                        break;
                                     }
                                     else if (leftPlayerDice[victimIndex].getFaceValue() < movingDie.getFaceValue()) {
                                         //attacked die loses
                                         const victim = leftPlayerDice.splice(victimIndex, 1)[0];
                                         const jailLocation = rightPlayerCaptureOffsets.splice(0, 1)[0];
-                                        victim.moveTo(jailLocation.x, jailLocation.y);
+                                        victim.moveTo(jailLocation.x, jailLocation.y, true);
                                         rightPlayerCapturedDice.push(victim);
+                                        break;
                                     }
                                 }
                             }
@@ -1209,37 +1261,50 @@
                 };
 
                 const drawLeftPlayer = (ctx, x, y, tileSize) => {
+                    const topLayer = [];
                     for (const captive of leftPlayerCapturedDice) {
-                        captive.draw(ctx, x, y, tileSize);
+                        const newTopLayerItems = captive.draw(ctx, x, y, tileSize);
+                        topLayer.push(...newTopLayerItems);
                     }
                     for (const left of leftPlayerDice) {
-                        if (!isHighlightedDie(left)) {
-                            left.draw(ctx, x, y, tileSize);
+                        let isBeingDragged = false;
+                        if (movingDieIsBeingDragged && movingDie !== null) {
+                            const lp = left.getOffset();
+                            const mp = movingDie.getOffset();
+                            isBeingDragged = lp.x === mp.x && lp.y === mp.y;
                         }
+                        const newTopLayerItems = left.draw(ctx, x, y, tileSize, isBeingDragged, mx, my);
+                        topLayer.push(...newTopLayerItems);
                     }
+                    return topLayer;
                 };
 
                 const drawRightPlayer = (ctx, x, y, tileSize) => {
+                    const topLayer = [];
                     for (const captive of rightPlayerCapturedDice) {
-                        captive.draw(ctx, x, y, tileSize);
+                        const newTopLayerItems = captive.draw(ctx, x, y, tileSize);
+                        topLayer.push(...newTopLayerItems);
                     }
                     for (const right of rightPlayerDice) {
-                        if (!isHighlightedDie(right)) {
-                            right.draw(ctx, x, y, tileSize);
+                        let isBeingDragged = false;
+                        if (movingDieIsBeingDragged && movingDie !== null) {
+                            const rp = right.getOffset();
+                            const mp = movingDie.getOffset();
+                            isBeingDragged = rp.x === mp.x && rp.y === mp.y;
                         }
+                        const newTopLayerItems = right.draw(ctx, x, y, tileSize, isBeingDragged, mx, my);
+                        topLayer.push(...newTopLayerItems);
                     }
+                    return topLayer;
                 };
 
                 this.draw = (ctx, x, y, tileSize, showValidMoves) => {
                     const topLayer = [];
+                    let newTopLayerItems = [];
                     for (const cell of cells) {
-                        const newTopLayerItems = cell.draw(ctx, x, y, tileSize);
+                        newTopLayerItems = cell.draw(ctx, x, y, tileSize);
                         topLayer.push(...newTopLayerItems);
                     }
-                    for (const top of topLayer) {
-                        top(ctx, x, y, tileSize);
-                    }
-                    //TODO: should dice go under or over the top layer that comes back from the grid draw call??
                     if (showValidMoves === true) {
                         ctx.save();
                         const defaultFillStyle = (player === playerId.left)
@@ -1259,26 +1324,23 @@
                         }
                         ctx.restore();
                     }
-                    
                     if (player === playerId.left) {
-                        drawRightPlayer(ctx, x, y, tileSize);
-                        drawLeftPlayer(ctx, x, y, tileSize);
+                        newTopLayerItems = drawRightPlayer(ctx, x, y, tileSize);
+                        topLayer.push(...newTopLayerItems);
+                        newTopLayerItems = drawLeftPlayer(ctx, x, y, tileSize);
+                        topLayer.push(...newTopLayerItems);
                     }
                     else {
-                        drawLeftPlayer(ctx, x, y, tileSize);
-                        drawRightPlayer(ctx, x, y, tileSize);
+                        newTopLayerItems = drawLeftPlayer(ctx, x, y, tileSize);
+                        topLayer.push(...newTopLayerItems);
+                        newTopLayerItems = drawRightPlayer(ctx, x, y, tileSize);
+                        topLayer.push(...newTopLayerItems);
                     }
                     if (highlightedCell !== null && showValidMoves && isValidMove(highlightedCell)) {
                         highlightedCell.drawHoverHighlight(ctx, x, y, tileSize, player);
                     }
-                    if (!movingDieIsBeingDragged && highlightedDie !== null) {
-                        highlightedDie.draw(ctx, x, y, tileSize);
-                    }
-                    if (!movingDieIsBeingDragged && movingDie !== null) {
-                        movingDie.draw(ctx, x, y, tileSize);
-                    }
-                    if (movingDieIsBeingDragged && movingDie !== null) {
-                        movingDie.draw(ctx, 0, 0, tileSize, true, mx, my);
+                    for (const top of topLayer) {
+                        top(ctx, x, y, tileSize);
                     }
                 };
             }
@@ -1449,7 +1511,6 @@
                 };
 
                 this.update = (dt) => {
-                    //TODO: game logic (might just be passing this up to the dice for animation purposes lol)
                     grid.update(dt);
                 };
 
