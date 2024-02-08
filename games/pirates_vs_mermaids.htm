@@ -362,6 +362,7 @@
             };
 
             //TODO: these values require lots of balancing and play testing! (especially for different board sizes!)
+            //TODO: add a second layer to this that is accessed by board size
             const armySizeByGameMode = {
                 kingOfTheHill: 96,
                 annihilation: 128,
@@ -1847,13 +1848,13 @@
                 
                 //TODO: need different minimum requirements per game mode?
                 //TODO: if the player somehow exceeds the dice count max, there is currently no way to give feedback in the UI.
-                //TODO: for smaller board sizes it is possible to have enough spaces in the bases but not enough for them to exist between the bases!
                 const trueValidate = () => leftArmySize <= maxArmySize
                                     && leftArmySize > 0
                                     && leftArmyCount <= gameGridSize * numBaseColumns
                                     && rightArmySize <= maxArmySize
                                     && rightArmySize > 0
-                                    && rightArmyCount <= gameGridSize * numBaseColumns;
+                                    && rightArmyCount <= gameGridSize * numBaseColumns
+                                    && leftArmyCount + rightArmyCount <= ((gameGridSize * gameGridSize) - (gameGridSize * numBaseColumns * 2));
 
                 const populateDiceSelectors = () => {
                     for (const id in dieDescriptions) {
