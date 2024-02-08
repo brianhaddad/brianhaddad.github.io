@@ -8,6 +8,7 @@
         <script src="../scripts/html_tools.js"></script>
         <script>
             //TODO: it's getting kind of long... maybe start thinking about separate files?
+            //TODO: need a way to show the rules for the player?
             /*******************
              * Alright, here's how this is going to go:
              * D4: (spy) move 3 spaces in any? (limit to diagonals?) direction and can jump over other pieces. deals its health in damage even if it dies.
@@ -320,13 +321,46 @@
                 captureTheFlag: 'Capture the Princess',
             };
 
+            const boardSizes = {
+                sevenWithOne: '7x7 w/ 1',
+                sevenWithTwo: '7x7 w/ 2',
+                nineWithOne: '9x9 w/ 1',
+                nineWithTwo: '9x9 w/ 2',
+                elevenWithOne: '11x11 w/ 1',
+                elevenWithTwo: '11x11 w/ 2',
+                thirteenWithOne: '13x13 w/ 1',
+                thirteenWithTwo: '13x13 w/ 2',
+            };
+
+            const boardDimensions = {
+                sevenWithOne: 7,
+                sevenWithTwo: 7,
+                nineWithOne: 9,
+                nineWithTwo: 9,
+                elevenWithOne: 11,
+                elevenWithTwo: 11,
+                thirteenWithOne: 13,
+                thirteenWithTwo: 13,
+            };
+
+            const boardHomeColumns = {
+                sevenWithOne: 1,
+                sevenWithTwo: 2,
+                nineWithOne: 1,
+                nineWithTwo: 2,
+                elevenWithOne: 1,
+                elevenWithTwo: 2,
+                thirteenWithOne: 1,
+                thirteenWithTwo: 2,
+            };
+
             const armyIncludesSpecial = {
                 kingOfTheHill: false,
                 annihilation: true,
                 captureTheFlag: false,
             };
 
-            //TODO: these values require lots of balancing and play testing!
+            //TODO: these values require lots of balancing and play testing! (especially for different board sizes!)
             const armySizeByGameMode = {
                 kingOfTheHill: 96,
                 annihilation: 128,
@@ -343,12 +377,22 @@
                 right: `Mermaid`,
             };
 
+            const winStates = {
+                noWinner: `Game in Progress`,
+                draw: `Draw`,
+                leftWins: `Pirates win!`,
+                rightWins: `Mermaids win!`,
+            };
+
             const gamePhases = {
                 setup: `Game Setup`,
                 leftPlaceDie: `Pirate: Place Your Die`,
                 rightPlaceDie: `Mermaid: Place Your Die`,
                 leftPlayerTurn: `Pirate's Turn`,
                 rightPlayerTurn: `Mermaid's Turn`,
+                leftPlayerWins: winStates.leftWins,
+                rightPlayerWins: winStates.rightWins,
+                //TODO: didn't use these two? do we want to add a little game mode for the roll-off?
                 leftAttacksRight: `Pirate Attacks Mermaid!`,
                 rightAttacksLeft: `Mermaid Attacks Pirate!`,
             };
@@ -391,7 +435,8 @@
             const dieMoveAnimationTime = 500;
             const gameWidth = 800;
             const gameHeight = 800;
-            const gameGridSize = 13;
+            let gameGridSize = 13;
+            let numBaseColumns = 2;
 
             function drawCenteredBoldText(ctx, text, color) {
                 ctx.save();
@@ -535,7 +580,7 @@
                 const iAmSpecial = isSpecial === true;
                 const maxValue = value;
                 const name = 'D' + value;
-                const getMovementType = () => isSpecial ? 'Special' + name : name;
+                this.getMovementType = () => isSpecial ? 'Special' + name : name;
                 this.getType = () => name;
                 let displayValue = 1;
                 this.getFaceValue = () => displayValue;
@@ -629,7 +674,7 @@
 
                 this.getValidMoves = (enemyPositions, friendlyPositions, validBoardPosEvaluator) => {
                     const validMoves = [];
-                    for (const evaluator of dieMovements[getMovementType()]) {
+                    for (const evaluator of dieMovements[this.getMovementType()]) {
                         const newMoves = evaluator
                             .getMoves(this.getOffset(), enemyPositions, friendlyPositions, validBoardPosEvaluator)
                             .filter(move => validMoves.filter(m => move.x === m.x && move.y === m.y).length === 0);
@@ -836,13 +881,13 @@
                 };
             }
 
-            function Grid(numRows, numCols) {
+            function Grid(numRows, numCols, baseColumns) {
                 const rows = numRows;
                 const cols = numCols;
                 const cells = [];
                 const hasCenter = (rows % 2 === 1) && (cols % 2 === 1);
                 const healingSpotRowInset = 1;
-                const playerBaseCols = 2;
+                const playerBaseCols = baseColumns;
                 const gridPositionOffsets = [];
                 const leftPlayerBaseOffsets = [];
                 const leftPlayerCaptureOffsets = [];
@@ -974,33 +1019,56 @@
                     return true;
                 };
 
+                let leftCounterDie = null;
+                let rightCounterDie = null;
+
                 this.generatePlayerDice = (leftPlayerArmy, rightPlayerArmy, gameMode) => {
                     const offsetPool = [];
+                    const kingOfTheHillMode = gameModes[gameMode] === gameModes.kingOfTheHill;
                     for (let r = 0; r < rows; r++) {
                         for (let c = playerBaseCols; c < cols - playerBaseCols; c++) {
                             offsetPool.push(gridPositionOffsets[r][c]);
                         }
                     }
-                    //TODO: for king of the hill the special die should be held in a separate variable and drawn off grid... maybe in the game object?
-                    if (gameModes[gameMode] === gameModes.captureTheFlag) {
+                    if (kingOfTheHillMode || gameModes[gameMode] === gameModes.captureTheFlag) {
                         leftPlayerArmy['leftSpecialD12'] = 1;
                         rightPlayerArmy['rightSpecialD12'] = 1;
                     }
                     for (const id in leftPlayerArmy) {
                         for (let i = 0; i < leftPlayerArmy[id]; i++) {
-                            const offset = offsetPool.splice(Math.floor(Math.random() * offsetPool.length), 1)[0];
+                            const offset = kingOfTheHillMode && id === 'leftSpecialD12'
+                                ? {x: -1, y: gridPositionOffsets[0][0].y - 1}
+                                : offsetPool.splice(Math.floor(Math.random() * offsetPool.length), 1)[0];
                             const die = dieBuilders[id](offset);
-                            die.roll();
-                            leftPlayerDice.push(die);
+                            let addToArmy = true;
+                            if (kingOfTheHillMode && id === 'leftSpecialD12') {
+                                addToArmy = false;
+                                die.heal();
+                                leftCounterDie = die;
+                            }
+                            if (addToArmy) {
+                                die.roll();
+                                leftPlayerDice.push(die);
+                            }
                         }
                     }
                     
                     for (const id in rightPlayerArmy) {
                         for (let i = 0; i < rightPlayerArmy[id]; i++) {
-                            const offset = offsetPool.splice(Math.floor(Math.random() * offsetPool.length), 1)[0];
+                            const offset = kingOfTheHillMode && id === 'rightSpecialD12'
+                                ? {x: 1, y: gridPositionOffsets[0][0].y - 1}
+                                : offsetPool.splice(Math.floor(Math.random() * offsetPool.length), 1)[0];
                             const die = dieBuilders[id](offset);
-                            die.roll();
-                            rightPlayerDice.push(die);
+                            let addToArmy = true;
+                            if (kingOfTheHillMode && id === 'rightSpecialD12') {
+                                addToArmy = false;
+                                die.heal();
+                                rightCounterDie = die;
+                            }
+                            if (addToArmy) {
+                                die.roll();
+                                rightPlayerDice.push(die);
+                            }
                         }
                     }
                 };
@@ -1254,8 +1322,12 @@
 
                 this.highlightingDie = () => highlightedDie !== null && movingDie === null;
 
+                const isRightPlayerTurn = () => player === playerId.right;
+                const isLeftPlayerTurn = () => player === playerId.left;
+
                 this.evaluateCellEffects = () => {
                     for (const cell of cells) {
+                        const cellOffset = cell.getOffset();
                         const leftDie = leftPlayerDice.find(d => cell.isSamePosition(d.getOffset()));
                         const rightDie = rightPlayerDice.find(d => cell.isSamePosition(d.getOffset()));
                         if (leftDie && cell.isLeftHeal()) {
@@ -1264,7 +1336,69 @@
                         if (rightDie && cell.isRightHeal()) {
                             rightDie.heal();
                         }
+                        if (cellOffset.x === 0 && cellOffset.y === 0) {
+                            if (isLeftPlayerTurn() && leftCounterDie !== null) {
+                                if (leftDie) {
+                                    leftCounterDie.dealDamage(1);
+                                }
+                                else {
+                                    leftCounterDie.heal();
+                                }
+                            }
+                            if (isRightPlayerTurn() && rightCounterDie !== null) {
+                                if (rightDie) {
+                                    rightCounterDie.dealDamage(1);
+                                }
+                                else {
+                                    rightCounterDie.heal();
+                                }
+                            }
+                        }
                     }
+                };
+
+                this.evaluateWinConditions = (gameMode) => {
+                    const leftPlayerEliminated = leftPlayerDice.length === 0;
+                    const rightPlayerEliminated = rightPlayerDice.length === 0;
+                    //Note: for all gamemodes, elmination is a way to win!
+                    if (leftPlayerEliminated && rightPlayerEliminated) {
+                        return winStates.draw; //Note: should be impossible!
+                    }
+                    if (leftPlayerEliminated) {
+                        return winStates.rightWins;
+                    }
+                    if (rightPlayerEliminated) {
+                        return winStates.leftWins;
+                    }
+                    switch (gameModes[gameMode]) {
+                        case gameModes.annihilation:
+                            return winStates.noWinner;
+
+                        case gameModes.kingOfTheHill:
+                            if (leftCounterDie.getFaceValue() <= 1) {
+                                return winStates.leftWins;
+                            }
+                            if (rightCounterDie.getFaceValue() <= 1) {
+                                return winStates.rightWins;
+                            }
+                            return winStates.noWinner;
+
+                        case gameModes.captureTheFlag:
+                            const leftSpecialDie = leftPlayerDice.find(d => d.getMovementType() === 'SpecialD12');
+                            const rightSpecialDie = rightPlayerDice.find(d => d.getMovementType() === 'SpecialD12');
+                            if (!leftSpecialDie && !rightSpecialDie) {
+                                return winStates.draw; //Note: again, shouldn't be possible!
+                            }
+                            if (leftSpecialDie && !rightSpecialDie) {
+                                return winStates.leftWins;
+                            }
+                            if (!leftSpecialDie && rightSpecialDie) {
+                                return winStates.rightWins;
+                            }
+                            return winStates.noWinner;
+                    }
+                    //TODO: should be impossible to get to this line... maybe raise some kind of error?
+                    return winStates.noWinner;
                 };
 
                 const drawLeftPlayer = (ctx, x, y, tileSize) => {
@@ -1282,6 +1416,9 @@
                         }
                         const newTopLayerItems = left.draw(ctx, x, y, tileSize, isBeingDragged, mx, my);
                         topLayer.push(...newTopLayerItems);
+                    }
+                    if (leftCounterDie) {
+                        leftCounterDie.draw(ctx, x, y, tileSize);
                     }
                     return topLayer;
                 };
@@ -1301,6 +1438,9 @@
                         }
                         const newTopLayerItems = right.draw(ctx, x, y, tileSize, isBeingDragged, mx, my);
                         topLayer.push(...newTopLayerItems);
+                    }
+                    if (rightCounterDie) {
+                        rightCounterDie.draw(ctx, x, y, tileSize);
                     }
                     return topLayer;
                 };
@@ -1352,11 +1492,12 @@
                 };
             }
 
-            function Game(width, height, gridDimension, gameStatusContainer) {
+            function Game(width, height, gridDimension, baseColumns, gameStatusContainer) {
                 let w = width;
                 let h = height;
                 const gridSize = gridDimension;
                 const statusContainer = gameStatusContainer;
+                statusContainer.innerHTML = '';
                 const container = createElement('div', { 'style': `width:100%;display:flex;flex-direction:row;justify-content:space-between;flex-wrap:wrap;` }, null);
                 statusContainer.appendChild(container);
                 const statusOutputs = {
@@ -1375,43 +1516,64 @@
                 }
 
                 const updateStatusDisplay = () => {
+                    //TODO: maybe just make a status manager class and pass in the same data that we'll persist for gamesave?
                     statusOutputs.gameMode.updateText(gameModes[gameMode]);
                     statusOutputs.gamePhase.updateText(gamePhase);
                     statusOutputs.playerTurn.updateText(playerNames[currentPlayerTurn]);
+                    //TODO: on win, the display should show a button that allows the user to start a new game and the player turn segment should probably be removed.
                 };
 
                 const x = () => w / 2;
                 const y = () => h / 2;
                 const pxTileSize = () => Math.floor(Math.min(w, h) / (gridSize + 2));
 
-                const grid = new Grid(gridSize, gridSize);
+                const grid = new Grid(gridSize, gridSize, baseColumns);
 
                 let gameMode = '';
                 let gamePhase = gamePhases.setup;
                 let currentPlayerTurn = '';
 
                 const setGamePhase = (newGamePhase) => {
+                    //TODO: when changing game phases, maybe have some huge text appear in the game board window? lol
                     gamePhase = newGamePhase;
+                    let winState = winStates.noWinner;
                     switch (gamePhase) {
                         case gamePhases.leftPlaceDie:
                             currentPlayerTurn = playerId.left;
+                            grid.setPlayer(currentPlayerTurn);
                             break;
 
                         case gamePhases.leftPlayerTurn:
                             grid.evaluateCellEffects();
-                            currentPlayerTurn = playerId.left;
+                            winState = grid.evaluateWinConditions(gameMode);
+                            if (winState === winStates.noWinner) {
+                                currentPlayerTurn = playerId.left;
+                                grid.setPlayer(currentPlayerTurn);
+                            }
                             break;
                             
                         case gamePhases.rightPlaceDie:
                             currentPlayerTurn = playerId.right;
+                            grid.setPlayer(currentPlayerTurn);
                             break;
 
                         case gamePhases.rightPlayerTurn:
                             grid.evaluateCellEffects();
-                            currentPlayerTurn = playerId.right;
+                            winState = grid.evaluateWinConditions(gameMode);
+                            if (winState === winStates.noWinner) {
+                                currentPlayerTurn = playerId.right;
+                                grid.setPlayer(currentPlayerTurn);
+                            }
                             break;
                     }
-                    grid.setPlayer(currentPlayerTurn);
+                    //TODO: there is no gamePhase for a draw, but draws should not be possible, right? RIGHT??!?!!!?
+                    switch (winState) {
+                        case winStates.leftWins:
+                            return setGamePhase(gamePhases.leftPlayerWins);
+                            
+                        case winStates.rightWins:
+                            return setGamePhase(gamePhases.rightPlayerWins);
+                    }
                     updateStatusDisplay();
                 };
 
@@ -1437,12 +1599,10 @@
                             break;
 
                         case gamePhases.leftPlayerTurn:
-                            //TODO: based on gamemode, check for win condition
                             setGamePhase(gamePhases.rightPlayerTurn);
                             break;
 
                         case gamePhases.rightPlayerTurn:
-                            //TODO: based on gamemode, check for win condition
                             setGamePhase(gamePhases.leftPlayerTurn);
                             break;
                     }
@@ -1494,7 +1654,7 @@
                             break;
 
                         case 'contextmenu':
-                            //TODO: this is right clicking!
+                            //TODO: do we want to use right-clicking for anything?
                             break;
 
                         case 'mousemove':
@@ -1546,12 +1706,13 @@
                 doneButton.addEventListener('click', () => finishFunction());
 
                 const gameModeSelector = createElement('div', {}, null);
+                const boardSizeSelector = createElement('div', {}, null);
 
                 const gameSetupTop = createElement('div', { 'style': `width:100%;display:flex;flex-direction:row;justify-content:space-between;align-content:stretch;align-items:stretch;` }, null);
                 gameSetupControls.appendChild(gameSetupTop);
 
                 gameSetupTop.appendChild(gameModeSelector);
-                //TODO: a third dropdown for board size? (just for testing purposes?) junior mode?
+                gameSetupTop.appendChild(boardSizeSelector);
                 gameSetupTop.appendChild(doneButton);
 
                 const leftPlayerSetupFieldset = makeFieldset(`${playerNames.left} Army`);
@@ -1584,6 +1745,13 @@
                 gameModeSelect.addEventListener('change', () => setGameMode());
                 gameModeSelector.appendChild(gameModeLabel);
                 gameModeSelector.appendChild(gameModeSelect);
+
+                const boardSizeLabel = createElement('label', { 'for': 'boardSizes' }, 'Board Size');
+                const boardSizeSelect = makeSelect('boardSizes', boardSizes);
+                boardSizeSelect.selectedIndex = boardSizeSelect.options.length - 1;
+                boardSizeSelect.addEventListener('change', () => setBoardSize());
+                boardSizeSelector.appendChild(boardSizeLabel);
+                boardSizeSelector.appendChild(boardSizeSelect);
 
                 const diceSelectors = {};
                 for (const id in numDiceIncluded) {
@@ -1678,12 +1846,13 @@
                 
                 //TODO: need different minimum requirements per game mode?
                 //TODO: if the player somehow exceeds the dice count max, there is currently no way to give feedback in the UI.
+                //TODO: for smaller board sizes it is possible to have enough spaces in the bases but not enough for them to exist between the bases!
                 const trueValidate = () => leftArmySize <= maxArmySize
                                     && leftArmySize > 0
-                                    && leftArmyCount <= gameGridSize * 2
+                                    && leftArmyCount <= gameGridSize * numBaseColumns
                                     && rightArmySize <= maxArmySize
                                     && rightArmySize > 0
-                                    && rightArmyCount <= gameGridSize * 2;
+                                    && rightArmyCount <= gameGridSize * numBaseColumns;
 
                 const populateDiceSelectors = () => {
                     for (const id in dieDescriptions) {
@@ -1711,6 +1880,15 @@
                         populateDiceSelectors();
                         updateArmy();
                     }
+                };
+
+                const setBoardSize = () => {
+                    const newBoardSize = boardSizeSelect.options[boardSizeSelect.selectedIndex].value;
+                    gameGridSize = boardDimensions[newBoardSize];
+                    numBaseColumns = boardHomeColumns[newBoardSize];
+                    //TODO: this is a hammer doing the job of a screwdriver
+                    //might want a more elegant way to update the board...
+                    startNewGame();
                 };
 
                 const updateArmy = () => {
@@ -1842,7 +2020,7 @@
             //this will require never storing pixel coordinates though, so need to factor out the game x,y coords and the tileSize
             //and pass those values in for every draw call, plus we'll need a way to convert mouse position into the same offset system for the tiles
             function startNewGame() {
-                game = new Game(gameWidth, gameHeight, gameGridSize, gameOutput);
+                game = new Game(gameWidth, gameHeight, gameGridSize, numBaseColumns, gameOutput);
                 //TODO: only append if gamestate is in setup?
                 gameDiv.appendChild(gameSetupControls);
                 lastUpdate = Date.now();
