@@ -294,6 +294,7 @@
                 trueOmnidirectional: (dist, canFly, canAttackUp) => new MovementEvaluator(dist, canFly, canAttackUp, trueOmnidirectionalMovement),
             };
 
+            //TODO: the movement distance for the D12 true omnidirectional (and probably the special D12) need to be adjusted for smaller boards!
             const dieMovements = {
                 D4: [movementTypes.orthogonal(1), movementTypes.diagonal(3, true, true)],
                 D6: [movementTypes.orthogonal(2), movementTypes.diagonal(2)],
