@@ -1846,15 +1846,17 @@
                 let validationOverride = false;
                 const validate = () => validationOverride || trueValidate();
                 
-                //TODO: need different minimum requirements per game mode?
                 //TODO: if the player somehow exceeds the dice count max, there is currently no way to give feedback in the UI.
-                const trueValidate = () => leftArmySize <= maxArmySize
-                                    && leftArmySize > 0
-                                    && leftArmyCount <= gameGridSize * numBaseColumns
-                                    && rightArmySize <= maxArmySize
-                                    && rightArmySize > 0
+                const diceCountValidate = () => leftArmyCount <= gameGridSize * numBaseColumns
                                     && rightArmyCount <= gameGridSize * numBaseColumns
-                                    && leftArmyCount + rightArmyCount <= ((gameGridSize * gameGridSize) - (gameGridSize * numBaseColumns * 2));
+                                    && leftArmyCount + rightArmyCount <= ((gameGridSize * gameGridSize) - (gameGridSize * numBaseColumns * 2))
+
+                //TODO: need different minimum requirements per game mode?
+                const trueValidate = () => diceCountValidate()
+                                    && leftArmySize <= maxArmySize
+                                    && leftArmySize > 0
+                                    && rightArmySize <= maxArmySize
+                                    && rightArmySize > 0;
 
                 const populateDiceSelectors = () => {
                     for (const id in dieDescriptions) {
