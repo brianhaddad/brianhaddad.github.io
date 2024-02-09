@@ -1984,6 +1984,8 @@
 
             const gameDiv = createElement('div', {'style': `width:${gameWidth}px;height:100%;padding:0px;margin:0px auto;display:flex;flex-wrap:wrap;flex-direction:column;`}, null);
             document.body.appendChild(gameDiv);
+            const rulesDiv = createElement('div', {'style': `width:${gameWidth}px;height:100%;padding:0px;margin:8px auto;display:flex;flex-wrap:wrap;flex-direction:column;`}, null);
+            document.body.appendChild(rulesDiv);
 
             const canvas = createElement('canvas', {'width': gameWidth, 'height': gameHeight}, null);
             //canvas.addEventListener('click', gameMouseEvent, false);
@@ -2027,8 +2029,11 @@
                 game = new Game(gameWidth, gameHeight, gameGridSize, numBaseColumns, gameOutput);
                 //TODO: only append if gamestate is in setup?
                 gameDiv.appendChild(gameSetupControls);
-                lastUpdate = Date.now();
-                animateGame();
+                setupRulesDiv();
+                if (lastUpdate === null) {
+                    lastUpdate = Date.now();
+                    animateGame();
+                }
             }
 
             function finishSetup() {
@@ -2036,7 +2041,61 @@
                     gameDiv.removeChild(gameSetupControls);
                     game.setup(setupManager.getCurrentGameMode(), setupManager.getLeftArmy(), setupManager.getRightArmy());
                     gameDiv.appendChild(gameOutput);
+                    setupRulesDiv(setupManager.getCurrentGameMode());
                 }
+            }
+
+            function setupRulesDiv(gameMode) {
+                rulesDiv.innerHTML = '';
+                if (!gameMode) {
+                    rulesDiv.appendChild(createElement('h3', {}, `Game Rules`));
+                    showKingOfTheHillRules();
+                    showCaptureTheFlagRules();
+                    showAnnihilationRules();
+                }
+                else {
+                    switch (gameModes[gameMode]) {
+                        case gameModes.kingOfTheHill:
+                            showKingOfTheHillRules();
+                            break;
+                        case gameModes.captureTheFlag:
+                            showCaptureTheFlagRules();
+                            break;
+                        case gameModes.annihilation:
+                            showAnnihilationRules();
+                            break;
+                    }
+                }
+            }
+
+            function showKingOfTheHillRules() {
+                const containerDiv = createElement('div', {'style': 'width:100%; margin:16px auto; padding:0px;'}, null);
+                const detail = makeDetail(gameModes.kingOfTheHill, containerDiv, false);
+                
+                //TODO: write the rules! lol
+                containerDiv.appendChild(createElement('p', {}, `Some test text in a paragraph!`));
+
+                rulesDiv.appendChild(detail);
+            }
+
+            function showCaptureTheFlagRules() {
+                const containerDiv = createElement('div', {'style': 'width:100%; margin:16px auto; padding:0px;'}, null);
+                const detail = makeDetail(gameModes.captureTheFlag, containerDiv, false);
+                
+                //TODO: write the rules! lol
+                containerDiv.appendChild(createElement('p', {}, `Some test text in a paragraph!`));
+
+                rulesDiv.appendChild(detail);
+            }
+
+            function showAnnihilationRules() {
+                const containerDiv = createElement('div', {'style': 'width:100%; margin:16px auto; padding:0px;'}, null);
+                const detail = makeDetail(gameModes.annihilation, containerDiv, false);
+                
+                //TODO: write the rules! lol
+                containerDiv.appendChild(createElement('p', {}, `Some test text in a paragraph!`));
+
+                rulesDiv.appendChild(detail);
             }
 
             startNewGame();
