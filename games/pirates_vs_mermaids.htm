@@ -6,6 +6,7 @@
     </head>
     <body>
         <script src="../scripts/html_tools.js"></script>
+        <script src="../scripts/canvas_animation.js"></script>
         <script>
             //TODO: it's getting kind of long... maybe start thinking about separate files?
             //TODO: need a way to show the rules for the player?
@@ -441,9 +442,13 @@
             let numBaseColumns = 2;
 
             function drawCenteredBoldText(ctx, text, color) {
+                return drawCenteredBoldTextAtSize(ctx, text, color, 16);
+            }
+
+            function drawCenteredBoldTextAtSize(ctx, text, color, size) {
                 ctx.save();
                 //TODO: allow font size to be passed in?
-                ctx.font = 'bold 12px Arial';
+                ctx.font = `bold ${size}px Arial`;
                 ctx.fillStyle = color;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
@@ -1494,11 +1499,12 @@
                 };
             }
 
-            function Game(width, height, gridDimension, baseColumns, gameStatusContainer) {
+            function Game(width, height, gridDimension, baseColumns, gameStatusContainer, gameAnimationsMgr) {
                 let w = width;
                 let h = height;
                 const gridSize = gridDimension;
                 const statusContainer = gameStatusContainer;
+                const animationsMgr = gameAnimationsMgr;
                 statusContainer.innerHTML = '';
                 const container = createElement('div', { 'style': `width:100%;display:flex;flex-direction:row;justify-content:space-between;flex-wrap:wrap;` }, null);
                 statusContainer.appendChild(container);
@@ -1534,6 +1540,8 @@
                 let gameMode = '';
                 let gamePhase = gamePhases.setup;
                 let currentPlayerTurn = '';
+
+                animationsMgr.changeGamePhase(gamePhase);
 
                 const setGamePhase = (newGamePhase) => {
                     //TODO: when changing game phases, maybe have some huge text appear in the game board window? lol
@@ -1576,6 +1584,7 @@
                         case winStates.rightWins:
                             return setGamePhase(gamePhases.rightPlayerWins);
                     }
+                    animationsMgr.changeGamePhase(gamePhase);
                     updateStatusDisplay();
                 };
 
@@ -1681,6 +1690,7 @@
 
                 this.update = (dt) => {
                     grid.update(dt);
+                    animationsMgr.update(dt);
                 };
 
                 this.draw = (ctx) => {
@@ -1694,6 +1704,7 @@
                     ctx.fillStyle = themeColors.boardBorderColor;
                     ctx.fillRect(cx - p, cy - p, p * 2, p * 2);
                     grid.draw(ctx, cx, cy, tileSize, showValidMoves);
+                    animationsMgr.draw(ctx, w, h);
                 };
             }
 
@@ -1982,6 +1993,58 @@
                 };
             }
 
+            function GameAnimationsManager() {
+                const animations = [];
+
+                //TODO: maybe slide text along top/bottom of the canvas instead? It's not a very good effect right now.
+                const createTextSlideUpFunction = (displayText) => {
+                    return (ctx, bbr, t) => {
+                        //TODO:
+                        const myT = 1 - t;
+                        const startY = bbr.y + bbr.h + 32;
+                        const destY = bbr.y - 32;
+                        ctx.save();
+                        ctx.translate(bbr.cx, startY + (myT * (destY - startY)));
+                        drawCenteredBoldTextAtSize(ctx, displayText, '#ffffff', 32);
+                        ctx.restore();
+                    };
+                };
+
+                this.changeGamePhase = (phaseText) => {
+                    //TODO: are the fireworks always necessary? lol
+                    const newAnimation = new LayeredAnimationCollection();
+                    //first, background layer (fireworks) in a sequential collection
+                    const fireworks = new SequentialAnimationCollection();
+                    //TODO: fireworks could be layered instead of sequential, with each one having a random time offset
+                    //TODO: fireworks.addSequence(new CountdownAnimationContainer(animationTime, updateFunc, animateFunc));
+                    newAnimation.addLayer(fireworks);
+                    //next, foreground, text
+                    const text = new CountdownAnimationContainer(5000, (ct, tt) => {return ct/tt;}, createTextSlideUpFunction(phaseText));
+                    newAnimation.addLayer(text);
+
+                    animations.push(newAnimation);
+                };
+
+                this.update = (dt) => {
+                    const deleteTheseIndices = [];
+                    for (let i = 0; i < animations.length; i++) {
+                        if (!animations[i].update(dt)) {
+                            deleteTheseIndices.push(i);
+                        }
+                    }
+                    for (let i = deleteTheseIndices.length - 1; i >= 0; i--) {
+                        animations.splice(deleteTheseIndices[i], 1);
+                    }
+                };
+
+                this.draw = (ctx, w, h) => {
+                    const bbr = new DrawBoundsRect(0, 0, w, h);
+                    for (const animation of animations) {
+                        animation.draw(ctx, bbr);
+                    }
+                };
+            }
+
             const gameDiv = createElement('div', {'style': `width:${gameWidth}px;height:100%;padding:0px;margin:0px auto;display:flex;flex-wrap:wrap;flex-direction:column;`}, null);
             document.body.appendChild(gameDiv);
             const rulesDiv = createElement('div', {'style': `width:${gameWidth}px;height:100%;padding:0px;margin:8px auto;display:flex;flex-wrap:wrap;flex-direction:column;`}, null);
@@ -2010,6 +2073,7 @@
             }
 
             let game = null;
+            let gameAnimationsMgr = null;
 
             let lastUpdate = null;
             function animateGame() {
@@ -2026,7 +2090,8 @@
             //this will require never storing pixel coordinates though, so need to factor out the game x,y coords and the tileSize
             //and pass those values in for every draw call, plus we'll need a way to convert mouse position into the same offset system for the tiles
             function startNewGame() {
-                game = new Game(gameWidth, gameHeight, gameGridSize, numBaseColumns, gameOutput);
+                gameAnimationsMgr = new GameAnimationsManager();
+                game = new Game(gameWidth, gameHeight, gameGridSize, numBaseColumns, gameOutput, gameAnimationsMgr);
                 //TODO: only append if gamestate is in setup?
                 gameDiv.appendChild(gameSetupControls);
                 setupRulesDiv();
