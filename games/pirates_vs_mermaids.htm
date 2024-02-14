@@ -2003,23 +2003,26 @@
                         const myT = 1 - t;
                         const startY = bbr.y + bbr.h + 32;
                         const destY = bbr.y - 32;
+                        const scale = Math.sin(t * Math.PI);
                         ctx.save();
                         ctx.translate(bbr.cx, startY + (myT * (destY - startY)));
-                        drawCenteredBoldTextAtSize(ctx, displayText, '#ffffff', 32);
+                        ctx.scale(scale, scale);
+                        drawCenteredBoldTextAtSize(ctx, displayText, '#ffffff', 64);
                         ctx.restore();
                     };
                 };
 
                 this.changeGamePhase = (phaseText) => {
-                    //TODO: are the fireworks always necessary? lol
+                    //TODO: are the fireworks always necessary? lol Add fireworks based on game phase? (win? start?)
                     const newAnimation = new LayeredAnimationCollection();
                     //first, background layer (fireworks) in a sequential collection
-                    const fireworks = new SequentialAnimationCollection();
-                    //TODO: fireworks could be layered instead of sequential, with each one having a random time offset
-                    //TODO: fireworks.addSequence(new CountdownAnimationContainer(animationTime, updateFunc, animateFunc));
+                    const fireworks = new LayeredAnimationCollection();
+                    fireworks.addLayer(new FireworkExplosion(.3, 0, 500));
+                    fireworks.addLayer(new FireworkExplosion(0, -.2, 0));
+                    fireworks.addLayer(new FireworkExplosion(-.3, 0, 200));
                     newAnimation.addLayer(fireworks);
                     //next, foreground, text
-                    const text = new CountdownAnimationContainer(5000, (ct, tt) => {return ct/tt;}, createTextSlideUpFunction(phaseText));
+                    const text = new CountdownAnimationContainer(3000, (ct, tt) => {return ct/tt;}, createTextSlideUpFunction(phaseText));
                     newAnimation.addLayer(text);
 
                     animations.push(newAnimation);

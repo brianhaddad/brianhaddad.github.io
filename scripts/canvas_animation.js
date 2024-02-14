@@ -16,7 +16,7 @@ function LayeredAnimationCollection() {
 
     this.update = (dt) => {
         let isAlive = false;
-        for (let layer of layers) {
+        for (const layer of layers) {
             if (layer.update(dt)) {
                 isAlive = true;
             }
@@ -28,7 +28,7 @@ function LayeredAnimationCollection() {
         ctx.save();
         ctx.translate(drawRect.x, drawRect.y);
         const newRect = new DrawBoundsRect(0, 0, drawRect.w, drawRect.h);
-        for (let layer of layers) {
+        for (const layer of layers) {
             layer.draw(ctx, newRect);
         }
         ctx.restore();
@@ -89,6 +89,152 @@ function CountdownAnimationContainer(totalTime, updateFunc, animateFunc) {
     this.draw = (ctx, drawRect) => {
         if (isActive()) {
             return animator(ctx, drawRect, t);
+        }
+        return null;
+    };
+}
+
+function FireworkExplosion(cx, cy, delayStart) {
+    const xLoc = cx;
+    const yLoc = cy;
+    let timeUntilBegin = delayStart ?? 0;
+    let active = true;
+    const particles = [];
+    const numParticles = Math.floor(Math.random() * 500) + 500;
+
+    const baseColorVal = 100;
+    const randomizedColorPortion = 155;
+    const getColorVariation = () => Math.round(Math.random() * 7) / 7;
+    const redColorVariation = getColorVariation();
+    const getRedColorValue = () => Math.floor((Math.random() * randomizedColorPortion * redColorVariation) + (randomizedColorPortion * (1 - redColorVariation))) + baseColorVal;
+    const greenColorVariation = getColorVariation();
+    const getGreenColorValue = () => Math.floor((Math.random() * randomizedColorPortion * greenColorVariation) + (randomizedColorPortion * (1 - greenColorVariation))) + baseColorVal;
+    const blueColorVariation = getColorVariation();
+    const getBlueColorValue = () => Math.floor((Math.random() * randomizedColorPortion * blueColorVariation) + (randomizedColorPortion * (1 - blueColorVariation))) + baseColorVal;
+    const getAngle = () => ((Math.random() * 2 * angleRange) - angleRange) - (Math.PI / 2);
+    const getColor = () => `rgb(${getRedColorValue()},${getGreenColorValue()},${getBlueColorValue()})`;
+    
+    const angleRange = Math.PI;
+    const sparkleAfter = Math.random() * 2 > 1 ? (Math.random() * .75) + .25 : 1;
+
+    const timeToLiveVariation = (Math.random() * .5) + .5;
+    const maxTimeToLive = Math.floor(Math.random() * 5000) + 2000;
+    const getTimeToLive = () => Math.floor(Math.random() * maxTimeToLive * timeToLiveVariation) + ((1 - timeToLiveVariation) * maxTimeToLive);
+
+    for (let i = 0; i < numParticles; i++) {
+        const angle = getAngle();
+        const speed = (Math.random() * .3) + .01;
+        const timeToLive = getTimeToLive();
+        const size = (Math.random() * .01) + .005;
+        const startVX = speed * Math.cos(angle);
+        const startVY = (speed * Math.sin(angle)) - .2;
+        const accX = startVX * .05;
+        const accY = startVY * .05;
+        const grav = .25;
+        const color = getColor();
+        particles.push(new FireworkParticle(timeToLive, size, startVX, startVY, accX, accY, grav, color, sparkleAfter));
+    }
+
+    this.update = (dt) => {
+        if (timeUntilBegin > 0) {
+            timeUntilBegin -= dt;
+        }
+
+        if (timeUntilBegin <= 0 && active) {
+            //TODO: I have no idea what I'm doing! lol Apply "physics" to the particles using dt
+            let weDead = true;
+            for (const particle of particles) {
+                if (particle.update(dt)) {
+                    weDead = false;
+                }
+            }
+            if (weDead) {
+                active = false;
+            }
+        }
+        return active;
+    };
+
+    this.draw = (ctx, drawRect) => {
+        if (timeUntilBegin <= 0 && active) {
+            const baseline = Math.min(drawRect.w, drawRect.h);
+            const dx = xLoc * baseline;
+            const dy = yLoc * baseline;
+            ctx.save();
+            ctx.translate(drawRect.cx + dx, drawRect.cy + dy);
+            for (const particle of particles) {
+                particle.draw(ctx, drawRect);
+            }
+            ctx.restore();
+        }
+        return null;
+    };
+}
+
+function FireworkParticle(timeToLive, size, startVX, startVY, accX, accY, grav, color, sparkleAfter) {
+    const airResistance = -.75;
+    const totalLife = timeToLive;
+    let lifeRemaining = timeToLive;
+    let t = 0;
+    
+    let x = 0;
+    let y = 0;
+    let vx = startVX;
+    let vy = startVY;
+    let ax = accX;
+    let ay = accY;
+    const g = grav;
+
+    const s = size;
+    const c = color;
+    const sparklyAfter = sparkleAfter;
+
+    const isActive = () => t >= 0 && t <= 1;
+
+    this.update = (dt) => {
+        lifeRemaining -= dt;
+        t = lifeRemaining / totalLife;
+
+        const tf = dt / 1000;
+        //TODO: remove the ax * and ay *?
+        ax += ax * airResistance;
+        ay += ay * airResistance;
+        ay += g;
+
+        vx += ax * tf;
+        vy += ay * tf;
+
+        x += vx * tf;
+        y += vy * tf;
+
+        return isActive();
+    };
+
+    this.draw = (ctx, drawRect) => {
+        if (isActive()) {
+            const baseline = Math.min(drawRect.w, drawRect.h);
+            const r = .5 * s * baseline;
+            const px = x * baseline;
+            const py = y * baseline;
+
+            ctx.save();
+            if (t < 1 - sparklyAfter) {
+                const tH = Math.floor(t * 100);
+                const f = (t * 100) - tH;
+                if (f < .5) {
+                    ctx.beginPath();
+                    ctx.arc(px, py, r, 0, Math.PI * 2, false);
+                    ctx.fillStyle = 'rgb(250,250,250)';
+                    ctx.fill();
+                }
+            }
+            else {
+                ctx.beginPath();
+                ctx.arc(px, py, r, 0, Math.PI * 2, false);
+                ctx.fillStyle = c;
+                ctx.fill();
+            }
+            ctx.restore();
         }
         return null;
     };
