@@ -627,7 +627,7 @@
                     const dx = targetPos.x - p.x;
                     const dy = targetPos.y - p.y;
                     const t = 1 - (animateTime/dieMoveAnimationTime);
-                    const f = t * t * (3.0 - 2.0 * t);
+                    const f = easing.inAndOut(t);
                     
                     return {
                         x: p.x + (f * dx),
@@ -2017,12 +2017,12 @@
                     const newAnimation = new LayeredAnimationCollection();
                     //first, background layer (fireworks) in a sequential collection
                     const fireworks = new LayeredAnimationCollection();
-                    fireworks.addLayer(new FireworkExplosion(.3, 0, 900));
-                    fireworks.addLayer(new FireworkExplosion(0, -.2, 0));
-                    fireworks.addLayer(new FireworkExplosion(-.3, 0, 500));
+                    fireworks.addLayer(MakeFireworkSequence(.3, 0, 900));
+                    fireworks.addLayer(MakeFireworkSequence(0, -.2, 0));
+                    fireworks.addLayer(MakeFireworkSequence(-.3, 0, 500));
                     newAnimation.addLayer(fireworks);
                     //next, foreground, text
-                    const text = new CountdownAnimationContainer(3000, (ct, tt) => {return ct/tt;}, createTextSlideUpFunction(phaseText));
+                    const text = new CountdownAnimationContainer(3000, (ct, tt) => {return ct/tt;}, createTextSlideUpFunction(phaseText), 1500);
                     newAnimation.addLayer(text);
 
                     animations.push(newAnimation);
