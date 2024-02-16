@@ -7,6 +7,18 @@ function DrawBoundsRect(xLoc, yLoc, width, height) {
     this.cy = this.y + (height/2);
 }
 
+//politely borrowed from:
+//https://www.30secondsofcode.org/js/s/hsb-to-rgb/
+//The range of the input parameters is H: [0, 360], S: [0, 100], B: [0, 100].
+function HSBToRGBstring(h, s, b) {
+    const fix = (n) => Math.max(Math.min(Math.round(n), 255), 0);
+    s /= 100;
+    b /= 100;
+    const k = (n) => (n + h / 60) % 6;
+    const f = (n) => b * (1 - s * Math.max(0, Math.min(k(n), 4 - k(n), 1)));
+    return `rgb(${fix(255 * f(5))},${fix(255 * f(3))},${fix(255 * f(1))})`;
+}
+
 function LayeredAnimationCollection() {
     const layers = [];
 
@@ -102,17 +114,14 @@ function FireworkExplosion(cx, cy, delayStart) {
     const particles = [];
     const numParticles = Math.floor(Math.random() * 500) + 500;
 
-    const baseColorVal = 100;
-    const randomizedColorPortion = 155;
-    const getColorVariation = () => Math.round(Math.random() * 7) / 7;
-    const redColorVariation = getColorVariation();
-    const getRedColorValue = () => Math.floor((Math.random() * randomizedColorPortion * redColorVariation) + (randomizedColorPortion * (1 - redColorVariation))) + baseColorVal;
-    const greenColorVariation = getColorVariation();
-    const getGreenColorValue = () => Math.floor((Math.random() * randomizedColorPortion * greenColorVariation) + (randomizedColorPortion * (1 - greenColorVariation))) + baseColorVal;
-    const blueColorVariation = getColorVariation();
-    const getBlueColorValue = () => Math.floor((Math.random() * randomizedColorPortion * blueColorVariation) + (randomizedColorPortion * (1 - blueColorVariation))) + baseColorVal;
     const getAngle = () => ((Math.random() * 2 * angleRange) - angleRange) - (Math.PI / 2);
-    const getColor = () => `rgb(${getRedColorValue()},${getGreenColorValue()},${getBlueColorValue()})`;
+
+    const baseHue = Math.round(Math.random() * 360);
+    const hueVariation = Math.round(Math.random() * 60);
+    const getHue = () => (baseHue + Math.round(Math.random() * hueVariation * 2) - hueVariation) % 360;
+    const getSaturation = () => Math.round(Math.random() * 20) + 80;
+    const getValue = () => Math.round(Math.random() * 20) + 80;
+    const getColor =() => HSBToRGBstring(getHue(), getSaturation(), getValue());
     
     const angleRange = Math.PI;
     const sparkleAfter = Math.random() * 2 > 1 ? (Math.random() * .75) + .25 : 1;

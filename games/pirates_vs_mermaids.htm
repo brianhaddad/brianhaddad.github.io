@@ -2017,9 +2017,9 @@
                     const newAnimation = new LayeredAnimationCollection();
                     //first, background layer (fireworks) in a sequential collection
                     const fireworks = new LayeredAnimationCollection();
-                    fireworks.addLayer(new FireworkExplosion(.3, 0, 500));
+                    fireworks.addLayer(new FireworkExplosion(.3, 0, 900));
                     fireworks.addLayer(new FireworkExplosion(0, -.2, 0));
-                    fireworks.addLayer(new FireworkExplosion(-.3, 0, 200));
+                    fireworks.addLayer(new FireworkExplosion(-.3, 0, 500));
                     newAnimation.addLayer(fireworks);
                     //next, foreground, text
                     const text = new CountdownAnimationContainer(3000, (ct, tt) => {return ct/tt;}, createTextSlideUpFunction(phaseText));
