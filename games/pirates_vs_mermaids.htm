@@ -2013,16 +2013,19 @@
                 };
 
                 this.changeGamePhase = (phaseText) => {
-                    //TODO: are the fireworks always necessary? lol Add fireworks based on game phase? (win? start?)
                     const newAnimation = new LayeredAnimationCollection();
-                    //first, background layer (fireworks) in a sequential collection
-                    const fireworks = new LayeredAnimationCollection();
-                    fireworks.addLayer(MakeFireworkSequence(.3, 0, 900));
-                    fireworks.addLayer(MakeFireworkSequence(0, -.2, 0));
-                    fireworks.addLayer(MakeFireworkSequence(-.3, 0, 500));
-                    newAnimation.addLayer(fireworks);
+                    let textDelay = 0;
+                    if (phaseText === gamePhases.setup || phaseText === gamePhases.leftPlayerWins || phaseText === gamePhases.rightPlayerWins) {
+                        //first, background layer (fireworks) in a sequential collection, but only for some phases.
+                        const fireworks = new LayeredAnimationCollection();
+                        fireworks.addLayer(MakeFireworkSequence(.3, 0, 900));
+                        fireworks.addLayer(MakeFireworkSequence(0, -.2, 0));
+                        fireworks.addLayer(MakeFireworkSequence(-.3, 0, 500));
+                        newAnimation.addLayer(fireworks);
+                        textDelay = 1500;
+                    }
                     //next, foreground, text
-                    const text = new CountdownAnimationContainer(3000, (ct, tt) => {return ct/tt;}, createTextSlideUpFunction(phaseText), 1500);
+                    const text = new CountdownAnimationContainer(3000, (ct, tt) => {return ct/tt;}, createTextSlideUpFunction(phaseText), textDelay);
                     newAnimation.addLayer(text);
 
                     animations.push(newAnimation);
