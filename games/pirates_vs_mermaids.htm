@@ -50,7 +50,7 @@
              * 7x7 board, no D4 or D12 (just D6 and D20), one base column
              * 
              */
-            //TODO: safe spots?
+            //TODO: safe spots? Remove heal spots for testing?
             const cellTypes = {
                 center: 'centerCell',
                 leftBase: 'leftBase',
@@ -299,9 +299,9 @@
             const dieMovements = {
                 D4: [movementTypes.orthogonal(1), movementTypes.diagonal(3, true, true)],
                 D6: [movementTypes.orthogonal(2), movementTypes.diagonal(2)],
-                D12: [movementTypes.trueOmnidirectional(5)],
+                D12: [movementTypes.trueOmnidirectional(4)],
                 D20: [movementTypes.orthogonal(1)],
-                SpecialD12: [movementTypes.trueOmnidirectional(5), movementTypes.diagonal(99), movementTypes.orthogonal(99)],
+                SpecialD12: [movementTypes.trueOmnidirectional(4), movementTypes.diagonal(99), movementTypes.orthogonal(99)],
             };
 
             const dieBuilders = {
@@ -746,6 +746,7 @@
                             drawNgon(ctx, 6, r);
                             break;
                     }
+                    //TODO: draw as a fraction or use some other means to illustrate how "full" the health/power is.
                     drawCenteredBoldText(ctx, displayValue, textColor);
                     ctx.restore();
                 };
