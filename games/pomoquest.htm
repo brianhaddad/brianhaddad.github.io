@@ -96,9 +96,21 @@
                 defaultValues[xpKey] = levelOneXp;
             }
 
+            const itemTypes = {
+                rawFood: `Raw Food`, //<- required for cooking, for example
+                axe: `Axe`, //<- required for wood chopping (can be a weapon for dungeon crawling too, bonus for two weapon types?)
+                sword: `Sword`, //<- required for dungeon crawling
+                fishingPole: `Fishing Pole`, //<- required for fishing
+                flintAndSteel: `Flint and Steel`, //<- required for cooking
+                bowAndArrow: `Bow and Arrow`, //<- required for hunting (can be a weapon for dungeon crawling too, bonus for two weapon types?)
+                wood: `Wood`, //<- required for cooking
+            };
+
             //These are the activities a player can do during sessions.
             //Each one should appropriate XP toward a set of associated skills.
             //TODO: doesn't actually define how the XP should be divided between the skills.
+            //TODO: each one has requirements, levels, etc.
+            //Requirements searches the inventory for required materials/tools.
             const activities = {
                 woodChopping: {
                     skills: [skills.toolUse, skills.strength],
@@ -107,13 +119,13 @@
                     skills: [skills.intelligence, skills.toolUse],
                 },
                 hunting: {
-                    skills: [skills.strength, skills.combat, skills.intelligence],
+                    skills: [skills.combat, skills.intelligence],
                 },
                 dungeonCrawling: {
                     skills: [skills.strength, skills.combat, skills.health, skills.intelligence],
                 },
                 cooking: {
-                    skills: [skills.toolUse, skills.fire],
+                    skills: [skills.toolUse, skills.fire, skills.intelligence],
                 },
             };
 
