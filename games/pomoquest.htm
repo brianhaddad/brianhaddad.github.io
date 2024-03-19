@@ -93,6 +93,17 @@
                 },
             };
 
+            const getPlayerLevel = (state) => {
+                let xp = 0;
+                for (const n in skills) {
+                    const skillXp = state.get(skills[n].xpKey);
+                    if (skillXp) {
+                        xp += skillXp;
+                    }
+                }
+                return xpToLevel(xp);
+            };
+
             for (const n in skills) {
                 const xpKey = skills[n].keyValue + `Xp`;
                 skills[n].xpKey = xpKey;
@@ -102,44 +113,188 @@
 
             const itemTypes = {
                 rawFood: `Raw Food`, //<- required for cooking, for example
-                axe: `Axe`, //<- required for wood chopping (can be a weapon for dungeon crawling too, bonus for two weapon types?)
-                sword: `Sword`, //<- required for dungeon crawling
+                preppedFood: `Prepped Food`,
+                axe: `Axe`, //<- required for wood chopping
+                pickaxe: `Pickaxe`,
                 fishingPole: `Fishing Pole`, //<- required for fishing
-                flintAndSteel: `Flint and Steel`, //<- required for cooking
-                bowAndArrow: `Bow and Arrow`, //<- required for hunting (can be a weapon for dungeon crawling too, bonus for two weapon types?)
+                flintAndSteel: `Flint and Steel`, //<- required for cooking and smithing
                 wood: `Wood`, //<- required for cooking
+                weapon: `Weapon`, //<- required for hunting or dungeon crawling
+                rawOre: `Raw Ores`, //<- required for smithing
+            };
+
+            const newItem = (itemName, itemTypes, qty) => {
+                return {
+                    name: itemName,
+                    types: Array.from(itemTypes),
+                    quantity: qty,
+                };
+            };
+
+            const biomes = {
+                desert: `Desert`,
+                mountain: `Mountain`,
+                forest: `Forest`,
+                jungle: `Jungle`,
+                grassland: `Grassland`,
+                swamp: `Swamp`,
+                tundra: `Tundra`,
+                volcano: `Volcano`,
+                beach: `Beach`,
             };
 
             //These are the activities a player can do during sessions.
             //Each one should appropriate XP toward a set of associated skills.
-            //TODO: doesn't actually define how the XP should be divided between the skills.
-            //TODO: each one has requirements, levels, etc.
             //Requirements searches the inventory for required materials/tools.
             //Make activities a class (regional and global activities, exploration and cooking are global, hunting fishing etc. are regional)
             //The required skill levels (and maybe items) are dependent on the region.
             //Exploration has a chance to reveal a new region (procedurally generated).
             //Each new region contributes 1-5% toward total world exploration. Ensure procedural generation includes a minimum of one of each kind of biome.
             //Possible to discover regions that are much higher than current level (5-10 levels higher maybe more?).
-            //While exploring might encounter baddies.
+            //While exploring might encounter baddies, take damage, etc.
             //Additional activities/skills for the future could include crafting and building, but that is getting into stretch goal territory. Watch the scope!
+            const activityResult = (msg, lootItems) => {
+                return {
+                    messgae: msg,
+                    loot: Array.from(lootItems),
+                };
+            };
+
             const activities = {
                 woodChopping: {
+                    title: `Wood Chopping`,
                     skills: [skills.toolUse, skills.strength],
+                    requirements: [itemTypes.axe],
+                    unavailableInArea: (area) => {
+                        const notAvailable = [biomes.desert, biomes.tundra, biomes.volcano];
+                        return !(notAvailable.find(x => x === area.biome) === undefined);
+                    },
+                    minSkillLevelCalc: (area) => area.level,
+                    evaluateComplete: (area, state) => {
+                        const rewards = [];
+                        let itemName = `Oak Wood`;
+                        switch (area.biome) {
+                            case biomes.mountain:
+                                itemName = `Pine Wood`;
+                                break;
+                            
+                            case biomes.forest:
+                                itemName = `Spruce Wood`;
+                                break;
+                            
+                            case biomes.jungle:
+                                itemName = `Mahogany Wood`;
+                                break;
+                            
+                            case biomes.grassland:
+                                itemName = `Acacia Wood`;
+                                break;
+                            
+                            case biomes.swamp:
+                                itemName = `Willow Wood`;
+                                break;
+                            
+                            case biomes.beach:
+                                itemName = `Palm Wood`;
+                                break;
+                        }
+                        const workPeriod = state.get(stateKeys.workPeriod) / 60;
+                        const num = Math.floor(Math.random() * area.level * workPeriod);
+                        if (num > 0) {
+                            rewards.push(newItem(itemName, [itemTypes.wood], num));
+                        }
+                        const message = rewards.length > 0
+                            ? `You got some ${itemName.toLowerCase()}!`
+                            : `You failed to get any wood at all!`; //TODO: randomize failure messages?
+                        return activityResult(message, rewards);
+                    },
+                },
+                foraging: {
+                    title: `Foraging`,
+                    skills: [skills.intelligence, skills.exploration],
+                    requirements: [],
+                    unavailableInArea: (area) => false,
+                    minSkillLevelCalc: (area) => area.level,
+                    evaluateComplete: (area, state) => {
+                        //TODO: random loot (mostly raw ingredients) including wood and stones based on the area
+                    },
                 },
                 fishing: {
+                    title: `Fishing`,
                     skills: [skills.intelligence, skills.toolUse],
+                    requirements: [itemTypes.fishingPole],
+                    unavailableInArea: (area) => {
+                        const notAvailable = [biomes.desert, biomes.volcano];
+                        return !(notAvailable.find(x => x === area.biome) === undefined);
+                    },
+                    minSkillLevelCalc: (area) => area.level,
+                    evaluateComplete: (area, state) => {
+                        //TODO: random raw fish based on the area
+                    },
                 },
                 hunting: {
+                    title: `Hunting`,
                     skills: [skills.combat, skills.intelligence],
+                    requirements: [itemTypes.weapon],
+                    unavailableInArea: (area) => {
+                        const notAvailable = [biomes.volcano];
+                        return !(notAvailable.find(x => x === area.biome) === undefined);
+                    },
+                    minSkillLevelCalc: (area) => area.level,
+                    evaluateComplete: (area, state) => {
+                        //TODO: random game meat based on the area (bore, deer, rabbit, etc.)
+                    },
+                },
+                mining: {
+                    title: `Mining`,
+                    skills: [skills.strength, skills.toolUse],
+                    requirements: [itemTypes.pickaxe],
+                    unavailableInArea: (area) => false,
+                    minSkillLevelCalc: (area) => area.level,
+                    evaluateComplete: (area, state) => {
+                        //TODO: random raw ores based on level and area
+                    },
                 },
                 dungeonCrawling: {
+                    title: `Dungeon Crawling`,
                     skills: [skills.strength, skills.combat, skills.health, skills.intelligence],
+                    requirements: [itemTypes.weapon, itemTypes.preppedFood],
+                    unavailableInArea: (area) => false,
+                    minSkillLevelCalc: (area) => area.level,
+                    evaluateComplete: (area, state) => {
+                        //TODO: random prize loot based on the area (including special weapons?)
+                    },
                 },
                 cooking: {
+                    title: `Cooking`,
                     skills: [skills.toolUse, skills.fire, skills.intelligence],
+                    requirements: [itemTypes.rawFood, itemTypes.wood, itemTypes.flintAndSteel],
+                    unavailableInArea: (area) => false,
+                    minSkillLevelCalc: (area) => 1,
+                    evaluateComplete: (area, state) => {
+                        //TODO: remove raw food from inventory (exact quantity depends on level and work time) and return prepared versions of the food
+                    },
                 },
                 exploration: {
-                    skills: [skills.exploration, skills.intelligence, skills.fire, skills.toolUse, skills.combat],
+                    title: `Exploration`,
+                    skills: [skills.exploration, skills.intelligence],
+                    requirements: [itemTypes.preppedFood],
+                    unavailableInArea: (area) => false,
+                    minSkillLevelCalc: (area) => 1,
+                    evaluateComplete: (area, state) => {
+                        //TODO: depending on time and level, randomly possible to unlock a new area (this is set in the state)
+                        //Small chance of returning some foraged items as well?
+                    },
+                },
+                smithing: {
+                    title: `Smithing`,
+                    skills: [skills.strength, skills.toolUse, skills.fire],
+                    requirements: [itemTypes.wood, itemTypes.flintAndSteel, itemTypes.rawOre],
+                    unavailableInArea: (area) => false,
+                    minSkillLevelCalc: (area) => 1,
+                    evaluateComplete: (area, state) => {
+                        //TODO: similar to cooking, pull raw ores from inventory and return forged ingots, weapons, tools, treasures, etc.
+                    },
                 },
             };
 
@@ -164,12 +319,26 @@
                     myState[key] = value;
                     save();
                 };
+
+                this.addToInventory = (newItems) => {
+                    const inv = this.get(stateKeys.inventory);
+                    for (const item of newItems) {
+                        const existingItem = inv.find(x => x.name === item.name);
+                        if (existingItem) {
+                            existingItem.quantity += item.quantity;
+                        }
+                        else {
+                            inv.push(item);
+                        }
+                    }
+                    this.set(stateKeys.inventory, inv);
+                };
             }
 
             const state = new StateManager();
 
             function ScreenManager(state) {
-                //TODO:
+                //TODO: instantiate the state in here instead so it isn't globally available.
             }
 
             function ProgressBar(parent, width, height) {
