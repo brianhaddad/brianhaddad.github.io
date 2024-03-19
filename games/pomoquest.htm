@@ -7,6 +7,13 @@
     <body>
         <script src="../scripts/html_tools.js"></script>
         <script>
+            //TODO: some notes
+            /* 
+             * Possibly have an achievement system? A card per achievement, and a whole array of cards to scroll through?
+             * Use separate externally linked files for the new area generator and the achievement system (at a bare minimum).
+             * 
+             */
+            const gameWidth = 800;
             const rateOfAdvancement = 0.07;
             const levelUpDifficulty = 2;
             const xpToLevel = (xp) => {
@@ -21,7 +28,6 @@
                         return Math.floor(rateOfAdvancement * Math.pow(xp, 1/levelUpDifficulty));
                 }
             };
-
             const levelToXp = (level) => {
                 return Math.ceil(Math.pow(level / rateOfAdvancement, levelUpDifficulty));
             };
@@ -52,14 +58,12 @@
                 workPeriod: `workPeriod`,
                 restPeriod: `restPeriod`,
                 inventory: `inventory`,
-                currentHealth: `currentHealth`,
             };
 
             const defaultValues = {
                 workPeriod: 45 * 60,
                 restPeriod: 15 * 60,
                 inventory: [],
-                currentHealth: getHealthMax(levelOneXp),
             };
 
             const skills = {
@@ -335,10 +339,29 @@
                 };
             }
 
-            const state = new StateManager();
+            //TODO: look into implementing the timer functionality with web workers:
+            //https://isamatov.com/prevent-timers-stopping-javascript/
+            //TODO: timer is shown on all screens at all times (maybe in a header or something?)
 
-            function ScreenManager(state) {
-                //TODO: instantiate the state in here instead so it isn't globally available.
+            //TODO: play one sound when beginning the work timer (and thus ending the break timer), play another sound when the work timer is done.
+
+            function ScreenManager() {
+                const state = new StateManager();
+                const screenTypes = {
+                    welcome: `Welcome`,
+                    setup: `Setup`,
+                    activitySelection: `Select an Activity`,
+                    activityWorkTimer: `Working`, //TODO: also displays what activity they are engaged in
+                    activityResults: `Congratulations!`,
+                    postActivityRest: `Rest Period`,
+                };
+                const screens = {};
+                const mainDiv = createElement('div', {'style': `width:${gameWidth}px;height:100%;padding:0px;margin:0px auto;display:flex;flex-wrap:wrap;flex-direction:column;`}, null);
+                document.body.appendChild(mainDiv);
+
+                //TODO: all screens need to have an add and a remove function
+                //They need to keep track of whether they've been added, and if asked to remove, they should remove their child and then mark their "displayed" attribute false.
+                //Then when "shown" they need to mark the displayed attribute true so they know they need to remove again when switching.
             }
 
             function ProgressBar(parent, width, height) {
