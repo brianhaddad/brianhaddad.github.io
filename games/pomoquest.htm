@@ -87,6 +87,10 @@
                     keyValue: `intelligence`,
                     displayValue: `Intelligence`,
                 },
+                navigation: {
+                    keyValue: `navigation`,
+                    displayValue: `Navigation`,
+                },
             };
 
             for (const n in skills) {
@@ -111,6 +115,13 @@
             //TODO: doesn't actually define how the XP should be divided between the skills.
             //TODO: each one has requirements, levels, etc.
             //Requirements searches the inventory for required materials/tools.
+            //Make activities a class (regional and global activities, exploration and cooking are global, hunting fishing etc. are regional)
+            //The required skill levels (and maybe items) are dependent on the region.
+            //Exploration has a chance to reveal a new region (procedurally generated).
+            //Each new region contributes 1-5% toward total world exploration. Ensure procedural generation includes a minimum of one of each kind of biome.
+            //Possible to discover regions that are much higher than current level (5-10 levels higher maybe more?).
+            //While exploring might encounter baddies.
+            //Additional activities/skills for the future could include crafting and building, but that is getting into stretch goal territory. Watch the scope!
             const activities = {
                 woodChopping: {
                     skills: [skills.toolUse, skills.strength],
@@ -126,6 +137,9 @@
                 },
                 cooking: {
                     skills: [skills.toolUse, skills.fire, skills.intelligence],
+                },
+                exploration: {
+                    skills: [skills.exploration, skills.intelligence, skills.fire, skills.toolUse, skills.combat],
                 },
             };
 
