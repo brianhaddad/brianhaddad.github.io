@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>PomoQuest</title>
+        <link rel="stylesheet" href="../css/mvp.css">
+    </head>
+    <body>
+        <script src="../scripts/html_tools.js"></script>
+        <script>
+            const rateOfAdvancement = 0.07;
+            const levelUpDifficulty = 2;
+            const xpToLevel = (xp) => {
+                switch (levelUpDifficulty) {
+                    case 2:
+                        return Math.floor(rateOfAdvancement * Math.sqrt(xp));
+                    
+                    case 3:
+                        return Math.floor(rateOfAdvancement * Math.cbrt(xp));
+                    
+                    default:
+                        return Math.floor(rateOfAdvancement * Math.pow(xp, 1/levelUpDifficulty));
+                }
+            };
+
+            const levelToXp = (level) => {
+                return Math.ceil(Math.pow(level / rateOfAdvancement, levelUpDifficulty));
+            };
+
+            const getRelativeXpReport = (xp) => {
+                const level = xpToLevel(xp);
+                const baseLevelXp = levelToXp(level);
+                const nextLevelXp = levelToXp(level + 1);
+                return {
+                    value: xp - baseLevelXp,
+                    max: nextLevelXp - baseLevelXp,
+                };
+            };
+
+            const getHealthMax = (xp) => {
+                const level = xpToLevel(xp);
+                return 90 + (level * 10);
+            };
+
+            const levelOneXp = levelToXp(1);
+
+            const themeColors = {
+                progressBarBackground: `rgba(0,0,0,.25)`,
+                progressBarForeground: `rgba(255,255,255,.75)`,
+            };
+
+            const stateKeys = {
+                workPeriod: `workPeriod`,
+                restPeriod: `restPeriod`,
+                inventory: `inventory`,
+                currentHealth: `currentHealth`,
+            };
+
+            const defaultValues = {
+                workPeriod: 45 * 60,
+                restPeriod: 15 * 60,
+                inventory: [],
+                currentHealth: getHealthMax(levelOneXp),
+            };
+
+            const skills = {
+                strength: {
+                    keyValue: `strength`,
+                    displayValue: `Strength`,
+                },
+                toolUse: {
+                    keyValue: `toolUse`,
+                    displayValue: `Tool Use`,
+                },
+                fire: {
+                    keyValue: `fire`,
+                    displayValue: `Fire`,
+                },
+                combat: {
+                    keyValue: `combat`,
+                    displayValue: `Combat`,
+                },
+                health: {
+                    keyValue: `health`,
+                    displayValue: `Health`,
+                },
+                intelligence: {
+                    keyValue: `intelligence`,
+                    displayValue: `Intelligence`,
+                },
+            };
+
+            for (const n in skills) {
+                const xpKey = skills[n].keyValue + `Xp`;
+                skills[n].xpKey = xpKey;
+                stateKeys[xpKey] = xpKey;
+                defaultValues[xpKey] = levelOneXp;
+            }
+
+            //These are the activities a player can do during sessions.
+            //Each one should appropriate XP toward a set of associated skills.
+            //TODO: doesn't actually define how the XP should be divided between the skills.
+            const activities = {
+                woodChopping: {
+                    skills: [skills.toolUse, skills.strength],
+                },
+                fishing: {
+                    skills: [skills.intelligence, skills.toolUse],
+                },
+                hunting: {
+                    skills: [skills.strength, skills.combat, skills.intelligence],
+                },
+                dungeonCrawling: {
+                    skills: [skills.strength, skills.combat, skills.health, skills.intelligence],
+                },
+                cooking: {
+                    skills: [skills.toolUse, skills.fire],
+                },
+            };
+
+            function StateManager() {
+                const stateKey = `PomoQuestState`;
+                const myState = localStorage.hasOwnProperty(stateKey)
+                    ? JSON.parse(localStorage[stateKey])
+                    : {};
+
+                const save = () => {
+                    localStorage[stateKey] = JSON.stringify(myState);
+                };
+
+                this.get = (key) => {
+                    if (!myState.hasOwnProperty(key)) {
+                        this.set(key, defaultValues.hasOwnProperty(key) ? defaultValues[key] : null);
+                    }
+                    return myState[key];
+                };
+
+                this.set = (key, value) => {
+                    myState[key] = value;
+                    save();
+                };
+            }
+
+            const state = new StateManager();
+
+            function ScreenManager(state) {
+                //TODO:
+            }
+
+            function ProgressBar(parent, width, height) {
+                const borderRadius = '5';
+                const barContainer = createElement('div', { 'style': `background-color: ${themeColors.progressBarBackground}; border: 1px solid black; border-radius: ${borderRadius}px; width: ${width}px; height: ${height}px;` }, null);
+                const bar = createElement('div', { 'style': `border-radius: ${borderRadius}px; text-align: center; background-color: ${themeColors.progressBarForeground}; height:100%; width:50%` }, null);
+                barContainer.appendChild(bar);
+                parent.appendChild(barContainer);
+                
+                this.update = (data) => {
+                    bar.style.width = `${Math.floor((Math.min(data.value, data.max)/data.max) * 100)}%`;
+                };
+            }
+        </script>
+    </body>
+</html>
