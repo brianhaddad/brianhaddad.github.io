@@ -25,13 +25,13 @@ function AreaGenerator() {
                 minCount = biomeCounts[biome];
             }
         }
-        const hat = [];
+        const biomeHat = [];
         for (const biome in biomeCounts) {
             if (biomeCounts[biome] === minCount) {
-                hat.push(biome);
+                biomeHat.push(biome);
             }
         }
-        const selection = hat[Math.floor(Math.random() * hat.length)];
+        const selection = biomeHat[Math.floor(Math.random() * biomeHat.length)];
         return biomes[selection];
     };
 
@@ -44,6 +44,13 @@ function AreaGenerator() {
         return null;
     };
 
+    //TODO: populate with fun name components that can be removed as used to ensure every name is completely unique!
+    const nameComponentsHat = [
+        ``,
+        ``,
+    ];
+
+    //TODO: if using randomly generated names, need to ensure each name is completely unique!
     const generateRandomName = (level, biome) => {
         //TODO: actually randoly generate some area names!
         return `Placeholder ${biome} (lvl: ${level})`;

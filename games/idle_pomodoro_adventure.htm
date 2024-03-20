@@ -381,6 +381,46 @@
                 };
             }
 
+            function TimerWorker() {
+                let failoverMode = true;
+                let curTimer = null;
+                if (window.Worker) {
+                    try {
+                        curTimer = new Worker(`../scripts/pomodoro_timer_worker.js`);
+                        curTimer.onmessage = (e) => {
+                            this.onmessage(e);
+                        };
+                        failoverMode = false;
+                    }
+                    catch (e) {
+                        failoverMode = true;
+                    }
+                }
+
+                this.onmessage = (e) => {
+                    console.log(e);
+                };
+
+                this.postMessage = (data) => {
+                    if (!failoverMode) {
+                        curTimer.postMessage(data);
+                    }
+                    else {
+                        if (curTimer !== null) {
+                            clearInterval(curTimer);
+                            curTimer = null;
+                        }
+                        const d0 = data;
+                        const countUpTimer = (d0) => {
+                            const d = new Date();
+                            const diff = d - d0;
+                            this.onmessage({data: Math.floor(diff/1000)});
+                        };
+                        curTimer = setInterval(() => {countUpTimer(d0)}, 1000);
+                    }
+                };
+            }
+
             function IdlePomodoroAdventureApp() {
                 const state = new StateManager();
 
@@ -388,7 +428,7 @@
 
                 //TODO: might want to perform a check to see if the browser supports workers.
                 //If not, default to basic timeout behavior.
-                const timerWorker = new Worker(`../scripts/pomodoro_timer_worker.js`);
+                const timerWorker = new TimerWorker();
                 timerWorker.onmessage = (e) => {
                     evalTimer(e.data);
                 };
