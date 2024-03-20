@@ -515,9 +515,10 @@
                     const inv = state.get(stateKeys.inventory);
                     const loot = [];
                     if (!meetsInventoryRequirements(activities.woodChopping, state)) {
-                        loot.push(newItem('Basic Axe', [itemTypes.axe], 1));
+                        loot.push(newItem('Woodcutting Axe', [itemTypes.axe], 1));
                     }
                     //TODO: can keep populating loot based on requirements not met for basic activities.
+                    //Might want to have the player earn/create the tools for other activities though.
                     state.addToInventory(loot);
                 };
 
