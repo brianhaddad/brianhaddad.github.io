@@ -6,6 +6,7 @@
     </head>
     <body>
         <script src="../scripts/html_tools.js"></script>
+        <script src="../scripts/ipa_area_generator.js"></script>
         <script>
             //TODO: some notes
             /* 
@@ -58,12 +59,14 @@
                 workPeriod: `workPeriod`,
                 restPeriod: `restPeriod`,
                 inventory: `inventory`,
+                areas: `areas`,
             };
 
             const defaultValues = {
                 workPeriod: 45 * 60,
                 restPeriod: 15 * 60,
                 inventory: [],
+                areas: {},
             };
 
             const skills = {
@@ -135,6 +138,7 @@
                 };
             };
 
+            //TODO: loot tables and other data are procedurally generated based on biome and level.
             const biomes = {
                 desert: `Desert`,
                 mountain: `Mountain`,
@@ -147,6 +151,11 @@
                 beach: `Beach`,
             };
 
+            const biomeCounts = {};
+            for (const biome in biomes) {
+                biomeCounts[biome] = 0;
+            }
+
             //These are the activities a player can do during sessions.
             //Each one should appropriate XP toward a set of associated skills.
             //Requirements searches the inventory for required materials/tools.
@@ -155,6 +164,15 @@
             //Possible to discover regions that are much higher than current level (5-10 levels higher maybe more?).
             //While exploring might encounter baddies, take damage, etc.
             //Additional activities/skills for the future could include crafting and building, but that is getting into stretch goal territory. Watch the scope!
+            const getExplorationPercentage = (state) => {
+                const areas = state.get(stateKeys.areas);
+                let value = 0;
+                for (const area in areas) {
+                    value += area.level;
+                }
+                return value;
+            };
+
             const activityResult = (msg, lootItems) => {
                 return {
                     messgae: msg,
@@ -162,11 +180,31 @@
                 };
             };
 
+            const meetsMinSkillLevel = (area, activity, state) => {
+                for (const skill of activity.skills) {
+                    if (state.get(skill.xpKey) < activity.minSkillLevelCalc(area)) {
+                        return false;
+                    }
+                }
+                return true;
+            };
+
+            const meetsInventoryRequirements = (activity, state) => {
+                const inventory = state.get(stateKeys.inventory);
+                for (const type of activity.inventoryRequirements) {
+                    const goodItem = inventory.find(x => x.types.indexOf(type) > -1);
+                    if (!goodItem || goodItem.quantity < 1) {
+                        return false;
+                    }
+                }
+                return true;
+            };
+
             const activities = {
                 woodChopping: {
                     title: `Wood Chopping`,
                     skills: [skills.toolUse, skills.strength],
-                    requirements: [itemTypes.axe],
+                    inventoryRequirements: [itemTypes.axe],
                     unavailableInArea: (area) => {
                         const notAvailable = [biomes.desert, biomes.tundra, biomes.volcano];
                         return !(notAvailable.find(x => x === area.biome) === undefined);
@@ -214,7 +252,7 @@
                 foraging: {
                     title: `Foraging`,
                     skills: [skills.intelligence, skills.exploration],
-                    requirements: [],
+                    inventoryRequirements: [],
                     unavailableInArea: (area) => false,
                     minSkillLevelCalc: (area) => area.level,
                     evaluateComplete: (area, state) => {
@@ -224,7 +262,7 @@
                 fishing: {
                     title: `Fishing`,
                     skills: [skills.intelligence, skills.toolUse],
-                    requirements: [itemTypes.fishingPole],
+                    inventoryRequirements: [itemTypes.fishingPole],
                     unavailableInArea: (area) => {
                         const notAvailable = [biomes.desert, biomes.volcano];
                         return !(notAvailable.find(x => x === area.biome) === undefined);
@@ -237,7 +275,7 @@
                 hunting: {
                     title: `Hunting`,
                     skills: [skills.combat, skills.intelligence],
-                    requirements: [itemTypes.weapon],
+                    inventoryRequirements: [itemTypes.weapon],
                     unavailableInArea: (area) => {
                         const notAvailable = [biomes.volcano];
                         return !(notAvailable.find(x => x === area.biome) === undefined);
@@ -250,7 +288,7 @@
                 mining: {
                     title: `Mining`,
                     skills: [skills.strength, skills.toolUse],
-                    requirements: [itemTypes.pickaxe],
+                    inventoryRequirements: [itemTypes.pickaxe],
                     unavailableInArea: (area) => false,
                     minSkillLevelCalc: (area) => area.level,
                     evaluateComplete: (area, state) => {
@@ -260,7 +298,7 @@
                 dungeonCrawling: {
                     title: `Dungeon Crawling`,
                     skills: [skills.strength, skills.combat, skills.health, skills.intelligence],
-                    requirements: [itemTypes.weapon, itemTypes.preppedFood],
+                    inventoryRequirements: [itemTypes.weapon, itemTypes.preppedFood],
                     unavailableInArea: (area) => false,
                     minSkillLevelCalc: (area) => area.level,
                     evaluateComplete: (area, state) => {
@@ -270,7 +308,7 @@
                 cooking: {
                     title: `Cooking`,
                     skills: [skills.toolUse, skills.fire, skills.intelligence],
-                    requirements: [itemTypes.rawFood, itemTypes.wood, itemTypes.flintAndSteel],
+                    inventoryRequirements: [itemTypes.rawFood, itemTypes.wood, itemTypes.flintAndSteel],
                     unavailableInArea: (area) => false,
                     minSkillLevelCalc: (area) => 1,
                     evaluateComplete: (area, state) => {
@@ -280,18 +318,24 @@
                 exploration: {
                     title: `Exploration`,
                     skills: [skills.exploration, skills.intelligence],
-                    requirements: [itemTypes.preppedFood],
+                    inventoryRequirements: [itemTypes.preppedFood],
                     unavailableInArea: (area) => false,
                     minSkillLevelCalc: (area) => 1,
                     evaluateComplete: (area, state) => {
                         //TODO: depending on time and level, randomly possible to unlock a new area (this is set in the state)
                         //Small chance of returning some foraged items as well?
+                        const explorationPercentage = getExplorationPercentage(state);
+                        if (explorationPercentage === 100) {
+                            //can't do more exploration!
+                        }
+                        //TODO: also need to make sure the number arrives exactly at 100 by taking 100 - current percentage and making that the max level
+                        //for the new area (though the current max area level needs to be taken into account as well!).
                     },
                 },
                 smithing: {
                     title: `Smithing`,
                     skills: [skills.strength, skills.toolUse, skills.fire],
-                    requirements: [itemTypes.wood, itemTypes.flintAndSteel, itemTypes.rawOre],
+                    inventoryRequirements: [itemTypes.wood, itemTypes.flintAndSteel, itemTypes.rawOre],
                     unavailableInArea: (area) => false,
                     minSkillLevelCalc: (area) => 1,
                     evaluateComplete: (area, state) => {
@@ -337,11 +381,13 @@
                 };
             }
 
-            //TODO: play one sound when beginning the work timer (and thus ending the break timer), play another sound when the work timer is done.
-
-            function ScreenManager() {
+            function IdlePomodoroAdventureApp() {
                 const state = new StateManager();
 
+                const starterAreaName = `Novicewood Forest`;
+
+                //TODO: might want to perform a check to see if the browser supports workers.
+                //If not, default to basic timeout behavior.
                 const timerWorker = new Worker(`../scripts/pomodoro_timer_worker.js`);
                 timerWorker.onmessage = (e) => {
                     evalTimer(e.data);
@@ -396,6 +442,7 @@
                 const evalTimer = (timerValue) => {
                     if (timerValue >= timerTarget) {
                         timerWorker.terminate();
+                        //TODO: play one sound when beginning the work timer (and thus ending the break timer), play another sound when the work timer is done.
                         switch (currentTimerKey) {
                             case stateKeys.workPeriod:
                                 console.log('time to take a break!');
@@ -415,9 +462,34 @@
                     timerBar.update(timerBarValues);
                 };
 
+                const addArea = (lvl, bio, nm) => {
+                    const areas = state.get(stateKeys.areas);
+                    if (!areas.hasOwnProperty(nm)) {
+                        const newArea = areaGenerator.generate(lvl, bio, nm);
+                        areas[newArea.name] = newArea;
+                        state.set(stateKeys.areas, areas);
+                    }
+                };
+
+                const equipNewPlayer = () => {
+                    const inv = state.get(stateKeys.inventory);
+                    const loot = [];
+                    if (!meetsInventoryRequirements(activities.woodChopping, state)) {
+                        loot.push(newItem('Basic Axe', [itemTypes.axe], 1));
+                    }
+                    //TODO: can keep populating loot based on requirements not met for basic activities.
+                    state.addToInventory(loot);
+                };
+
                 //TODO: all screens need to have an add and a remove function (show/hide?)
                 //They need to keep track of whether they've been added, and if asked to remove, they should remove their child and then mark their "displayed" attribute false.
                 //Then when "shown" they need to mark the displayed attribute true so they know they need to remove again when switching.
+
+                //Setup:
+                //Add the starter area
+                addArea(1, biomes.forest, starterAreaName); //Will skip if area already exists.
+                equipNewPlayer();
+                
             }
 
             //TODO: need an activity picker component that will take in the "do-able" activities and display info panels about each one.
@@ -441,6 +513,8 @@
                     bar.style.width = `${Math.floor((Math.min(data.value, data.max)/data.max) * 100)}%`;
                 };
             }
+
+            const app = new IdlePomodoroAdventureApp();
         </script>
     </body>
 </html>
