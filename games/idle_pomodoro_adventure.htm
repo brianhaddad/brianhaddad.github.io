@@ -51,7 +51,7 @@
 
             const themeColors = {
                 progressBarBackground: `rgba(0,0,0,.25)`,
-                progressBarForeground: `rgba(255,255,255,.75)`,
+                progressBarForeground: `rgba(35,255,155,1)`,
             };
 
             const stateKeys = {
@@ -150,8 +150,6 @@
             //These are the activities a player can do during sessions.
             //Each one should appropriate XP toward a set of associated skills.
             //Requirements searches the inventory for required materials/tools.
-            //Make activities a class (regional and global activities, exploration and cooking are global, hunting fishing etc. are regional)
-            //The required skill levels (and maybe items) are dependent on the region.
             //Exploration has a chance to reveal a new region (procedurally generated).
             //Each new region contributes 1-5% toward total world exploration. Ensure procedural generation includes a minimum of one of each kind of biome.
             //Possible to discover regions that are much higher than current level (5-10 levels higher maybe more?).
@@ -339,14 +337,23 @@
                 };
             }
 
-            //TODO: look into implementing the timer functionality with web workers:
-            //https://isamatov.com/prevent-timers-stopping-javascript/
-            //TODO: timer is shown on all screens at all times (maybe in a header or something?)
-
             //TODO: play one sound when beginning the work timer (and thus ending the break timer), play another sound when the work timer is done.
 
             function ScreenManager() {
                 const state = new StateManager();
+
+                const timerWorker = new Worker(`../scripts/pomodoro_timer_worker.js`);
+                timerWorker.onmessage = (e) => {
+                    evalTimer(e.data);
+                };
+
+                //TODO: should any of these be stored in state in case of accidental refresh?
+                //maybe clear all values if too much time has passed since timer start?
+                //Possibly, we can save the last save date/time in the state and reset certain values if it's been too long?
+                let timerStart = new Date();
+                let timerTarget = 0;
+                let currentTimerKey = '';
+
                 const screenTypes = {
                     welcome: `Welcome`,
                     setup: `Setup`,
@@ -356,12 +363,71 @@
                     postActivityRest: `Rest Period`,
                 };
                 const screens = {};
+
                 const mainDiv = createElement('div', {'style': `width:${gameWidth}px;height:100%;padding:0px;margin:0px auto;display:flex;flex-wrap:wrap;flex-direction:column;`}, null);
                 document.body.appendChild(mainDiv);
 
-                //TODO: all screens need to have an add and a remove function
+                const headerDiv = createElement('div', {'style': `width:100%;display:flex;flex-direction:row;gap:8px;padding:0px;margin:0px;`}, null);
+                mainDiv.appendChild(headerDiv);
+
+                const title = createElement('h1', {'style': `display:block;`}, `Idle Pomodoro Adventure`); //TODO: make this a pixel art image?
+                headerDiv.appendChild(title);
+                const timerBarContainer = createElement('div', {'style': `margin-block-start:0.67em;display:flex;align-items:center;`}, null);
+                headerDiv.appendChild(timerBarContainer);
+                const timerBar = new ProgressBar(timerBarContainer, 400, 32);
+                timerBar.update({value: 0, max: 100});
+
+                //TODO: for testing? These should be activated internally methinks.
+                this.startWorkPeriod = () => {
+                    startTimer(stateKeys.workPeriod);
+                };
+
+                this.startRestPeriod = () => {
+                    startTimer(stateKeys.restPeriod);
+                };
+
+                const startTimer = (timerKey) => {
+                    currentTimerKey = timerKey;
+                    timerTarget = state.get(currentTimerKey);
+                    timerStart = new Date();
+                    timerWorker.postMessage(timerStart);
+                };
+
+                const evalTimer = (timerValue) => {
+                    if (timerValue >= timerTarget) {
+                        timerWorker.terminate();
+                        switch (currentTimerKey) {
+                            case stateKeys.workPeriod:
+                                console.log('time to take a break!');
+                                //TODO: evaluate the result of the selected activity
+                                break;
+
+                            case stateKeys.restPeriod:
+                                console.log('get back to work!');
+                                //TODO: if no activity was selected, select one of the available activities at random?
+                                break;
+                        }
+                    }
+                    const timerBarValues = {
+                        value: timerValue,
+                        max: timerTarget,
+                    };
+                    timerBar.update(timerBarValues);
+                };
+
+                //TODO: all screens need to have an add and a remove function (show/hide?)
                 //They need to keep track of whether they've been added, and if asked to remove, they should remove their child and then mark their "displayed" attribute false.
                 //Then when "shown" they need to mark the displayed attribute true so they know they need to remove again when switching.
+            }
+
+            //TODO: need an activity picker component that will take in the "do-able" activities and display info panels about each one.
+            //The info panels should have a "SELECT" button as well that highlights that panel. The whole component should be prepared to
+            //say what selection has been made, and each time a SELECT button is clicked, the other panels should all un-select.
+            //Also, each selection/panel needs to know if it is selectable or not (some will be 'disabled'). Also, the control should allow
+            //the code to get a selection of available (non-disabled) options to select one at random if the user fails to make a choice in time.
+            function ActivityPicker() {
+                //TODO: the rest of the owl.
+                this.getSelection = () => {};
             }
 
             function ProgressBar(parent, width, height) {
