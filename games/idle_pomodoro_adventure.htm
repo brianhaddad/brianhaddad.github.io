@@ -589,6 +589,7 @@
 
                 const activitySelector = new ActivityPicker(myContainer, myApp);
 
+                //TODO: can make the button inactive until an activity is selected?
                 const button = createElement('button', {'type': 'submit'}, `Go!`);
                 button.addEventListener('click', () => myApp.switchToScreen(screenTypes.activityWorkTimer));
                 myContainer.appendChild(button);
@@ -682,6 +683,7 @@
 
                 const activitySelector = new ActivityPicker(myContainer, myApp);
 
+                //TODO: can make the button inactive until an activity is selected?
                 const button = createElement('button', {'type': 'submit'}, `Rest!`);
                 button.addEventListener('click', () => myApp.switchToScreen(screenTypes.postActivityRest));
                 myContainer.appendChild(button);
