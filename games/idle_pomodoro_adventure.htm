@@ -699,7 +699,7 @@
                         resultsDisplay.innerHTML = '';
                         const results = myApp.getLatestActivityResult();
                         resultsDisplay.appendChild(createElement('h3', {}, results.message));
-                        //TODO: also display the loot
+                        //TODO: also display the loot and data about experience gained, level increases, etc.
                     }
                 };
 
@@ -816,6 +816,12 @@
                     screens[newScreen].show();
                     document.title = `${appTitle}: [${newScreen}]`;
                     switch (newScreen) {
+                        case screenTypes.activitySelection:
+                            //This ensures the tab can play these sounds later even if the tab is not showing.
+                            workDoneSound.play();
+                            restDoneSound.play();
+                            break;
+                            
                         case screenTypes.activityWorkTimer:
                             startWorkPeriod();
                             break;
@@ -904,6 +910,7 @@
                                 restDoneSound.load();
                                 restDoneSound.play();
                                 //TODO: if no activity was selected, select one of the available activities at random?
+                                //TODO: do not go to work timer immediately? Let the user acknowledge the end of break time?
                                 this.switchToScreen(screenTypes.activityWorkTimer);
                                 break;
                         }
