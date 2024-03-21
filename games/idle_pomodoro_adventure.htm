@@ -792,6 +792,10 @@
                 screens[screenTypes.activityResults] = new ResultsScreen(currentScreenContainer, this);
                 screens[screenTypes.postActivityRest] = new RestingScreen(currentScreenContainer, this);
 
+                //TODO: attach and detach available, probably in some kind of footer or extra container?
+                const playerDisplayCard = new PlayerDisplayCard(state);
+                playerDisplayCard.update();
+
                 const mainDiv = createElement('div', {'style': `width:${gameWidth}px;height:100%;padding:0px;margin:0px auto;display:flex;flex-wrap:wrap;flex-direction:column;`}, null);
                 document.body.appendChild(mainDiv);
 
@@ -1086,6 +1090,59 @@
                 
                 this.update = (data) => {
                     bar.style.width = `${Math.floor((Math.min(data.value, data.max)/data.max) * 100)}%`;
+                };
+            }
+
+            function PlayerDisplayCard(s) {
+                const state = s;
+                const myContainer = createElement('div', {}, null);
+                const statDisplays = {};
+                for (const stat in skills) {
+                    statDisplays[skills[stat].xpKey] = new PlayerStatDisplay(skills[stat].displayValue);
+                }
+                const inventoryDisplay = new PlayerInventoryDisplay();
+                //TODO: the rest of the owl
+
+                //TODO: populate the container, maybe with a fieldset first?
+                //Then fill the statDisplays array.
+                const populate = () => {
+                    //TODO: iterate over the statDisplays and update each one.
+                };
+
+                this.update = () => {
+                    //TODO: populate from settings
+                    const newInventoryData = state.get(stateKeys.inventory);
+                    inventoryDisplay.update(newInventoryData);
+
+                    for (const stat in statDisplays) {
+                        statDisplays[stat].update(state.get(stat));
+                    }
+                };
+
+                this.attach = (parent) => {
+                    parent.appendChild(myContainer);
+                };
+
+                this.detach = (parent) => {
+                    parent.removeChild(myContainer);
+                };
+            }
+
+            function PlayerStatDisplay(statName) {
+                const displayName = statName;
+                //TODO: the rest of the owl.
+                //When updating, can it highlight changes, such as leveling up?
+                this.update = (xp) => {
+                    const lvl = xpToLevel(xp);
+                    const nextLvlProgress = getRelativeXpReport(xp);
+                    //TODO: actually draw/display the level and progress bar.
+                };
+            }
+
+            function PlayerInventoryDisplay() {
+                //TODO: the rest of the owl.
+                this.update = (inventoryData) => {
+                    //TODO: might want icons/graphics for each inventory item type?
                 };
             }
 
