@@ -10,9 +10,9 @@
         <script>
             //TODO: some notes
             /* 
+             * Definitely need a favicon.
              * Possibly have an achievement system? A card per achievement, and a whole array of cards to scroll through?
-             * Use separate externally linked files for the new area generator and the achievement system (at a bare minimum).
-             * 
+             * Need a character stats/inventory display screen! Probably a modal overlay? Or maybe something at the footer?
              */
             const appTitle = `Idle Pomodoro Adventure`;
             const gameWidth = 800;
@@ -59,6 +59,7 @@
             const stateKeys = {
                 workPeriod: `workPeriod`,
                 restPeriod: `restPeriod`,
+                displayRemainingTime: `displayRemainingTime`,
                 inventory: `inventory`,
                 areas: `areas`,
             };
@@ -66,6 +67,7 @@
             const defaultValues = {
                 workPeriod: 45 * 60,
                 restPeriod: 15 * 60,
+                displayRemainingTime: true,
                 inventory: [],
                 areas: {},
             };
@@ -258,6 +260,7 @@
                     },
                     minSkillLevelCalc: (area) => area.level,
                     evaluateComplete: (area, state) => {
+                        //TODO: loot tables go somewhere else
                         const rewards = [];
                         let itemName = `Oak Wood`;
                         switch (area.biome) {
@@ -395,6 +398,14 @@
                     }
                     this.set(stateKeys.inventory, inv);
                 };
+
+                this.addXp = (xpKey, amt) => {
+                    const test = this.get(xpKey);
+                    if (!isNaN(test)) {
+                        myState[xpKey] += amt;
+                        save();
+                    }
+                };
             }
 
             function TimerWorker() {
@@ -462,7 +473,7 @@
 
             const displaySeconds = (seconds) => {
                 if (isNaN(seconds) || seconds <= 0) {
-                    return `[TIME INVALID]`;
+                    return `Time is up!`;
                 }
                 const minutes = Math.floor(seconds / 60);
                 seconds -= minutes * 60;
@@ -616,6 +627,9 @@
                 const activityTitle = createElement('h3', {}, null);
                 myContainer.appendChild(activityTitle);
 
+                const timeRemainingDisplay = createElement('div', {}, null);
+                myContainer.appendChild(timeRemainingDisplay);
+
                 const subtitle = createElement('h2', {}, 'Focus!');
                 myContainer.appendChild(subtitle);
 
@@ -628,6 +642,16 @@
                         showing = true;
                         const activityText = myApp.getCurrentActivityTitle();
                         activityTitle.innerHTML = activityText;
+                        if (myApp.getStateData(stateKeys.displayRemainingTime)) {
+                            timeRemainingDisplay.innerHTML = '';
+                            const remainingDisplay = makeFieldset('Work Time Remaining', {'style': `border-radius: 5px; width: ${Math.floor(gameWidth/2)}px;`});
+                            timeRemainingDisplay.appendChild(remainingDisplay);
+                            const timeDisplay = createElement('span', {'style': `font-weight:bold;font-size:1.25em;`}, 'Ready?'); //TODO: mess with the font more?
+                            remainingDisplay.appendChild(timeDisplay);
+                            myApp.onTick = () => {
+                                timeDisplay.innerHTML = myApp.getRemainingTimeDisplay();
+                            };
+                        }
                     }
                 };
 
@@ -697,6 +721,9 @@
                 const title = createElement('h1', {}, 'Resting');
                 myContainer.appendChild(title);
 
+                const timeRemainingDisplay = createElement('div', {}, null);
+                myContainer.appendChild(timeRemainingDisplay);
+
                 const subtitle = createElement('h2', {}, 'Take a meaningful break!');
                 myContainer.appendChild(subtitle);
 
@@ -707,6 +734,16 @@
                     if (!showing) {
                         parent.appendChild(myContainer);
                         showing = true;
+                        if (myApp.getStateData(stateKeys.displayRemainingTime)) {
+                            timeRemainingDisplay.innerHTML = '';
+                            const remainingDisplay = makeFieldset('Break Time Remaining', {'style': `border-radius: 5px; width: ${Math.floor(gameWidth/2)}px;`});
+                            timeRemainingDisplay.appendChild(remainingDisplay);
+                            const timeDisplay = createElement('span', {'style': `font-weight:bold;font-size:1.25em;`}, 'Ready?'); //TODO: mess with the font more?
+                            remainingDisplay.appendChild(timeDisplay);
+                            myApp.onTick = () => {
+                                timeDisplay.innerHTML = myApp.getRemainingTimeDisplay();
+                            };
+                        }
                     }
                 };
 
@@ -728,11 +765,15 @@
                     evalTimer(e.data);
                 };
 
+                const workDoneSound = new Audio('../audio-clips/work-done.ogg');
+                const restDoneSound = new Audio('../audio-clips/rest-done.ogg');
+
                 //TODO: should any of these be stored in state in case of accidental refresh?
                 //maybe clear all values if too much time has passed since timer start?
                 //Possibly, we can save the last save date/time in the state and reset certain values if it's been too long?
                 let timerStart = new Date();
                 let timerTarget = 0;
+                let remainingSeconds = 0;
                 let currentTimerKey = '';
 
                 let currentAreaData = null;
@@ -815,6 +856,15 @@
                     return title;
                 };
 
+                this.getRemainingTimeDisplay = () => {
+                    if (state.get(stateKeys.displayRemainingTime)) {
+                        return displaySeconds(remainingSeconds);
+                    }
+                    return null;
+                };
+
+                this.onTick = null;
+
                 const startWorkPeriod = () => {
                     startTimer(stateKeys.workPeriod);
                 };
@@ -833,25 +883,34 @@
                 const evalTimer = (timerValue) => {
                     if (timerValue > timerTarget) {
                         timerValue = 0;
+                        remainingSeconds = 0;
                         timerWorker.terminate();
-                        //TODO: play one sound when beginning the work timer (and thus ending the break timer), play another sound when the work timer is done.
-                        //TODO: currently, rest period doesn't start right away after work period.
-                        //Should rest period begin automatically?
                         switch (currentTimerKey) {
                             case stateKeys.workPeriod:
+                                workDoneSound.load();
+                                workDoneSound.play();
                                 //TODO: if no activity was selected, this crashes.
                                 currentActivityResult = activities[currentActivityKey].evaluateComplete(currentAreaData, state);
+                                state.addToInventory(currentActivityResult.loot);
+                                for (const skill of activities[currentActivityKey].skills) {
+                                    state.addXp(skill.xpKey, timerTarget);
+                                }
                                 currentActivityKey = null;
                                 currentAreaData = null;
-                                state.addToInventory(currentActivityResult.loot);
                                 this.switchToScreen(screenTypes.activityResults);
                                 break;
 
                             case stateKeys.restPeriod:
+                                restDoneSound.load();
+                                restDoneSound.play();
                                 //TODO: if no activity was selected, select one of the available activities at random?
                                 this.switchToScreen(screenTypes.activityWorkTimer);
                                 break;
                         }
+                    }
+                    remainingSeconds = timerTarget - timerValue;
+                    if (this.onTick) {
+                        this.onTick();
                     }
                     const timerBarValues = {
                         value: timerValue,
