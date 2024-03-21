@@ -14,6 +14,7 @@
              * Use separate externally linked files for the new area generator and the achievement system (at a bare minimum).
              * 
              */
+            const appTitle = `Idle Pomodoro Adventure`;
             const gameWidth = 800;
             const rateOfAdvancement = 0.07;
             const levelUpDifficulty = 2;
@@ -68,6 +69,11 @@
                 inventory: [],
                 areas: {},
             };
+
+            //TODO: move somewhere else for dev tools.
+            //dev overrides
+            //defaultValues.workPeriod = 10;
+            //defaultValues.restPeriod = 5;
 
             const skills = {
                 strength: {
@@ -403,6 +409,10 @@
 
                 this.postMessage = (data) => {
                     if (!failoverMode) {
+                        curTimer = new Worker(`../scripts/pomodoro_timer_worker.js`);
+                        curTimer.onmessage = (e) => {
+                            this.onmessage(e);
+                        };
                         curTimer.postMessage(data);
                     }
                     else {
@@ -419,6 +429,234 @@
                         curTimer = setInterval(() => {countUpTimer(d0)}, 1000);
                     }
                 };
+
+                this.terminate = () => {
+                    if (!failoverMode) {
+                        curTimer.terminate();
+                    }
+                    else {
+                        clearInterval(curTimer);
+                        curTimer = null;
+                    }
+                };
+            }
+
+            const screenTypes = {
+                welcome: `Welcome`,
+                setup: `Setup`,
+                activitySelection: `Select an Activity`,
+                activityWorkTimer: `Working`, //TODO: also displays what activity they are engaged in
+                activityResults: `Congratulations!`,
+                postActivityRest: `Rest Period`,
+            };
+
+            function WelcomeScreen(p, a) {
+                const parent = p;
+                const myApp = a;
+                const myContainer = createElement('div', {'style': `display:flex;flex-direction:column;align-items:center;`}, null);
+                let showing = false;
+
+                //TODO: replace with a nice, big graphic?
+                const title = createElement('h1', {}, 'Welcome!');
+                myContainer.appendChild(title);
+
+                const button = createElement('button', {'type': 'submit'}, `Begin`);
+                button.addEventListener('click', () => myApp.switchToScreen(screenTypes.activitySelection));
+                myContainer.appendChild(button);
+
+                //TODO: gear icon?
+                const setup = createElement('input', {'type': 'button', 'value': 'Setup'}, null);
+                setup.addEventListener('click', () => myApp.switchToScreen(screenTypes.setup));
+                myContainer.appendChild(setup);
+
+                //TODO: need a settings button to show the settings screen.
+                
+                this.show = () => {
+                    if (!showing) {
+                        parent.appendChild(myContainer);
+                        showing = true;
+                    }
+                };
+
+                this.hide = () => {
+                    if (showing) {
+                        parent.removeChild(myContainer);
+                        showing = false;
+                    }
+                };
+            }
+
+            function SetupScreen(p, a) {
+                const parent = p;
+                const myApp = a;
+                const myContainer = createElement('div', {'style': `display:flex;flex-direction:column;align-items:center;`}, null);
+                let showing = false;
+
+                //TODO: replace with a nice, big graphic?
+                const title = createElement('h1', {}, 'App Setup');
+                myContainer.appendChild(title);
+
+                const button = createElement('button', {'type': 'submit'}, `Done`);
+                button.addEventListener('click', () => myApp.switchToScreen(screenTypes.activitySelection));
+                myContainer.appendChild(button);
+
+                //TODO: need controls for editing the settings, especially the timer values
+                //might use pre-made list of timer values (5 min, 10, min, 15 min, etc...)
+                //maybe an advanced mode that allows a number of seconds to be entered manually
+                
+                this.show = () => {
+                    if (!showing) {
+                        parent.appendChild(myContainer);
+                        showing = true;
+                    }
+                };
+
+                this.hide = () => {
+                    if (showing) {
+                        parent.removeChild(myContainer);
+                        showing = false;
+                    }
+                };
+            }
+
+            function ActivitySelectScreen(p, a) {
+                const parent = p;
+                const myApp = a;
+                const myContainer = createElement('div', {'style': `display:flex;flex-direction:column;align-items:center;`}, null);
+                let showing = false;
+
+                //TODO: replace with a nice, big graphic?
+                const title = createElement('h1', {}, 'Select an Activity');
+                myContainer.appendChild(title);
+
+                //TODO: implement the activity selection control.
+                const activitySelector = new ActivityPicker();
+
+                const button = createElement('button', {'type': 'submit'}, `Go!`);
+                button.addEventListener('click', () => myApp.switchToScreen(screenTypes.activityWorkTimer));
+                myContainer.appendChild(button);
+
+                //TODO: gear icon?
+                const setup = createElement('input', {'type': 'button', 'value': 'Setup'}, null);
+                setup.addEventListener('click', () => myApp.switchToScreen(screenTypes.setup));
+                myContainer.appendChild(setup);
+
+                
+                this.show = () => {
+                    if (!showing) {
+                        //TODO: reset the activity selector
+                        parent.appendChild(myContainer);
+                        showing = true;
+                    }
+                };
+
+                this.hide = () => {
+                    if (showing) {
+                        parent.removeChild(myContainer);
+                        showing = false;
+                    }
+                };
+            }
+
+            function WorkingScreen(p, a) {
+                const parent = p;
+                const myApp = a;
+                const myContainer = createElement('div', {'style': `display:flex;flex-direction:column;align-items:center;`}, null);
+                let showing = false;
+
+                //TODO: replace with a nice, big graphic?
+                const title = createElement('h1', {}, 'Working');
+                myContainer.appendChild(title);
+
+                const subtitle = createElement('h2', {}, 'Focus!');
+                myContainer.appendChild(subtitle);
+
+                //TODO: maybe include some kind of graphics based on the current acitivy?
+                //If so, how to get current activity data to the screen? Maybe use myApp and a getter?
+                
+                this.show = () => {
+                    if (!showing) {
+                        parent.appendChild(myContainer);
+                        showing = true;
+                    }
+                };
+
+                this.hide = () => {
+                    if (showing) {
+                        parent.removeChild(myContainer);
+                        showing = false;
+                    }
+                };
+            }
+
+            function ResultsScreen(p, a) {
+                const parent = p;
+                const myApp = a;
+                const myContainer = createElement('div', {'style': `display:flex;flex-direction:column;align-items:center;`}, null);
+                let showing = false;
+
+                //TODO: replace with a nice, big graphic?
+                const title = createElement('h1', {}, 'Results!');
+                myContainer.appendChild(title);
+
+                //TODO: implement the activity selection control.
+                const activitySelector = new ActivityPicker();
+
+                const button = createElement('button', {'type': 'submit'}, `Rest!`);
+                button.addEventListener('click', () => myApp.switchToScreen(screenTypes.postActivityRest));
+                myContainer.appendChild(button);
+
+                //TODO: gear icon?
+                const setup = createElement('input', {'type': 'button', 'value': 'Setup'}, null);
+                setup.addEventListener('click', () => myApp.switchToScreen(screenTypes.setup));
+                myContainer.appendChild(setup);
+
+                
+                this.show = () => {
+                    if (!showing) {
+                        //TODO: reset the activity selector
+                        parent.appendChild(myContainer);
+                        showing = true;
+                    }
+                };
+
+                this.hide = () => {
+                    if (showing) {
+                        parent.removeChild(myContainer);
+                        showing = false;
+                    }
+                };
+            }
+
+            function RestingScreen(p, a) {
+                const parent = p;
+                const myApp = a;
+                const myContainer = createElement('div', {'style': `display:flex;flex-direction:column;align-items:center;`}, null);
+                let showing = false;
+
+                //TODO: replace with a nice, big graphic?
+                const title = createElement('h1', {}, 'Resting');
+                myContainer.appendChild(title);
+
+                const subtitle = createElement('h2', {}, 'Take a meaningful break!');
+                myContainer.appendChild(subtitle);
+
+                //TODO: maybe show what upcoming activity will be executed during the next work period?
+                //If so, how to get current activity data to the screen? Maybe use myApp and a getter?
+                
+                this.show = () => {
+                    if (!showing) {
+                        parent.appendChild(myContainer);
+                        showing = true;
+                    }
+                };
+
+                this.hide = () => {
+                    if (showing) {
+                        parent.removeChild(myContainer);
+                        showing = false;
+                    }
+                };
             }
 
             function IdlePomodoroAdventureApp() {
@@ -426,8 +664,6 @@
 
                 const starterAreaName = `Novicewood Forest`;
 
-                //TODO: might want to perform a check to see if the browser supports workers.
-                //If not, default to basic timeout behavior.
                 const timerWorker = new TimerWorker();
                 timerWorker.onmessage = (e) => {
                     evalTimer(e.data);
@@ -440,15 +676,15 @@
                 let timerTarget = 0;
                 let currentTimerKey = '';
 
-                const screenTypes = {
-                    welcome: `Welcome`,
-                    setup: `Setup`,
-                    activitySelection: `Select an Activity`,
-                    activityWorkTimer: `Working`, //TODO: also displays what activity they are engaged in
-                    activityResults: `Congratulations!`,
-                    postActivityRest: `Rest Period`,
-                };
+                let currentScreen = screenTypes.welcome;
+                const currentScreenContainer = createElement('div', {}, null);
                 const screens = {};
+                screens[screenTypes.welcome] = new WelcomeScreen(currentScreenContainer, this);
+                screens[screenTypes.setup] = new SetupScreen(currentScreenContainer, this);
+                screens[screenTypes.activitySelection] = new ActivitySelectScreen(currentScreenContainer, this);
+                screens[screenTypes.activityWorkTimer] = new WorkingScreen(currentScreenContainer, this);
+                screens[screenTypes.activityResults] = new ResultsScreen(currentScreenContainer, this);
+                screens[screenTypes.postActivityRest] = new RestingScreen(currentScreenContainer, this);
 
                 const mainDiv = createElement('div', {'style': `width:${gameWidth}px;height:100%;padding:0px;margin:0px auto;display:flex;flex-wrap:wrap;flex-direction:column;`}, null);
                 document.body.appendChild(mainDiv);
@@ -463,12 +699,30 @@
                 const timerBar = new ProgressBar(timerBarContainer, 400, 32);
                 timerBar.update({value: 0, max: 100});
 
-                //TODO: for testing? These should be activated internally methinks.
-                this.startWorkPeriod = () => {
+                mainDiv.appendChild(currentScreenContainer);
+
+                this.switchToScreen = (newScreen) => {
+                    for (const screen in screens) {
+                        screens[screen].hide();
+                    }
+                    screens[newScreen].show();
+                    document.title = `${appTitle}: [${newScreen}]`;
+                    switch (newScreen) {
+                        case screenTypes.activityWorkTimer:
+                            startWorkPeriod();
+                            break;
+
+                        case screenTypes.postActivityRest:
+                            startRestPeriod();
+                            break;
+                    }
+                };
+
+                const startWorkPeriod = () => {
                     startTimer(stateKeys.workPeriod);
                 };
 
-                this.startRestPeriod = () => {
+                const startRestPeriod = () => {
                     startTimer(stateKeys.restPeriod);
                 };
 
@@ -480,18 +734,22 @@
                 };
 
                 const evalTimer = (timerValue) => {
-                    if (timerValue >= timerTarget) {
+                    console.log(timerValue);
+                    if (timerValue > timerTarget) {
+                        timerValue = 0;
                         timerWorker.terminate();
                         //TODO: play one sound when beginning the work timer (and thus ending the break timer), play another sound when the work timer is done.
+                        //TODO: currently, rest period doesn't start right away after work period.
+                        //Should rest period begin automatically?
                         switch (currentTimerKey) {
                             case stateKeys.workPeriod:
-                                console.log('time to take a break!');
                                 //TODO: evaluate the result of the selected activity
+                                this.switchToScreen(screenTypes.activityResults);
                                 break;
 
                             case stateKeys.restPeriod:
-                                console.log('get back to work!');
                                 //TODO: if no activity was selected, select one of the available activities at random?
+                                this.switchToScreen(screenTypes.activityWorkTimer);
                                 break;
                         }
                     }
@@ -530,6 +788,9 @@
                 //Add the starter area
                 addArea(1, biomes.forest, starterAreaName); //Will skip if area already exists.
                 equipNewPlayer();
+
+                //Show welcome screen
+                this.switchToScreen(screenTypes.welcome);
                 
             }
 
