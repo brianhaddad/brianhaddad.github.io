@@ -552,15 +552,15 @@
                 const title = createElement('h1', {}, 'App Setup');
                 myContainer.appendChild(title);
 
-                const button = createElement('button', {'type': 'submit'}, `Done`);
-                button.addEventListener('click', () => myApp.goBack());
-                myContainer.appendChild(button);
-
                 //TODO: need controls for editing the settings, especially the timer values
                 //might use pre-made list of timer values (5 min, 10, min, 15 min, etc...)
                 //maybe an advanced mode that allows a number of seconds to be entered manually
                 const placeholder = createElement('p', {}, 'Coming soon! lol');
                 myContainer.appendChild(placeholder);
+
+                const button = createElement('button', {'type': 'submit'}, `Done`);
+                button.addEventListener('click', () => myApp.goBack());
+                myContainer.appendChild(button);
                 
                 this.show = () => {
                     if (!showing) {
