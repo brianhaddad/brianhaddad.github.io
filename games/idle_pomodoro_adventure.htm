@@ -179,13 +179,6 @@
                 return value;
             };
 
-            const activityResult = (msg, lootItems) => {
-                return {
-                    messgae: msg,
-                    loot: Array.from(lootItems),
-                };
-            };
-
             const meetsMinSkillLevel = (area, activity, state) => {
                 for (const skill of activity.skills) {
                     if (state.get(skill.xpKey) < activity.minSkillLevelCalc(area)) {
@@ -206,9 +199,57 @@
                 return true;
             };
 
+            const activityResult = (msg, lootItems) => {
+                return {
+                    message: msg,
+                    loot: Array.from(lootItems),
+                };
+            };
+
             const activities = {
+                cooking: {
+                    title: `Cooking`,
+                    areaDependent: false,
+                    skills: [skills.toolUse, skills.fire, skills.intelligence],
+                    inventoryRequirements: [itemTypes.rawFood, itemTypes.wood, itemTypes.flintAndSteel],
+                    unavailableInArea: (area) => false,
+                    minSkillLevelCalc: (area) => 1,
+                    evaluateComplete: (area, state) => {
+                        //TODO: remove raw food from inventory (exact quantity depends on level and work time) and return prepared versions of the food
+                    },
+                },
+                smithing: {
+                    title: `Smithing`,
+                    areaDependent: false,
+                    skills: [skills.strength, skills.toolUse, skills.fire],
+                    inventoryRequirements: [itemTypes.wood, itemTypes.flintAndSteel, itemTypes.rawOre],
+                    unavailableInArea: (area) => false,
+                    minSkillLevelCalc: (area) => 1,
+                    evaluateComplete: (area, state) => {
+                        //TODO: similar to cooking, pull raw ores from inventory and return forged ingots, weapons, tools, treasures, etc.
+                    },
+                },
+                exploration: {
+                    title: `Exploration`,
+                    areaDependent: false,
+                    skills: [skills.navigation, skills.intelligence],
+                    inventoryRequirements: [itemTypes.preppedFood],
+                    unavailableInArea: (area) => false,
+                    minSkillLevelCalc: (area) => 1,
+                    evaluateComplete: (area, state) => {
+                        //TODO: depending on time and level, randomly possible to unlock a new area (this is set in the state)
+                        //Small chance of returning some foraged items as well?
+                        const explorationPercentage = getExplorationPercentage(state);
+                        if (explorationPercentage === 100) {
+                            //can't do more exploration!
+                        }
+                        //TODO: also need to make sure the number arrives exactly at 100 by taking 100 - current percentage and making that the max level
+                        //for the new area (though the current max area level needs to be taken into account as well!).
+                    },
+                },
                 woodChopping: {
                     title: `Wood Chopping`,
+                    areaDependent: true,
                     skills: [skills.toolUse, skills.strength],
                     inventoryRequirements: [itemTypes.axe],
                     unavailableInArea: (area) => {
@@ -257,7 +298,8 @@
                 },
                 foraging: {
                     title: `Foraging`,
-                    skills: [skills.intelligence, skills.exploration],
+                    areaDependent: true,
+                    skills: [skills.intelligence, skills.navigation],
                     inventoryRequirements: [],
                     unavailableInArea: (area) => false,
                     minSkillLevelCalc: (area) => area.level,
@@ -267,6 +309,7 @@
                 },
                 fishing: {
                     title: `Fishing`,
+                    areaDependent: true,
                     skills: [skills.intelligence, skills.toolUse],
                     inventoryRequirements: [itemTypes.fishingPole],
                     unavailableInArea: (area) => {
@@ -280,6 +323,7 @@
                 },
                 hunting: {
                     title: `Hunting`,
+                    areaDependent: true,
                     skills: [skills.combat, skills.intelligence],
                     inventoryRequirements: [itemTypes.weapon],
                     unavailableInArea: (area) => {
@@ -293,6 +337,7 @@
                 },
                 mining: {
                     title: `Mining`,
+                    areaDependent: true,
                     skills: [skills.strength, skills.toolUse],
                     inventoryRequirements: [itemTypes.pickaxe],
                     unavailableInArea: (area) => false,
@@ -303,49 +348,13 @@
                 },
                 dungeonCrawling: {
                     title: `Dungeon Crawling`,
+                    areaDependent: true,
                     skills: [skills.strength, skills.combat, skills.health, skills.intelligence],
                     inventoryRequirements: [itemTypes.weapon, itemTypes.preppedFood],
                     unavailableInArea: (area) => false,
                     minSkillLevelCalc: (area) => area.level,
                     evaluateComplete: (area, state) => {
                         //TODO: random prize loot based on the area (including special weapons?)
-                    },
-                },
-                cooking: {
-                    title: `Cooking`,
-                    skills: [skills.toolUse, skills.fire, skills.intelligence],
-                    inventoryRequirements: [itemTypes.rawFood, itemTypes.wood, itemTypes.flintAndSteel],
-                    unavailableInArea: (area) => false,
-                    minSkillLevelCalc: (area) => 1,
-                    evaluateComplete: (area, state) => {
-                        //TODO: remove raw food from inventory (exact quantity depends on level and work time) and return prepared versions of the food
-                    },
-                },
-                exploration: {
-                    title: `Exploration`,
-                    skills: [skills.exploration, skills.intelligence],
-                    inventoryRequirements: [itemTypes.preppedFood],
-                    unavailableInArea: (area) => false,
-                    minSkillLevelCalc: (area) => 1,
-                    evaluateComplete: (area, state) => {
-                        //TODO: depending on time and level, randomly possible to unlock a new area (this is set in the state)
-                        //Small chance of returning some foraged items as well?
-                        const explorationPercentage = getExplorationPercentage(state);
-                        if (explorationPercentage === 100) {
-                            //can't do more exploration!
-                        }
-                        //TODO: also need to make sure the number arrives exactly at 100 by taking 100 - current percentage and making that the max level
-                        //for the new area (though the current max area level needs to be taken into account as well!).
-                    },
-                },
-                smithing: {
-                    title: `Smithing`,
-                    skills: [skills.strength, skills.toolUse, skills.fire],
-                    inventoryRequirements: [itemTypes.wood, itemTypes.flintAndSteel, itemTypes.rawOre],
-                    unavailableInArea: (area) => false,
-                    minSkillLevelCalc: (area) => 1,
-                    evaluateComplete: (area, state) => {
-                        //TODO: similar to cooking, pull raw ores from inventory and return forged ingots, weapons, tools, treasures, etc.
                     },
                 },
             };
@@ -444,10 +453,29 @@
             const screenTypes = {
                 welcome: `Welcome`,
                 setup: `Setup`,
-                activitySelection: `Select an Activity`,
-                activityWorkTimer: `Working`, //TODO: also displays what activity they are engaged in
-                activityResults: `Congratulations!`,
-                postActivityRest: `Rest Period`,
+                activitySelection: `Activity Selection`,
+                activityWorkTimer: `Working`,
+                activityResults: `Adventure Results`,
+                postActivityRest: `Resting`,
+            };
+
+            const displaySeconds = (seconds) => {
+                if (isNaN(seconds) || seconds <= 0) {
+                    return `[TIME INVALID]`;
+                }
+                const minutes = Math.floor(seconds / 60);
+                seconds -= minutes * 60;
+
+                const m = minutes + ' ' + (minutes === 1 ? 'minute' : 'minutes');
+                const s = seconds + ' ' + (seconds === 1 ? 'second': 'seconds');
+                if (minutes <= 0) {
+                    return s;
+                }
+                if (seconds <= 0) {
+                    return m;
+                }
+
+                return m + ' ' + s;
             };
 
             function WelcomeScreen(p, a) {
@@ -456,23 +484,39 @@
                 const myContainer = createElement('div', {'style': `display:flex;flex-direction:column;align-items:center;`}, null);
                 let showing = false;
 
-                //TODO: replace with a nice, big graphic?
-                const title = createElement('h1', {}, 'Welcome!');
-                myContainer.appendChild(title);
+                const populate = () => {
+                    const goButtonText = `Begin`;
+                    myContainer.innerHTML = '';
+                    //TODO: replace with a nice, big graphic?
+                    const title = createElement('h1', {}, 'Welcome!');
+                    myContainer.appendChild(title);
 
-                const button = createElement('button', {'type': 'submit'}, `Begin`);
-                button.addEventListener('click', () => myApp.switchToScreen(screenTypes.activitySelection));
-                myContainer.appendChild(button);
+                    const workTimerSeconds = myApp.getStateData(stateKeys.workPeriod);
+                    const restTimerSeconds = myApp.getStateData(stateKeys.restPeriod);
 
-                //TODO: gear icon?
-                const setup = createElement('input', {'type': 'button', 'value': 'Setup'}, null);
-                setup.addEventListener('click', () => myApp.switchToScreen(screenTypes.setup));
-                myContainer.appendChild(setup);
+                    const texts = [
+                        `Welcome to ${appTitle}! Embark on adventures, complete tasks, level up, and conquer your work!`,
+                        `Currently, the work period is set for ${displaySeconds(workTimerSeconds)} and the rest period is set for ${displaySeconds(restTimerSeconds)}. If you would like to adjust these times, go to setup. Otherwise, click '${goButtonText}' and get started on your adventure.`,
+                        `Good luck, adventurer!`,
+                    ];
+                    for (const text of texts) {
+                        const p = createElement('p', {}, text);
+                        myContainer.appendChild(p);
+                    }
 
-                //TODO: need a settings button to show the settings screen.
+                    const button = createElement('button', {'type': 'submit'}, goButtonText);
+                    button.addEventListener('click', () => myApp.switchToScreen(screenTypes.activitySelection));
+                    myContainer.appendChild(button);
+
+                    //TODO: gear icon?
+                    const setup = createElement('input', {'type': 'button', 'value': 'Setup'}, null);
+                    setup.addEventListener('click', () => myApp.switchToScreen(screenTypes.setup));
+                    myContainer.appendChild(setup);
+                };
                 
                 this.show = () => {
                     if (!showing) {
+                        populate();
                         parent.appendChild(myContainer);
                         showing = true;
                     }
@@ -496,8 +540,9 @@
                 const title = createElement('h1', {}, 'App Setup');
                 myContainer.appendChild(title);
 
+                //TODO: maybe need a concept of a back button instead?
                 const button = createElement('button', {'type': 'submit'}, `Done`);
-                button.addEventListener('click', () => myApp.switchToScreen(screenTypes.activitySelection));
+                button.addEventListener('click', () => myApp.goBack());
                 myContainer.appendChild(button);
 
                 //TODO: need controls for editing the settings, especially the timer values
@@ -529,8 +574,7 @@
                 const title = createElement('h1', {}, 'Select an Activity');
                 myContainer.appendChild(title);
 
-                //TODO: implement the activity selection control.
-                const activitySelector = new ActivityPicker();
+                const activitySelector = new ActivityPicker(myContainer, myApp);
 
                 const button = createElement('button', {'type': 'submit'}, `Go!`);
                 button.addEventListener('click', () => myApp.switchToScreen(screenTypes.activityWorkTimer));
@@ -540,11 +584,10 @@
                 const setup = createElement('input', {'type': 'button', 'value': 'Setup'}, null);
                 setup.addEventListener('click', () => myApp.switchToScreen(screenTypes.setup));
                 myContainer.appendChild(setup);
-
                 
                 this.show = () => {
                     if (!showing) {
-                        //TODO: reset the activity selector
+                        activitySelector.init();
                         parent.appendChild(myContainer);
                         showing = true;
                     }
@@ -568,6 +611,9 @@
                 const title = createElement('h1', {}, 'Working');
                 myContainer.appendChild(title);
 
+                const activityTitle = createElement('h3', {}, null);
+                myContainer.appendChild(activityTitle);
+
                 const subtitle = createElement('h2', {}, 'Focus!');
                 myContainer.appendChild(subtitle);
 
@@ -578,6 +624,8 @@
                     if (!showing) {
                         parent.appendChild(myContainer);
                         showing = true;
+                        const activityText = myApp.getCurrentActivityTitle();
+                        activityTitle.innerHTML = activityText;
                     }
                 };
 
@@ -595,12 +643,18 @@
                 const myContainer = createElement('div', {'style': `display:flex;flex-direction:column;align-items:center;`}, null);
                 let showing = false;
 
+                
                 //TODO: replace with a nice, big graphic?
                 const title = createElement('h1', {}, 'Results!');
                 myContainer.appendChild(title);
+                
+                const resultsContainer = makeFieldset('Results', {'style': `border-radius: 5px;`});
+                myContainer.appendChild(resultsContainer);
 
-                //TODO: implement the activity selection control.
-                const activitySelector = new ActivityPicker();
+                const resultsDisplay = createElement('div', {}, null);
+                resultsContainer.appendChild(resultsDisplay);
+
+                const activitySelector = new ActivityPicker(myContainer, myApp);
 
                 const button = createElement('button', {'type': 'submit'}, `Rest!`);
                 button.addEventListener('click', () => myApp.switchToScreen(screenTypes.postActivityRest));
@@ -610,13 +664,16 @@
                 const setup = createElement('input', {'type': 'button', 'value': 'Setup'}, null);
                 setup.addEventListener('click', () => myApp.switchToScreen(screenTypes.setup));
                 myContainer.appendChild(setup);
-
                 
                 this.show = () => {
                     if (!showing) {
-                        //TODO: reset the activity selector
+                        activitySelector.init();
                         parent.appendChild(myContainer);
                         showing = true;
+                        resultsDisplay.innerHTML = '';
+                        const results = myApp.getLatestActivityResult();
+                        resultsDisplay.appendChild(createElement('h3', {}, results.message));
+                        //TODO: also display the loot
                     }
                 };
 
@@ -676,6 +733,10 @@
                 let timerTarget = 0;
                 let currentTimerKey = '';
 
+                let currentAreaData = null;
+                let currentActivityKey = null;
+                let currentActivityResult = null;
+
                 let currentScreen = screenTypes.welcome;
                 const currentScreenContainer = createElement('div', {}, null);
                 const screens = {};
@@ -701,6 +762,10 @@
 
                 mainDiv.appendChild(currentScreenContainer);
 
+                this.getStateData = (key) => state.get(key);
+                this.getState = () => state;
+
+                let returnToScreen = null;
                 this.switchToScreen = (newScreen) => {
                     for (const screen in screens) {
                         screens[screen].hide();
@@ -715,7 +780,37 @@
                         case screenTypes.postActivityRest:
                             startRestPeriod();
                             break;
+
+                        case screenTypes.setup:
+                            returnToScreen = currentScreen;
+                            break;
                     }
+                    currentScreen = newScreen;
+                };
+
+                this.goBack = () => {
+                    if (returnToScreen !== null) {
+                        this.switchToScreen(returnToScreen);
+                        returnToScreen = null;
+                    }
+                };
+
+                this.setActivity = (area, activityKey) => {
+                    currentActivityResult = null;
+                    currentAreaData = area;
+                    currentActivityKey = activityKey;
+                };
+
+                this.getLatestActivityResult = () => currentActivityResult;
+                this.getCurrentActivityTitle = () => {
+                    if (currentAreaData === null || currentActivityKey === null) {
+                        return 'No Activity Selected';
+                    }
+                    let title = activities[currentActivityKey].title;
+                    if (activities[currentActivityKey].areaDependent) {
+                        title += ': ' + currentAreaData.name;
+                    }
+                    return title;
                 };
 
                 const startWorkPeriod = () => {
@@ -734,7 +829,6 @@
                 };
 
                 const evalTimer = (timerValue) => {
-                    console.log(timerValue);
                     if (timerValue > timerTarget) {
                         timerValue = 0;
                         timerWorker.terminate();
@@ -743,7 +837,11 @@
                         //Should rest period begin automatically?
                         switch (currentTimerKey) {
                             case stateKeys.workPeriod:
-                                //TODO: evaluate the result of the selected activity
+                                //TODO: if no activity was selected, this crashes.
+                                currentActivityResult = activities[currentActivityKey].evaluateComplete(currentAreaData, state);
+                                currentActivityKey = null;
+                                currentAreaData = null;
+                                state.addToInventory(currentActivityResult.loot);
                                 this.switchToScreen(screenTypes.activityResults);
                                 break;
 
@@ -780,10 +878,6 @@
                     state.addToInventory(loot);
                 };
 
-                //TODO: all screens need to have an add and a remove function (show/hide?)
-                //They need to keep track of whether they've been added, and if asked to remove, they should remove their child and then mark their "displayed" attribute false.
-                //Then when "shown" they need to mark the displayed attribute true so they know they need to remove again when switching.
-
                 //Setup:
                 //Add the starter area
                 addArea(1, biomes.forest, starterAreaName); //Will skip if area already exists.
@@ -793,15 +887,124 @@
                 this.switchToScreen(screenTypes.welcome);
                 
             }
+            
+            function ActivityPicker(parent, myApp) {
+                const theApp = myApp;
+                const myContainer = createElement('div', {}, null);
+                let activityCollection = [];
+                parent.appendChild(myContainer);
+                //TODO: format with a scrollbar so it doesn't get too big in late game?
+                const activityListDisplay = createElement('div', {}, null);
+                myContainer.appendChild(activityListDisplay);
 
-            //TODO: need an activity picker component that will take in the "do-able" activities and display info panels about each one.
-            //The info panels should have a "SELECT" button as well that highlights that panel. The whole component should be prepared to
-            //say what selection has been made, and each time a SELECT button is clicked, the other panels should all un-select.
-            //Also, each selection/panel needs to know if it is selectable or not (some will be 'disabled'). Also, the control should allow
-            //the code to get a selection of available (non-disabled) options to select one at random if the user fails to make a choice in time.
-            function ActivityPicker() {
-                //TODO: the rest of the owl.
-                this.getSelection = () => {};
+                this.init = () => {
+                    const state = theApp.getState();
+                    activityCollection = [];
+                    activityListDisplay.innerHTML = '';
+                    const areas = state.get(stateKeys.areas);
+                    const explorationPercentage = getExplorationPercentage(state);
+                    const doneOnce = {};
+                    for (const area in areas) {
+                        //evaluate each activity in every area
+                        for (const activity in activities) {
+                            if (!activities[activity].areaDependent && !doneOnce.hasOwnProperty(activity)) {
+                                doneOnce[activity] = false;
+                            }
+                            if (activity === 'exploration' && explorationPercentage >= 100) {
+                                continue;
+                            }
+                            if (activities[activity].unavailableInArea(areas[area])) {
+                                continue;
+                            }
+                            if (doneOnce.hasOwnProperty(activity) && doneOnce[activity]) {
+                                continue;
+                            }
+                            const meetsSkillLevelRequirement = meetsMinSkillLevel(areas[area], activities[activity], state);
+                            const meetsInventoryRequirement = meetsInventoryRequirements(activities[activity], state);
+                            const card = new ActivityCard(areas[area], activity, activityListDisplay, this, meetsSkillLevelRequirement, meetsInventoryRequirement);
+                            activityCollection.push(card);
+                            if (!activities[activity].areaDependent) {
+                                doneOnce[activity] = true;
+                            }
+                        }
+                    }
+                };
+
+                this.deselectAll = () => {
+                    for (const activity of activityCollection) {
+                        activity.deselect();
+                    }
+                };
+
+                this.setSelection = (area, activityKey) => {
+                    theApp.setActivity(area, activityKey);
+                };
+            }
+
+            function ActivityCard(areaData, activityId, parent, picker, meetsSkillLevelRequirement, meetsInventoryRequirement) {
+                const areaName = areaData.name;
+                const area = areaData;
+                const activityKey = activityId;
+                const activity = activities[activityKey];
+                const activityName = activity.title;
+                const myParentPicker = picker;
+                const skillOk = meetsSkillLevelRequirement;
+                const inventoryOk = meetsInventoryRequirement;
+                const disabled = !skillOk || !inventoryOk;
+                const myContainer = createElement('div', {}, null);
+                parent.appendChild(myContainer);
+
+                let legendText = activityName
+                if (activity.areaDependent){
+                    legendText += ': ' + areaName;
+                }
+                if (disabled) {
+                    legendText += ' (disabled)';
+                }
+                const cardContents = createElement('div', {}, null);
+                const card = makeDetail(legendText, cardContents, !disabled);
+                myContainer.appendChild(card);
+                
+                //TODO: need to individually identify each skill or item that is missing rather than just marking the whole line as the problem.
+                const lvl = activity.minSkillLevelCalc(area);
+                const skillsAttributes = {};
+                if (!skillOk) {
+                    skillsAttributes['style'] = `color: red;`;
+                }
+                cardContents.appendChild(createElement('p', skillsAttributes, 'Skills: ' + activity.skills.map(x => x.displayValue + ` (${lvl})`).join(', ')));
+
+                if (activity.inventoryRequirements.length > 0) {
+                    const inventoryAttributes = {};
+                    if (!inventoryOk) {
+                        inventoryAttributes['style'] = `color: red;`;
+                    }
+                    cardContents.appendChild(createElement('p', inventoryAttributes, 'Items: ' + activity.inventoryRequirements.join(', ')));
+                }
+
+                const buttonAttributes = {'type': 'button', 'value': 'Select'};
+                if (disabled) {
+                    buttonAttributes['disabled'] = true;
+                }
+                const selectButton = createElement('input', buttonAttributes, null);
+                selectButton.addEventListener('click', () => select());
+                cardContents.appendChild(selectButton);
+
+                let selected = false;
+                this.isSelected = () => selected;
+
+                const select = () => {
+                    myParentPicker.deselectAll();
+                    selected = true;
+                    myParentPicker.setSelection(area, activityKey);
+                    //TODO: set styling
+                    selectButton.value = 'Selected!';
+                };
+
+                this.deselect = () => {
+                    selected = false;
+                    //TODO: set styling
+                    selectButton.value = 'Select';
+                };
             }
 
             function ProgressBar(parent, width, height) {

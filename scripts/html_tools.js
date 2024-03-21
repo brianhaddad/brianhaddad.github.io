@@ -1,5 +1,8 @@
-function makeFieldset(legendText) {
-    const fieldset = createElement('fieldset');
+function makeFieldset(legendText, fieldsetAttributes) {
+    if (!fieldsetAttributes) {
+        fieldsetAttributes = {};
+    }
+    const fieldset = createElement('fieldset', fieldsetAttributes, null);
     const legend = createElement('legend', {}, legendText);
     fieldset.appendChild(legend);
     return fieldset;
