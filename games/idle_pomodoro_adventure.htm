@@ -800,6 +800,15 @@
                 timerBar.update({value: 0, max: 100});
 
                 mainDiv.appendChild(currentScreenContainer);
+                
+                const showPlayerDisplay = () => {
+                    playerDisplayCard.attach(mainDiv);
+                };
+                showPlayerDisplay();
+
+                const hidePlayerDisplay = () => {
+                    playerDisplayCard.detach(mainDiv);
+                };
 
                 this.getStateData = (key) => state.get(key);
                 this.getState = () => state;
@@ -809,6 +818,7 @@
                     for (const screen in screens) {
                         screens[screen].hide();
                     }
+                    
                     switch (newScreen) {
                         case screenTypes.activitySelection:
                             //This ensures the tab can play these sounds later even if the tab is not showing.
@@ -821,7 +831,12 @@
                             currentActivityResult = null;
                             currentAreaData = data.area;
                             currentActivityKey = data.activityKey;
+                            hidePlayerDisplay();
                             startWorkPeriod();
+                            break;
+                        
+                        case screenTypes.activityResults:
+                            showPlayerDisplay();
                             break;
 
                         case screenTypes.postActivityRest:
@@ -1107,21 +1122,30 @@
             function PlayerDisplayCard(s) {
                 const state = s;
                 const myContainer = createElement('div', {}, null);
+                const skillContainer = createElement('div', {}, null);
+                const skillFieldset = makeFieldset('Skills', {'style': `border-radius:5px;`});
+                skillFieldset.appendChild(skillContainer);
+                const inventoryContainer = createElement('div', {}, null);
+                const inventoryFieldset = makeFieldset('Inventory', {'style': `border-radius:5px;flex-grow:2;`});
+                inventoryFieldset.appendChild(inventoryContainer);
                 const statDisplays = {};
                 for (const stat in skills) {
-                    statDisplays[skills[stat].xpKey] = new PlayerStatDisplay(skills[stat].displayValue);
+                    statDisplays[skills[stat].xpKey] = new PlayerStatDisplay(skills[stat].displayValue, skillContainer);
                 }
-                const inventoryDisplay = new PlayerInventoryDisplay();
+                const inventoryDisplay = new PlayerInventoryDisplay(inventoryContainer);
                 //TODO: the rest of the owl
 
                 //TODO: populate the container, maybe with a fieldset first?
                 //Then fill the statDisplays array.
-                const populate = () => {
-                    //TODO: iterate over the statDisplays and update each one.
-                };
+                
+                const cardFieldset = makeFieldset('Player Info', {'style': `border-radius:5px;`});
+                myContainer.appendChild(cardFieldset);
+                const cardContents = createElement('div', {'style': `display:flex;flex-direction:row;align-items:stretch;align-content:stretch;`}, null);
+                cardFieldset.appendChild(cardContents);
+                cardContents.appendChild(skillFieldset);
+                cardContents.appendChild(inventoryFieldset);
 
                 this.update = () => {
-                    //TODO: implement displays for these
                     const newInventoryData = state.get(stateKeys.inventory);
                     inventoryDisplay.update(newInventoryData);
 
@@ -1139,21 +1163,31 @@
                 };
             }
 
-            function PlayerStatDisplay(statName) {
+            function PlayerStatDisplay(statName, parent) {
                 const displayName = statName;
-                //TODO: the rest of the owl.
-                //When updating, can it highlight changes, such as leveling up?
+                const myContainer = createElement('div', {}, null);
+                parent.appendChild(myContainer);
+                const myLabel = createElement('span', {}, null);
+                myContainer.appendChild(myLabel);
+                const myBar = new ProgressBar(myContainer, 256, 16);
+                //TODO: better formatting?
+                //When updating, can it highlight changes, such as leveling up? Would need to track previous values...
                 this.update = (xp) => {
                     const lvl = xpToLevel(xp);
+                    myLabel.innerHTML = `${statName}: (${lvl})`;
                     const nextLvlProgress = getRelativeXpReport(xp);
-                    //TODO: actually draw/display the level and progress bar.
+                    myBar.update(nextLvlProgress);
                 };
             }
 
-            function PlayerInventoryDisplay() {
+            function PlayerInventoryDisplay(parent) {
+                const myContainer = createElement('div', {}, null);
+                parent.appendChild(myContainer);
                 //TODO: the rest of the owl.
                 this.update = (inventoryData) => {
+                    myContainer.innerHTML = 'coming soon';
                     //TODO: might want icons/graphics for each inventory item type?
+                    //TODO: how to get this container to line up, size-wise, with the skills container?
                 };
             }
 
