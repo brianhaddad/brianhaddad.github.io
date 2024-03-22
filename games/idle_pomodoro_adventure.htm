@@ -577,17 +577,19 @@
                 };
             }
 
-            function ActivitySelectScreen(p, a) {
+            function ActivitySelectScreen(p, a, picker) {
                 const parent = p;
                 const myApp = a;
+                const activitySelector = picker;
                 const myContainer = createElement('div', {'style': `display:flex;flex-direction:column;align-items:center;`}, null);
+                const selectorContainer = createElement('div', {}, null);
                 let showing = false;
 
                 //TODO: replace with a nice, big graphic?
                 const title = createElement('h1', {}, 'Select an Activity');
                 myContainer.appendChild(title);
 
-                const activitySelector = new ActivityPicker(myContainer, myApp);
+                myContainer.appendChild(selectorContainer);
 
                 //TODO: can make the button inactive until an activity is selected?
                 const button = createElement('button', {'type': 'submit'}, `Go!`);
@@ -602,6 +604,7 @@
                 this.show = () => {
                     if (!showing) {
                         activitySelector.init();
+                        activitySelector.attach(selectorContainer);
                         parent.appendChild(myContainer);
                         showing = true;
                     }
@@ -665,12 +668,13 @@
                 };
             }
 
-            function ResultsScreen(p, a) {
+            function ResultsScreen(p, a, picker) {
                 const parent = p;
                 const myApp = a;
+                const activitySelector = picker;
                 const myContainer = createElement('div', {'style': `display:flex;flex-direction:column;align-items:center;`}, null);
+                const selectorContainer = createElement('div', {}, null);
                 let showing = false;
-
                 
                 //TODO: replace with a nice, big graphic?
                 const title = createElement('h1', {}, 'Results!');
@@ -682,7 +686,7 @@
                 const resultsDisplay = createElement('div', {}, null);
                 resultsContainer.appendChild(resultsDisplay);
 
-                const activitySelector = new ActivityPicker(myContainer, myApp);
+                myContainer.appendChild(selectorContainer);
 
                 //TODO: can make the button inactive until an activity is selected?
                 const button = createElement('button', {'type': 'submit'}, `Rest!`);
@@ -697,6 +701,7 @@
                 this.show = () => {
                     if (!showing) {
                         activitySelector.init();
+                        activitySelector.attach(selectorContainer);
                         parent.appendChild(myContainer);
                         showing = true;
                         resultsDisplay.innerHTML = '';
@@ -772,6 +777,8 @@
                 const workDoneSound = new Audio('../audio-clips/work-done.ogg');
                 const restDoneSound = new Audio('../audio-clips/rest-done.ogg');
 
+                const activityPicker = new ActivityPicker(this);
+
                 //TODO: should any of these be stored in state in case of accidental refresh?
                 //maybe clear all values if too much time has passed since timer start?
                 //Possibly, we can save the last save date/time in the state and reset certain values if it's been too long?
@@ -789,9 +796,9 @@
                 const screens = {};
                 screens[screenTypes.welcome] = new WelcomeScreen(currentScreenContainer, this);
                 screens[screenTypes.setup] = new SetupScreen(currentScreenContainer, this);
-                screens[screenTypes.activitySelection] = new ActivitySelectScreen(currentScreenContainer, this);
+                screens[screenTypes.activitySelection] = new ActivitySelectScreen(currentScreenContainer, this, activityPicker);
                 screens[screenTypes.activityWorkTimer] = new WorkingScreen(currentScreenContainer, this);
-                screens[screenTypes.activityResults] = new ResultsScreen(currentScreenContainer, this);
+                screens[screenTypes.activityResults] = new ResultsScreen(currentScreenContainer, this, activityPicker);
                 screens[screenTypes.postActivityRest] = new RestingScreen(currentScreenContainer, this);
 
                 //TODO: attach and detach available, probably in some kind of footer or extra container?
@@ -903,7 +910,6 @@
                             case stateKeys.workPeriod:
                                 workDoneSound.load();
                                 workDoneSound.play();
-                                //TODO: if no activity was selected, this crashes.
                                 if (currentActivityKey === null) {
                                     currentActivityResult = activityResult('No activity selected!', []);
                                     this.switchToScreen(screenTypes.activityResults);
@@ -970,14 +976,21 @@
                 
             }
             
-            function ActivityPicker(parent, myApp) {
+            function ActivityPicker(myApp) {
                 const theApp = myApp;
                 const myContainer = createElement('div', {}, null);
                 let activityCollection = [];
-                parent.appendChild(myContainer);
                 //TODO: format with a scrollbar so it doesn't get too big in late game?
                 const activityListDisplay = createElement('div', {}, null);
                 myContainer.appendChild(activityListDisplay);
+
+                this.attach = (parent) => {
+                    parent.appendChild(myContainer);
+                };
+
+                this.detach = (parent) => {
+                    parent.removeChild(myContainer);
+                };
 
                 this.init = () => {
                     const state = theApp.getState();
@@ -1018,8 +1031,15 @@
                     }
                 };
 
+                //TODO: remove this and make the activity cards responsible for knowing selection status
+                //rather than feeding the activity information to the app, have the app pull the information.
                 this.setSelection = (area, activityKey) => {
                     theApp.setActivity(area, activityKey);
+                };
+
+                this.getSelection = () => {
+                    //TODO: find selected
+                    //if none selected, filter by disabled and return one at random.
                 };
             }
 
