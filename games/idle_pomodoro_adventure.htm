@@ -1039,7 +1039,7 @@
                     legendText += ': ' + areaName;
                 }
                 if (disabled) {
-                    legendText += ' (disabled)';
+                    legendText += ' (unavailable)';
                 }
                 const cardContents = createElement('div', {}, null);
                 const card = makeDetail(legendText, cardContents, !disabled);
@@ -1492,13 +1492,13 @@
                     }
 
                     const workEffort = Math.max(1, state.get(stateKeys.workPeriod) / 60);
-                    const numLoot = Math.max(1, Math.floor(Math.random() * area.level * workEffort * averageSkillLevel));
+                    const numLoot = Math.max(1, Math.floor(Math.random() * area.level * averageSkillLevel));
 
                     const loot = [];
 
                     for (let x = 0; x < numLoot; x++) {
                         const selection = getFromTable(table);
-                        const num = Math.floor(Math.random() * area.level * workEffort * averageSkillLevel * playerLevel);
+                        const num = Math.floor(Math.random() * area.level * workEffort * playerLevel);
                         if (selection && selection.hasOwnProperty('n') & num > 0) {
                             loot.push(newItem(selection.n, selection.t, num));
                         }
