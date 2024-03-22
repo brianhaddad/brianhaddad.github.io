@@ -54,6 +54,7 @@
             const themeColors = {
                 progressBarBackground: `rgba(0,0,0,.25)`,
                 progressBarForeground: `rgba(35,255,155,1)`,
+                selectedActivityCardBackground: `rgba(10,150,70,.75)`,
             };
 
             const stateKeys = {
@@ -159,6 +160,15 @@
                 beach: `Beach`,
             };
 
+            const getBiomeKey = (biomeName) => {
+                for (const biomeKey in biomes) {
+                    if (biomes[biomeKey] === biomeName) {
+                        return biomeKey;
+                    }
+                }
+                return null;
+            };
+
             const biomeCounts = {};
             for (const biome in biomes) {
                 biomeCounts[biome] = 0;
@@ -260,41 +270,9 @@
                     },
                     minSkillLevelCalc: (area) => area.level,
                     evaluateComplete: (area, state) => {
-                        //TODO: loot tables go somewhere else
-                        const rewards = [];
-                        let itemName = `Oak Wood`;
-                        switch (area.biome) {
-                            case biomes.mountain:
-                                itemName = `Pine Wood`;
-                                break;
-                            
-                            case biomes.forest:
-                                itemName = `Spruce Wood`;
-                                break;
-                            
-                            case biomes.jungle:
-                                itemName = `Mahogany Wood`;
-                                break;
-                            
-                            case biomes.grassland:
-                                itemName = `Acacia Wood`;
-                                break;
-                            
-                            case biomes.swamp:
-                                itemName = `Willow Wood`;
-                                break;
-                            
-                            case biomes.beach:
-                                itemName = `Palm Wood`;
-                                break;
-                        }
-                        const workPeriod = state.get(stateKeys.workPeriod) / 60;
-                        const num = Math.floor(Math.random() * area.level * workPeriod);
-                        if (num > 0) {
-                            rewards.push(newItem(itemName, [itemTypes.wood], num));
-                        }
+                        const rewards = lootTable.getLoot(`woodChopping`, area, state);
                         const message = rewards.length > 0
-                            ? `You got some ${itemName.toLowerCase()}!`
+                            ? `You chopped some wood!`
                             : `You failed to get any wood at all!`; //TODO: randomize failure messages?
                         return activityResult(message, rewards);
                     },
@@ -307,8 +285,11 @@
                     unavailableInArea: (area) => false,
                     minSkillLevelCalc: (area) => area.level,
                     evaluateComplete: (area, state) => {
-                        //TODO: random loot (mostly raw ingredients) including wood and stones based on the area
-                        return activityResult(`You found nothing. Maybe that's because the developer hasn't programmed in anything to find!`, []);
+                        const rewards = lootTable.getLoot(`foraging`, area, state);
+                        const message = rewards.length > 0
+                            ? `You foraged some things!`
+                            : `You didn't find anything at all! That could be because the developer hasn't programmed in anything to find yet!`; //TODO: randomize failure messages?
+                        return activityResult(message, rewards);
                     },
                 },
                 fishing: {
@@ -828,8 +809,6 @@
                     for (const screen in screens) {
                         screens[screen].hide();
                     }
-                    screens[newScreen].show();
-                    document.title = `${appTitle}: [${newScreen}]`;
                     switch (newScreen) {
                         case screenTypes.activitySelection:
                             //This ensures the tab can play these sounds later even if the tab is not showing.
@@ -838,6 +817,10 @@
                             break;
                             
                         case screenTypes.activityWorkTimer:
+                            const data = activityPicker.getSelection();
+                            currentActivityResult = null;
+                            currentAreaData = data.area;
+                            currentActivityKey = data.activityKey;
                             startWorkPeriod();
                             break;
 
@@ -850,6 +833,8 @@
                             break;
                     }
                     currentScreen = newScreen;
+                    screens[currentScreen].show();
+                    document.title = `${appTitle}: [${currentScreen}]`;
                 };
 
                 this.goBack = () => {
@@ -857,12 +842,6 @@
                         this.switchToScreen(returnToScreen);
                         returnToScreen = null;
                     }
-                };
-
-                this.setActivity = (area, activityKey) => {
-                    currentActivityResult = null;
-                    currentAreaData = area;
-                    currentActivityKey = activityKey;
                 };
 
                 this.getLatestActivityResult = () => currentActivityResult;
@@ -917,8 +896,9 @@
                                 }
                                 currentActivityResult = activities[currentActivityKey].evaluateComplete(currentAreaData, state);
                                 state.addToInventory(currentActivityResult.loot);
+                                const xpGained = Math.max(10, Math.floor(timerTarget/60)) * currentAreaData.level; //TODO: tell the player how much XP was gained?
                                 for (const skill of activities[currentActivityKey].skills) {
-                                    state.addXp(skill.xpKey, timerTarget);
+                                    state.addXp(skill.xpKey, xpGained);
                                 }
                                 currentActivityKey = null;
                                 currentAreaData = null;
@@ -929,7 +909,6 @@
                             case stateKeys.restPeriod:
                                 restDoneSound.load();
                                 restDoneSound.play();
-                                //TODO: if no activity was selected, select one of the available activities at random?
                                 //TODO: do not go to work timer immediately? Let the user acknowledge the end of break time?
                                 this.switchToScreen(screenTypes.activityWorkTimer);
                                 break;
@@ -1031,15 +1010,13 @@
                     }
                 };
 
-                //TODO: remove this and make the activity cards responsible for knowing selection status
-                //rather than feeding the activity information to the app, have the app pull the information.
-                this.setSelection = (area, activityKey) => {
-                    theApp.setActivity(area, activityKey);
-                };
-
                 this.getSelection = () => {
-                    //TODO: find selected
-                    //if none selected, filter by disabled and return one at random.
+                    let selected = activityCollection.find(x => x.isSelected());
+                    if (!selected) {
+                        const options = activityCollection.filter(x => !x.isDisabled());
+                        selected = options[Math.floor(Math.random() * options.length)];
+                    }
+                    return selected.getData();
                 };
             }
 
@@ -1055,6 +1032,7 @@
                 const disabled = !skillOk || !inventoryOk;
                 const myContainer = createElement('div', {}, null);
                 parent.appendChild(myContainer);
+                let selected = false;
 
                 let legendText = activityName
                 if (activity.areaDependent){
@@ -1091,21 +1069,26 @@
                 selectButton.addEventListener('click', () => select());
                 cardContents.appendChild(selectButton);
 
-                let selected = false;
                 this.isSelected = () => selected;
+                this.isDisabled = () => disabled;
+                this.getData = () => {
+                    return {
+                        area: area,
+                        activityKey: activityKey,
+                    };
+                };
 
                 const select = () => {
                     myParentPicker.deselectAll();
                     selected = true;
-                    myParentPicker.setSelection(area, activityKey);
-                    //TODO: set styling
                     selectButton.value = 'Selected!';
+                    card.style.backgroundColor = themeColors.selectedActivityCardBackground;
                 };
 
                 this.deselect = () => {
                     selected = false;
-                    //TODO: set styling
                     selectButton.value = 'Select';
+                    card.style.backgroundColor = '';
                 };
             }
 
@@ -1138,7 +1121,7 @@
                 };
 
                 this.update = () => {
-                    //TODO: populate from settings
+                    //TODO: implement displays for these
                     const newInventoryData = state.get(stateKeys.inventory);
                     inventoryDisplay.update(newInventoryData);
 
@@ -1173,6 +1156,359 @@
                     //TODO: might want icons/graphics for each inventory item type?
                 };
             }
+
+            function LootTable() {
+                const lootTables = {
+                    cooking: {},
+                    smithing: {},
+                    exploration: {},
+                    woodChopping: {
+                        mountain: {
+                            bountiful: [
+                                {n: `Pine Wood`, t: [itemTypes.wood]},
+                                {n: `Spruce Wood`, t: [itemTypes.wood]},
+                            ],
+                            common: [
+                                {n: `Oak Wood`, t: [itemTypes.wood]},
+                                {n: `Walnut Wood`, t: [itemTypes.wood]},
+                            ],
+                            rare: [
+                                {n: `Cedar Wood`, t: [itemTypes.wood]},
+                            ],
+                        },
+                        forest: {
+                            bountiful: [
+                                {n: `Pine Wood`, t: [itemTypes.wood]},
+                                {n: `Spruce Wood`, t: [itemTypes.wood]},
+                            ],
+                            common: [
+                                {n: `Oak Wood`, t: [itemTypes.wood]},
+                                {n: `Maple Wood`, t: [itemTypes.wood]},
+                            ],
+                            rare: [
+                                {n: `Cherry Wood`, t: [itemTypes.wood]},
+                            ],
+                        },
+                        jungle: {
+                            bountiful: [
+                                {n: `Kapok Wood`, t: [itemTypes.wood]}, //lightweight and useless, except for burning
+                            ],
+                            common: [
+                                {n: `Mahogany Wood`, t: [itemTypes.wood]},
+                            ],
+                            rare: [
+                                {n: `Rosewood`, t: [itemTypes.wood]},
+                            ],
+                        },
+                        grassland: {
+                            bountiful: [
+                                {n: `Acacia Wood`, t: [itemTypes.wood]},
+                            ],
+                            common: [
+                                {n: `Birch Wood`, t: [itemTypes.wood]},
+                            ],
+                            rare: [
+                                {n: `Applewood`, t: [itemTypes.wood]},
+                            ],
+                        },
+                        swamp: {
+                            bountiful: [
+                                {n: `Willow Wood`, t: [itemTypes.wood]},
+                            ],
+                            common: [
+                                {n: `Cottonwood`, t: [itemTypes.wood]}, //lightweight and useless, except for burning
+                            ],
+                            rare: [
+                                {n: `Cypress Wood`, t: [itemTypes.wood]},
+                            ],
+                        },
+                        beach: {
+                            bountiful: [
+                                {n: `Palmwood`, t: [itemTypes.wood]}, //lightweight and useless, except for burning
+                            ],
+                            common: [
+                                {n: `Oak Wood`, t: [itemTypes.wood]},
+                            ],
+                            rare: [
+                                {n: `Black Palmwood`, t: [itemTypes.wood]},
+                            ],
+                        },
+                    },
+                    foraging: { //TODO: random loot (mostly raw ingredients) including wood and stones based on the area
+                        desert: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        mountain: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        forest: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        jungle: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        grassland: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        swamp: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        tundra: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        volcano: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        beach: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                    },
+                    fishing: {
+                        mountain: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        forest: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        jungle: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        grassland: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        swamp: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        tundra: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        beach: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                    },
+                    hunting: {
+                        desert: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        mountain: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        forest: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        jungle: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        grassland: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        swamp: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        tundra: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        beach: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                    },
+                    mining: {
+                        desert: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        mountain: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        forest: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        jungle: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        grassland: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        swamp: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        tundra: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        volcano: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        beach: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                    },
+                    dungeonCrawling: {
+                        desert: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        mountain: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        forest: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        jungle: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        grassland: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        swamp: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        tundra: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        volcano: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                        beach: {
+                            bountiful: [],
+                            common: [],
+                            rare: [],
+                        },
+                    },
+                };
+
+                const rollDie = (faces) => {
+                    return Math.floor(Math.random() * faces) + 1;
+                };
+
+                const pickFromArray = (collection) => {
+                    return collection[Math.floor(Math.random() * collection.length)];
+                };
+
+                const getFromTable = (table) => {
+                    const dieRoll = rollDie(20);
+                    if (dieRoll === 20) {
+                        return pickFromArray(table.rare);
+                    }
+                    if (dieRoll >= 10) {
+                        return pickFromArray(table.common);
+                    }
+                    return pickFromArray(table.bountiful);
+                };
+
+                this.getLoot = (activityKey, area, state) => {
+                    const activity = activities[activityKey];
+                    if (!activity.areaDependent) {
+                        //TODO: these do not use looting tables
+                        return [];
+                    }
+                    const biomeName = area.biome;
+                    const biomeKey = getBiomeKey(biomeName);
+                    const averageSkillLevel = activity.skills.map(x => xpToLevel(state.get(x.xpKey))).reduce((a, x) => {return a + x}, 0) / activity.skills.length;
+                    const playerLevel = getPlayerLevel(state);
+                    const table = lootTables[activityKey][biomeKey];
+
+                    if (!table) {
+                        return [];
+                    }
+
+                    const workEffort = Math.max(1, state.get(stateKeys.workPeriod) / 60);
+                    const numLoot = Math.max(1, Math.floor(Math.random() * area.level * workEffort * averageSkillLevel));
+
+                    const loot = [];
+
+                    for (let x = 0; x < numLoot; x++) {
+                        const selection = getFromTable(table);
+                        const num = Math.floor(Math.random() * area.level * workEffort * averageSkillLevel * playerLevel);
+                        if (selection && selection.hasOwnProperty('n') & num > 0) {
+                            loot.push(newItem(selection.n, selection.t, num));
+                        }
+                    }
+
+                    return loot;
+                };
+            }
+
+            const lootTable = new LootTable();
 
             const app = new IdlePomodoroAdventureApp();
         </script>
