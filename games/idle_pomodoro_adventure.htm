@@ -631,6 +631,7 @@
                 const timeRemainingDisplay = createElement('div', {}, null);
                 myContainer.appendChild(timeRemainingDisplay);
 
+                //TODO: randomize subtitle?
                 const subtitle = createElement('h2', {}, 'Focus!');
                 myContainer.appendChild(subtitle);
 
@@ -726,6 +727,7 @@
                 const timeRemainingDisplay = createElement('div', {}, null);
                 myContainer.appendChild(timeRemainingDisplay);
 
+                //TODO: randomize subtitle?
                 const subtitle = createElement('h2', {}, 'Take a meaningful break!');
                 myContainer.appendChild(subtitle);
 
@@ -902,6 +904,11 @@
                                 workDoneSound.load();
                                 workDoneSound.play();
                                 //TODO: if no activity was selected, this crashes.
+                                if (currentActivityKey === null) {
+                                    currentActivityResult = activityResult('No activity selected!', []);
+                                    this.switchToScreen(screenTypes.activityResults);
+                                    break;
+                                }
                                 currentActivityResult = activities[currentActivityKey].evaluateComplete(currentAreaData, state);
                                 state.addToInventory(currentActivityResult.loot);
                                 for (const skill of activities[currentActivityKey].skills) {
@@ -909,6 +916,7 @@
                                 }
                                 currentActivityKey = null;
                                 currentAreaData = null;
+                                playerDisplayCard.update();
                                 this.switchToScreen(screenTypes.activityResults);
                                 break;
 
