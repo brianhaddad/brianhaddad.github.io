@@ -535,22 +535,93 @@
                 const myContainer = createElement('div', {'style': `display:flex;flex-direction:column;align-items:center;`}, null);
                 let showing = false;
 
+                const timerValues = {
+                    '5': 'Five Second Test',
+                    '10': 'Ten Second Test',
+                    '60': 'One Minute',
+                    '300': 'Five Minutes',
+                    '600': 'Ten Minutes',
+                    '900': 'Fifteen Minutes',
+                    '1200': 'Twenty Minutes',
+                    '1500': 'Twenty-Five Minutes',
+                    '1800': 'Thirty Minutes',
+                    '2100': 'Thirty-Five Minutes',
+                    '2400': 'Forty Minutes',
+                    '2700': 'Forty-Five Minutes',
+                    '3000': 'Fifty Minutes',
+                    '3300': 'Fifty-Five Minutes',
+                    '3600': 'Sixty Minutes',
+                    '4500': 'Seventy-Five Minutes',
+                    '5400': 'Ninety Minutes',
+                };
+
+                const showHideValues = {
+                    'true': 'Show',
+                    'false': 'Hide',
+                };
+
                 //TODO: replace with a nice, big graphic?
                 const title = createElement('h1', {}, 'App Setup');
                 myContainer.appendChild(title);
 
-                //TODO: need controls for editing the settings, especially the timer values
-                //might use pre-made list of timer values (5 min, 10, min, 15 min, etc...)
-                //maybe an advanced mode that allows a number of seconds to be entered manually
-                const placeholder = createElement('p', {}, 'Coming soon! lol');
-                myContainer.appendChild(placeholder);
+                const workPeriodLabel = createElement('label', { 'for': stateKeys.workPeriod }, 'Work Period');
+                const workPeriodSelect = makeSelect(stateKeys.workPeriod, timerValues);
+                workPeriodSelect.addEventListener('change', () => setTimerValue(stateKeys.workPeriod, workPeriodSelect));
+                myContainer.appendChild(workPeriodLabel);
+                myContainer.appendChild(workPeriodSelect);
 
-                const button = createElement('button', {'type': 'submit'}, `Done`);
+                const restPeriodLabel = createElement('label', { 'for': stateKeys.restPeriod }, 'Rest Period');
+                const restPeriodSelect = makeSelect(stateKeys.restPeriod, timerValues);
+                restPeriodSelect.addEventListener('change', () => setTimerValue(stateKeys.restPeriod, restPeriodSelect));
+                myContainer.appendChild(restPeriodLabel);
+                myContainer.appendChild(restPeriodSelect);
+                
+                const showRemainingTimeLabel = createElement('label', { 'for': stateKeys.displayRemainingTime }, 'Remaining Time');
+                const showRemainingTimeSelect = makeSelect(stateKeys.displayRemainingTime, showHideValues);
+                showRemainingTimeSelect.addEventListener('change', () => setShowHideValue(stateKeys.displayRemainingTime, showRemainingTimeSelect));
+                myContainer.appendChild(showRemainingTimeLabel);
+                myContainer.appendChild(showRemainingTimeSelect);
+
+                const button = createElement('button', {'type': 'submit'}, `Back`);
                 button.addEventListener('click', () => myApp.goBack());
                 myContainer.appendChild(button);
+
+                const setTimerValue = (key, select) => {
+                    const value = parseInt(select.options[select.selectedIndex].value);
+                    const state = myApp.getState();
+                    state.set(key, value);
+                };
+
+                const setShowHideValue = (key, select) => {
+                    const value = select.options[select.selectedIndex].value === 'true';
+                    const state = myApp.getState();
+                    state.set(key, value);
+                };
+
+                const getOptionIndex = (options, val) => {
+                    for (let i=0; i<options.length; i++) {
+                        if (options[i].value === val.toString()) {
+                            return i;
+                        }
+                    }
+                    return -1;
+                };
                 
                 this.show = () => {
                     if (!showing) {
+                        const currentWorkPeriod = myApp.getStateData(stateKeys.workPeriod);
+                        const currentRestPeriod = myApp.getStateData(stateKeys.restPeriod);
+                        const currentDisplayRemainingTime = myApp.getStateData(stateKeys.displayRemainingTime);
+                        
+                        const selectedWorkPeriod = getOptionIndex(workPeriodSelect.options, currentWorkPeriod);
+                        workPeriodSelect.selectedIndex = selectedWorkPeriod;
+
+                        const selectedRestPeriod = getOptionIndex(restPeriodSelect.options, currentRestPeriod);
+                        restPeriodSelect.selectedIndex = selectedRestPeriod;
+                        
+                        const selectedShowHideRemainingTime = getOptionIndex(showRemainingTimeSelect.options, currentDisplayRemainingTime);
+                        showRemainingTimeSelect.selectedIndex = selectedShowHideRemainingTime;
+
                         parent.appendChild(myContainer);
                         showing = true;
                     }
