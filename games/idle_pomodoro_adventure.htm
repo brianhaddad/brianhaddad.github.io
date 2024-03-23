@@ -12,7 +12,6 @@
             /* 
              * Definitely need a favicon.
              * Possibly have an achievement system? A card per achievement, and a whole array of cards to scroll through?
-             * Need a character stats/inventory display screen! Probably a modal overlay? Or maybe something at the footer?
              */
             const appTitle = `Idle Pomodoro Adventure`;
             const gameWidth = 800;
@@ -133,10 +132,12 @@
                 axe: `Axe`, //<- required for wood chopping
                 pickaxe: `Pickaxe`,
                 fishingPole: `Fishing Pole`, //<- required for fishing
-                flintAndSteel: `Flint and Steel`, //<- required for cooking and smithing
+                flint: `Flint`, //<- required for cooking and smithing
                 wood: `Wood`, //<- required for cooking
                 weapon: `Weapon`, //<- required for hunting or dungeon crawling
                 rawOre: `Raw Ores`, //<- required for smithing
+                ingot: `Forged Ingots`, //<- required for smithing some tools
+                junk: `Junk`, //<- useless lol
             };
 
             const newItem = (itemName, itemTypes, qty) => {
@@ -193,7 +194,7 @@
 
             const meetsMinSkillLevel = (area, activity, state) => {
                 for (const skill of activity.skills) {
-                    if (state.get(skill.xpKey) < activity.minSkillLevelCalc(area)) {
+                    if (xpToLevel(state.get(skill.xpKey)) < activity.minSkillLevelCalc(area)) {
                         return false;
                     }
                 }
@@ -223,7 +224,7 @@
                     title: `Cooking`,
                     areaDependent: false,
                     skills: [skills.toolUse, skills.fire, skills.intelligence],
-                    inventoryRequirements: [itemTypes.rawFood, itemTypes.wood, itemTypes.flintAndSteel],
+                    inventoryRequirements: [itemTypes.rawFood, itemTypes.wood, itemTypes.flint],
                     unavailableInArea: (area) => false,
                     minSkillLevelCalc: (area) => 1,
                     evaluateComplete: (area, state) => {
@@ -234,7 +235,7 @@
                     title: `Smithing`,
                     areaDependent: false,
                     skills: [skills.strength, skills.toolUse, skills.fire],
-                    inventoryRequirements: [itemTypes.wood, itemTypes.flintAndSteel, itemTypes.rawOre],
+                    inventoryRequirements: [itemTypes.wood, itemTypes.flint, itemTypes.rawOre],
                     unavailableInArea: (area) => false,
                     minSkillLevelCalc: (area) => 1,
                     evaluateComplete: (area, state) => {
@@ -247,7 +248,7 @@
                     skills: [skills.navigation, skills.intelligence],
                     inventoryRequirements: [itemTypes.preppedFood],
                     unavailableInArea: (area) => false,
-                    minSkillLevelCalc: (area) => 1,
+                    minSkillLevelCalc: (area) => 2,
                     evaluateComplete: (area, state) => {
                         //TODO: depending on time and level, randomly possible to unlock a new area (this is set in the state)
                         //Small chance of returning some foraged items as well?
@@ -257,6 +258,11 @@
                         }
                         //TODO: also need to make sure the number arrives exactly at 100 by taking 100 - current percentage and making that the max level
                         //for the new area (though the current max area level needs to be taken into account as well!).
+                        //TODO: remove some of the food from their inventory. The amount of food available should affect chance to discover a new place:
+                        //for example, if only have like 5 food, it should be way less likely to find a place. But if the food quantity available to consume
+                        //exceeds the number of minutes worked, then discovery chances should be "normal" but still based on player level and the level of the
+                        //next area to be discovered.
+                        return activityResult(`After wandering around for a long time, you return home defeated. Perhaps the developer has not yet added any new areas to discover?`, []);
                     },
                 },
                 woodChopping: {
@@ -288,7 +294,7 @@
                         const rewards = lootTable.getLoot(`foraging`, area, state);
                         const message = rewards.length > 0
                             ? `You foraged some things!`
-                            : `You didn't find anything at all! That could be because the developer hasn't programmed in anything to find yet!`; //TODO: randomize failure messages?
+                            : `You didn't find anything at all!`; //TODO: randomize failure messages?
                         return activityResult(message, rewards);
                     },
                 },
@@ -1166,28 +1172,55 @@
             function PlayerStatDisplay(statName, parent) {
                 const displayName = statName;
                 const myContainer = createElement('div', {}, null);
+                let previousXp = null;
                 parent.appendChild(myContainer);
                 const myLabel = createElement('span', {}, null);
                 myContainer.appendChild(myLabel);
                 const myBar = new ProgressBar(myContainer, 256, 16);
                 //TODO: better formatting?
-                //When updating, can it highlight changes, such as leveling up? Would need to track previous values...
                 this.update = (xp) => {
+                    myLabel.style.fontWeight = '';
                     const lvl = xpToLevel(xp);
-                    myLabel.innerHTML = `${statName}: (${lvl})`;
+                    let increasedXp = false;
+                    let leveledUp = false;
+                    if (previousXp === null) {
+                        previousXp = xp;
+                    }
+                    if (xp > previousXp) {
+                        increasedXp = true;
+                        myLabel.style.fontWeight = 'bold';
+                        const previousLevel = xpToLevel(previousXp);
+                        if (lvl > previousLevel) {
+                            leveledUp = true;
+                        }
+                    }
+                    let text = `${statName}: (${lvl})`;
+                    if (increasedXp) {
+                        text = `+${(xp - previousXp)}xp ` + text;
+                    }
+                    if (leveledUp) {
+                        text += ` LEVEL UP!`;
+                    }
+                    myLabel.innerHTML = text;
                     const nextLvlProgress = getRelativeXpReport(xp);
                     myBar.update(nextLvlProgress);
                 };
             }
 
             function PlayerInventoryDisplay(parent) {
-                const myContainer = createElement('div', {}, null);
+                const myContainer = createElement('div', {'style': `display:flex;flex-direction:row;flex-wrap:wrap;gap:5px;`}, null);
                 parent.appendChild(myContainer);
-                //TODO: the rest of the owl.
                 this.update = (inventoryData) => {
-                    myContainer.innerHTML = 'coming soon';
+                    myContainer.innerHTML = '';
                     //TODO: might want icons/graphics for each inventory item type?
-                    //TODO: how to get this container to line up, size-wise, with the skills container?
+                    for (const item of inventoryData) {
+                        //TODO: once there are icons for the item types, I should incorporate those into the design.
+                        if (item.quantity > 0) {
+                            const text = `${item.name} x ${item.quantity}`;
+                            const itemTile = createElement('div', {'style': `border:1px solid black; border-radius: 5px; padding: 5px;`}, text);
+                            myContainer.appendChild(itemTile);
+                        }
+                    }
                 };
             }
 
@@ -1268,51 +1301,130 @@
                             ],
                         },
                     },
-                    foraging: { //TODO: random loot (mostly raw ingredients) including wood and stones based on the area
+                    foraging: {
                         desert: {
-                            bountiful: [],
-                            common: [],
-                            rare: [],
+                            bountiful: [
+                                {n: `Dead Twig`, t: [itemTypes.junk]},
+                            ],
+                            common: [
+                                {n: `Cactus Fruit`, t:  [itemTypes.preppedFood, itemTypes.rawFood]},
+                            ],
+                            rare: [
+                                {n: `Coconut`, t: [itemTypes.preppedFood]},
+                            ],
                         },
                         mountain: {
-                            bountiful: [],
-                            common: [],
-                            rare: [],
+                            bountiful: [
+                                {n: `Blackberry`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
+                                {n: `Stick`, t: [itemTypes.wood]},
+                                {n: `Rock`, t: [itemTypes.junk]},
+                            ],
+                            common: [
+                                {n: `Cap Mushroom`, t:  [itemTypes.preppedFood, itemTypes.rawFood]},
+                            ],
+                            rare: [
+                                {n: `Flint`, t: [itemTypes.flint]},
+                                {n: `Black Palmwood`, t: [itemTypes.wood]},
+                            ],
                         },
                         forest: {
-                            bountiful: [],
-                            common: [],
-                            rare: [],
+                            bountiful: [
+                                {n: `Button Mushroom`, t:  [itemTypes.preppedFood, itemTypes.rawFood]},
+                                {n: `Stick`, t: [itemTypes.wood]},
+                                {n: `Rock`, t: [itemTypes.junk]},
+                            ],
+                            common: [
+                                {n: `Blueberry`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
+                                {n: `Apple`, t: [itemTypes.preppedFood]},
+                            ],
+                            rare: [
+                                //{n: `Flint`, t: [itemTypes.flint]}, //TODO: add in when I am ready to implement cooking! lol
+                                {n: `Honeycomb`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
+                            ],
                         },
                         jungle: {
-                            bountiful: [],
-                            common: [],
-                            rare: [],
+                            bountiful: [
+                                {n: `Stick`, t: [itemTypes.wood]},
+                                {n: `Rock`, t: [itemTypes.junk]},
+                            ],
+                            common: [
+                                {n: `Vine`, t: [itemTypes.junk]},
+                                {n: `Banana`, t: [itemTypes.preppedFood]},
+                                {n: `Acai`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
+                            ],
+                            rare: [
+                                {n: `Coconut`, t: [itemTypes.preppedFood]},
+                                {n: `Cashew Nut`, t: [itemTypes.rawFood]},
+                            ],
                         },
                         grassland: {
-                            bountiful: [],
-                            common: [],
-                            rare: [],
+                            bountiful: [
+                                {n: `Cowpie`, t: [itemTypes.junk]},
+                                {n: `Rock`, t: [itemTypes.junk]},
+                                {n: `Stick`, t: [itemTypes.wood]},
+                            ],
+                            common: [
+                                {n: `Potato`, t: [itemTypes.rawFood]},
+                                {n: `Carrot`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
+                                {n: `Blueberry`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
+                            ],
+                            rare: [
+                                {n: `Flint`, t: [itemTypes.flint]},
+                                {n: `Honeycomb`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
+                            ],
                         },
                         swamp: {
-                            bountiful: [],
-                            common: [],
-                            rare: [],
+                            bountiful: [
+                                {n: `Raspberry`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
+                                {n: `Rock`, t: [itemTypes.junk]},
+                            ],
+                            common: [
+                                {n: `Edlerberry`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
+                                {n: `Cattail`, t: [itemTypes.rawFood]},
+                                {n: `Chalk`, t: [itemTypes.junk]},
+                            ],
+                            rare: [
+                                {n: `Blueberry`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
+                            ],
                         },
                         tundra: {
-                            bountiful: [],
-                            common: [],
-                            rare: [],
+                            bountiful: [
+                                {n: `Rock`, t: [itemTypes.junk]},
+                            ],
+                            common: [
+                                {n: `Dead Twig`, t: [itemTypes.junk]},
+                                {n: `Haskap Berry`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
+                            ],
+                            rare: [
+                                {n: `Fossil`, t: [itemTypes.junk]},
+                                {n: `Honeyberry`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
+                            ],
                         },
                         volcano: {
-                            bountiful: [],
-                            common: [],
-                            rare: [],
+                            bountiful: [
+                                {n: `Volcanic Rock`, t: [itemTypes.junk]},
+                            ],
+                            common: [
+                                {n: `Obsidian`, t: [itemTypes.junk]},
+                            ],
+                            rare: [
+                                {n: `Diamond`, t: [itemTypes.junk]},
+                            ],
                         },
                         beach: {
-                            bountiful: [],
-                            common: [],
-                            rare: [],
+                            bountiful: [
+                                {n: `Seaweed`, t: [itemTypes.rawFood]},
+                            ],
+                            common: [
+                                {n: `Seashell`, t: [itemTypes.junk]},
+                                {n: `Driftwood`, t: [itemTypes.wood]},
+                                {n: `Coconut`, t: [itemTypes.preppedFood]},
+                            ],
+                            rare: [
+                                {n: `Seaglass`, t: [itemTypes.junk]},
+                                {n: `Mermaid's Shell`, t: [itemTypes.junk]},
+                                {n: `Pirate's Boot`, t: [itemTypes.junk]},
+                            ],
                         },
                     },
                     fishing: {
