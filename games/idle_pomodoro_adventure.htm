@@ -72,11 +72,6 @@
                 areas: {},
             };
 
-            //TODO: move somewhere else for dev tools.
-            //dev overrides
-            //defaultValues.workPeriod = 10;
-            //defaultValues.restPeriod = 5;
-
             const skills = {
                 strength: {
                     keyValue: `strength`,
@@ -535,6 +530,7 @@
                 const myContainer = createElement('div', {'style': `display:flex;flex-direction:column;align-items:center;`}, null);
                 let showing = false;
 
+                //TODO: maybe remove the five and ten second options later?
                 const timerValues = {
                     '5': 'Five Second Test',
                     '10': 'Ten Second Test',
