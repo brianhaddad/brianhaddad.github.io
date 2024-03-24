@@ -1682,6 +1682,17 @@
                     },
                 };
 
+                //Seasonal or temporal items:
+                const today = new Date();
+                if (today.getMonth() === 2 || today.getMonth === 3) {
+                    //This is a special item for the `Love Potion Number Nine` recipe. :)
+                    //other ingredients include strawberries and who knows what else!
+                    lootTables.foraging.grassland.rare.push({n: `Cherry Blossom Petal`, t: [itemTypes.rawFood]});
+                }
+
+                //TODO: need a ton more recipes. The "promise" right now is that all you need is raw food in order to cook.
+                //So I need at least one recipe per raw food probably, right?
+                //Maybe a catch-all recipe that randomly grabs any raw food and produces something that maybe isn't super useful?
                 const cookingRecipes = [
                     {
                         n: `Bittersweet Bread`,
