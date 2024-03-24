@@ -223,7 +223,12 @@
                     unavailableInArea: (area) => false,
                     minSkillLevelCalc: (area) => 1,
                     evaluateComplete: (area, state) => {
-                        //TODO: remove raw food from inventory (exact quantity depends on level and work time) and return prepared versions of the food
+                        const rewards = lootTable.getLoot(`cooking`, area, state);
+                        //TODO: list the cooked recipes here, or use the loot content on the results screen?
+                        const message = rewards.length > 0
+                            ? `You cooked some food!`
+                            : `You failed to cook anything at all!`; //TODO: randomize failure messages?
+                        return activityResult(message, rewards);
                     },
                 },
                 smithing: {
@@ -1269,6 +1274,7 @@
                         text += ` LEVEL UP!`;
                     }
                     myLabel.innerHTML = text;
+                    previousXp = xp;
                     const nextLvlProgress = getRelativeXpReport(xp);
                     myBar.update(nextLvlProgress);
                 };
@@ -1407,7 +1413,7 @@
                                 {n: `Apple`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
                             ],
                             rare: [
-                                //{n: `Flint`, t: [itemTypes.flint]}, //TODO: add in when I am ready to implement cooking! lol
+                                {n: `Flint`, t: [itemTypes.flint]},
                                 {n: `Honeycomb`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
                             ],
                         },
@@ -1783,7 +1789,7 @@
                 const getFoodValue = (foodName) => {
                     const recipe = cookingRecipes.find(x => x.n === foodName);
                     if (recipe) {
-                        return Math.floor(recipe.ingredients.map(x => x.qty / recipe.yeild).reduce((a, x) => {return a + x}, recipe.ingredients.length));
+                        return Math.floor(recipe.ingredients.map(x => x.qty / recipe.yeild).reduce((a, x) => a + x, recipe.ingredients.length));
                     }
                     return 1;
                 };
@@ -1815,7 +1821,21 @@
                 };
 
                 const getCookableRecipes = (rawIngredients) => {
-                    //TODO: perform filtering to get only the recipes our inventory ingredients can support.
+                    const cookable = [];
+                    for (const recipe of cookingRecipes) {
+                        let ok = true;
+                        for (const ingredient of recipe.ingredients) {
+                            const total = rawIngredients.filter(x => ingredient.n.indexOf(x.name) > -1).map(x => x.quantity).reduce((a, x) => a + x, 0);
+                            if (total < ingredient.qty) {
+                                ok = false;
+                                break;
+                            }
+                        }
+                        if (ok) {
+                            cookable.push(recipe);
+                        }
+                    }
+                    return cookable;
                 };
 
                 //TODO: delete when done testing:
@@ -1829,7 +1849,7 @@
                         switch (activity.title) {
                             case 'Cooking':
                                 const rawIngredients = state.get(stateKeys.inventory).filter(x => x.types.indexOf(itemTypes.rawFood) > -1);
-                                console.log(rawIngredients);
+                                const canCook = getCookableRecipes(rawIngredients);
                                 //TODO: calculate how much we can make, capped by level and time worked (effort), then make each one,
                                 //removing the ingredients from the inventory and consuming wood burned (need a calculation for how much wood... just one per 15 minutes?)
                                 break;
