@@ -383,7 +383,7 @@
                             inv.push(item);
                         }
                     }
-                    this.set(stateKeys.inventory, inv);
+                    this.set(stateKeys.inventory, inv.filter(x => x.quantity > 0));
                 };
 
                 this.addXp = (xpKey, amt) => {
@@ -1852,6 +1852,8 @@
                                 const canCook = getCookableRecipes(rawIngredients);
                                 //TODO: calculate how much we can make, capped by level and time worked (effort), then make each one,
                                 //removing the ingredients from the inventory and consuming wood burned (need a calculation for how much wood... just one per 15 minutes?)
+                                //tip: state.addToInventory(arrayOfItems) can be used to remove items too, with negative quantity values
+                                //and newItem(itemName, itemTypes, qty) can be used to generate the new item with a negative qty.
                                 break;
                         }
                         return loot;
