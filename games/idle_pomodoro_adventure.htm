@@ -1387,11 +1387,11 @@
                                 {n: `Rock`, t: [itemTypes.junk]},
                             ],
                             common: [
+                                {n: `Strawberry`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
                                 {n: `Cap Mushroom`, t:  [itemTypes.preppedFood, itemTypes.rawFood]},
                             ],
                             rare: [
                                 {n: `Flint`, t: [itemTypes.flint]},
-                                {n: `Black Palmwood`, t: [itemTypes.wood]},
                             ],
                         },
                         forest: {
@@ -1402,7 +1402,9 @@
                             ],
                             common: [
                                 {n: `Blueberry`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
-                                {n: `Apple`, t: [itemTypes.preppedFood]},
+                                {n: `Onion`, t: [itemTypes.rawFood]},
+                                {n: `Strawberry`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
+                                {n: `Apple`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
                             ],
                             rare: [
                                 //{n: `Flint`, t: [itemTypes.flint]}, //TODO: add in when I am ready to implement cooking! lol
@@ -1421,18 +1423,22 @@
                             ],
                             rare: [
                                 {n: `Coconut`, t: [itemTypes.preppedFood]},
-                                {n: `Cashew Nut`, t: [itemTypes.rawFood]},
+                                {n: `Onion`, t: [itemTypes.rawFood]},
+                                {n: `Raw Cashew Nut`, t: [itemTypes.rawFood]},
                             ],
                         },
                         grassland: {
                             bountiful: [
                                 {n: `Cowpie`, t: [itemTypes.junk]},
+                                {n: `Strawberry`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
                                 {n: `Rock`, t: [itemTypes.junk]},
                                 {n: `Stick`, t: [itemTypes.wood]},
                             ],
                             common: [
                                 {n: `Potato`, t: [itemTypes.rawFood]},
+                                {n: `Grape`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
                                 {n: `Carrot`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
+                                {n: `Onion`, t: [itemTypes.rawFood]},
                                 {n: `Blueberry`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
                             ],
                             rare: [
@@ -1451,6 +1457,7 @@
                                 {n: `Chalk`, t: [itemTypes.junk]},
                             ],
                             rare: [
+                                {n: `Onion`, t: [itemTypes.rawFood]},
                                 {n: `Blueberry`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
                             ],
                         },
@@ -1669,6 +1676,125 @@
                     },
                 };
 
+                const cookingRecipes = [
+                    {
+                        n: `Bittersweet Bread`,
+                        ingredients: [
+                            {n: [`Cattail`], qty: 5},
+                            {n: [`Honeycomb`], qty: 1},
+                        ],
+                        yeild: 1,
+                        t: [itemTypes.preppedFood],
+                    },
+                    {
+                        n: `Cashew Nut`,
+                        ingredients: [
+                            {n: [`Raw Cashew Nut`], qty: 1},
+                        ],
+                        yeild: 1,
+                        t: [itemTypes.preppedFood],
+                    },
+                    {
+                        n: `Honey Roasted Cashew Nut`,
+                        ingredients: [
+                            {n: [`Raw Cashew Nut`], qty: 10},
+                            {n: [`Honeycomb`], qty: 1},
+                        ],
+                        yeild: 10,
+                        t: [itemTypes.preppedFood],
+                    },
+                    {
+                        n: `Baked Potato`,
+                        ingredients: [
+                            {n: [`Potato`], qty: 1},
+                        ],
+                        yeild: 1,
+                        t: [itemTypes.preppedFood],
+                    },
+                    {
+                        n: `Mashed Potatoes`,
+                        ingredients: [
+                            {n: [`Potato`], qty: 4},
+                        ],
+                        yeild: 1,
+                        t: [itemTypes.preppedFood],
+                    },
+                    {
+                        n: `Simple Mushroom Soup`,
+                        ingredients: [
+                            {n: [`Cap Mushroom`, `Button Mushroom`], qty: 5},
+                            {n: [`Carrot`, `Potato`, `Onion`], qty: 3},
+                        ],
+                        yeild: 1,
+                        t: [itemTypes.preppedFood],
+                    },
+                    {
+                        n: `Vegetable Soup`,
+                        ingredients: [
+                            {n: [`Cap Mushroom`, `Button Mushroom`], qty: 6},
+                            {n: [`Potato`], qty: 2},
+                            {n: [`Carrot`], qty: 3},
+                            {n: [`Onion`], qty: 1},
+                        ],
+                        yeild: 1,
+                        t: [itemTypes.preppedFood],
+                    },
+                    {
+                        n: `Vegetable Stew`,
+                        ingredients: [
+                            {n: [`Cattail`], qty: 3},
+                            {n: [`Cap Mushroom`, `Button Mushroom`], qty: 6},
+                            {n: [`Potato`], qty: 2},
+                            {n: [`Carrot`], qty: 3},
+                            {n: [`Onion`], qty: 1},
+                        ],
+                        yeild: 1,
+                        t: [itemTypes.preppedFood],
+                    },
+                ];
+
+                //Programatic Recipes because sometimes hand-typing them all is a pain.
+                const jams = [
+                    `Acai`,
+                    `Apple`,
+                    `Blackberry`,
+                    `Blueberry`,
+                    `Cactus Fruit`,
+                    `Edlerberry`,
+                    `Grape`,
+                    `Haskap Berry`,
+                    `Honeyberry`,
+                    `Raspberry`,
+                    `Strawberry`,
+                ];
+                for (const fruit of jams) {
+                    cookingRecipes.push({
+                        n: fruit + ' Jam',
+                        ingredients: [
+                            {n: [fruit], qty: 5},
+                            {n: [`Honeycomb`], qty: 1},
+                        ],
+                        yeild: 1,
+                        t: [itemTypes.preppedFood],
+                    });
+                }
+
+                //TODO: NOTE: when evaluating how "good" a food is, use the number of ingredients in its recipe plus one, or just one for uncooked edibles.
+                const getFoodValue = (foodName) => {
+                    const recipe = cookingRecipes.find(x => x.n === foodName);
+                    if (recipe) {
+                        return Math.floor(recipe.ingredients.map(x => x.qty / recipe.yeild).reduce((a, x) => {return a + x}, recipe.ingredients.length));
+                    }
+                    return 1;
+                };
+
+                cookingRecipes.sort((a, b) => getFoodValue(b.n) - getFoodValue(a.n));
+
+                //TODO: remove later, for now it's good for viewing the recipes and their values
+                //for (const recipe of cookingRecipes) {
+                //    console.log(recipe.n, getFoodValue(recipe.n));
+                //}
+
                 const rollDie = (faces) => {
                     return Math.floor(Math.random() * faces) + 1;
                 };
@@ -1688,11 +1814,27 @@
                     return pickFromArray(table.bountiful);
                 };
 
+                const getCookableRecipes = (rawIngredients) => {
+                    //TODO: perform filtering to get only the recipes our inventory ingredients can support.
+                };
+
+                //TODO: delete when done testing:
+                //lootTable.getLoot('cooking', {}, new StateManager());
                 this.getLoot = (activityKey, area, state) => {
                     const activity = activities[activityKey];
+                    const loot = [];
                     if (!activity.areaDependent) {
                         //TODO: these do not use looting tables
-                        return [];
+                        console.log(activity);
+                        switch (activity.title) {
+                            case 'Cooking':
+                                const rawIngredients = state.get(stateKeys.inventory).filter(x => x.types.indexOf(itemTypes.rawFood) > -1);
+                                console.log(rawIngredients);
+                                //TODO: calculate how much we can make, capped by level and time worked (effort), then make each one,
+                                //removing the ingredients from the inventory and consuming wood burned (need a calculation for how much wood... just one per 15 minutes?)
+                                break;
+                        }
+                        return loot;
                     }
                     const biomeName = area.biome;
                     const biomeKey = getBiomeKey(biomeName);
@@ -1701,13 +1843,11 @@
                     const table = lootTables[activityKey][biomeKey];
 
                     if (!table) {
-                        return [];
+                        return loot;
                     }
 
                     const workEffort = Math.max(1, state.get(stateKeys.workPeriod) / 60);
                     const numLoot = Math.max(1, Math.floor(Math.random() * area.level * averageSkillLevel));
-
-                    const loot = [];
 
                     for (let x = 0; x < numLoot; x++) {
                         const selection = getFromTable(table);
