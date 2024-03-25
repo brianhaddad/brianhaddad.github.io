@@ -1915,7 +1915,7 @@
                         return loot;
                     }
 
-                    const numLoot = Math.max(1, Math.floor(Math.random() * area.level * averageSkillLevel));
+                    const numLoot = Math.max(3, Math.floor(Math.random() * area.level * averageSkillLevel));
 
                     for (let x = 0; x < numLoot; x++) {
                         const selection = getFromTable(table);
