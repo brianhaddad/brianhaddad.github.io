@@ -1849,20 +1849,58 @@
                     return cookable;
                 };
 
+                const attemptToCook = (recipe, rawIngredients, maxItems) => {
+                    const ingredientsUsed = []; //TODO: make sure to add but with negative quantity numbers
+                    //use newItem(itemName, itemTypes, qty) can be used to generate the new item with a negative qty.
+
+                    //TODO: get quantities of each raw ingredient available, and we can calculate how many of the recipe we can/will make.
+                    //Obviously don't make more than the maxItems, but do make as many as the ingredients will support as long as it's less (use Math.min)
+                    //For substitute ingredients in the recipe, we can get a grand total for that slot, and then just remove them carefully. lol
+                    let numCooked = 0;
+                    console.log('recipe', recipe);
+
+                    return {
+                        usedIngredients: numCooked > 0 ? ingredientsUsed : [],
+                        dishCooked: newItem(recipe.n, recipe.t, numCooked),
+                    };
+                };
+
                 //TODO: delete when done testing:
                 //lootTable.getLoot('cooking', {}, new StateManager());
                 this.getLoot = (activityKey, area, state) => {
                     const activity = activities[activityKey];
+                    const averageSkillLevel = activity.skills.map(x => xpToLevel(state.get(x.xpKey))).reduce((a, x) => a + x, 0) / activity.skills.length;
+                    const playerLevel = getPlayerLevel(state);
+                    const workEffort = Math.max(1, state.get(stateKeys.workPeriod) / 60);
+
                     const loot = [];
                     if (!activity.areaDependent) {
-                        //TODO: these do not use looting tables
-                        console.log(activity);
+                        //TODO: also need to do one for smithing and probably one for exploration (though that may be handled differently?)
                         switch (activity.title) {
                             case 'Cooking':
-                                const rawIngredients = state.get(stateKeys.inventory).filter(x => x.types.indexOf(itemTypes.rawFood) > -1);
+                                const itemsPerLog = 1; //TODO: store as a global variable somewhere?
+                                const inventory = state.get(stateKeys.inventory);
+                                let rawIngredients = inventory.filter(x => x.types.indexOf(itemTypes.rawFood) > -1);
+                                const fuel = inventory.filter(x => x.types.indexOf(itemTypes.wood) > -1);
                                 const canCook = getCookableRecipes(rawIngredients);
-                                //TODO: calculate how much we can make, capped by level and time worked (effort), then make each one,
-                                //removing the ingredients from the inventory and consuming wood burned (need a calculation for how much wood... just one per 15 minutes?)
+                                const fireSkill = xpToLevel(state.get(skills.fire.xpKey));
+                                const consumptionRate = (1) / (itemsPerLog * fireSkill);
+                                const numFuelAvailable = fuel.map(x => x.quantity).reduce((a, x) => a + x, 0);
+                                const targetNumDishes = Math.min(Math.max(1, Math.floor(Math.random() * averageSkillLevel * workEffort)), Math.floor(numFuelAvailable / consumptionRate));
+                                let numItemsCooked = 0;
+                                for (let i = 0; i < canCook.length; i++) {
+                                    const result = attemptToCook(canCook[i], rawIngredients, targetNumDishes - numItemsCooked);
+                                    loot.push(result.dishCooked);
+                                    state.addToInventory(result.usedIngredients);
+                                    rawIngredients = state.get(stateKeys.inventory).filter(x => x.types.indexOf(itemTypes.rawFood) > -1);
+                                    numItemsCooked += result.dishCooked.quantity;
+                                    if (numItemsCooked >= targetNumDishes) {
+                                        break;
+                                    }
+                                }
+                                const woodUsed = Math.ceil(numItemsCooked * consumptionRate);
+                                console.log('woodUsed', woodUsed);
+                                //TODO: progressively remove wood from inventory in a loop until we've met the requirement
                                 //tip: state.addToInventory(arrayOfItems) can be used to remove items too, with negative quantity values
                                 //and newItem(itemName, itemTypes, qty) can be used to generate the new item with a negative qty.
                                 break;
@@ -1871,15 +1909,12 @@
                     }
                     const biomeName = area.biome;
                     const biomeKey = getBiomeKey(biomeName);
-                    const averageSkillLevel = activity.skills.map(x => xpToLevel(state.get(x.xpKey))).reduce((a, x) => {return a + x}, 0) / activity.skills.length;
-                    const playerLevel = getPlayerLevel(state);
                     const table = lootTables[activityKey][biomeKey];
 
                     if (!table) {
                         return loot;
                     }
 
-                    const workEffort = Math.max(1, state.get(stateKeys.workPeriod) / 60);
                     const numLoot = Math.max(1, Math.floor(Math.random() * area.level * averageSkillLevel));
 
                     for (let x = 0; x < numLoot; x++) {
