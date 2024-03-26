@@ -1002,6 +1002,7 @@
                             case stateKeys.restPeriod:
                                 restDoneSound.load();
                                 restDoneSound.play();
+                                //TODO: if the player has health missing, should it be restored at the end of the rest period according to the food they have available?
                                 //TODO: do not go to work timer immediately? Let the user acknowledge the end of break time?
                                 this.switchToScreen(screenTypes.activityWorkTimer);
                                 break;
