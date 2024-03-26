@@ -1693,6 +1693,7 @@
                 //TODO: need a ton more recipes. The "promise" right now is that all you need is raw food in order to cook.
                 //So I need at least one recipe per raw food probably, right?
                 //Maybe a catch-all recipe that randomly grabs any raw food and produces something that maybe isn't super useful?
+                //Or see the note below where I wonder if the cooking activity can be made unavailable when there are no recipes supported by current inventory.
                 const cookingRecipes = [
                     {
                         n: `Bittersweet Bread`,
@@ -1796,7 +1797,7 @@
                     });
                 }
 
-                //TODO: NOTE: when evaluating how "good" a food is, use the number of ingredients in its recipe plus one, or just one for uncooked edibles.
+                //TODO: use this later when calculating how food contributes to exploration and combat.
                 const getFoodValue = (foodName) => {
                     const recipe = cookingRecipes.find(x => x.n === foodName);
                     if (recipe) {
@@ -1831,6 +1832,7 @@
                     return pickFromArray(table.bountiful);
                 };
 
+                //TODO: is there any way to leverage this to make the cooking activity unavailable when there are no recipes supported by the player inventory?
                 const getCookableRecipes = (rawIngredients) => {
                     const cookable = [];
                     for (const recipe of cookingRecipes) {
@@ -1849,15 +1851,44 @@
                     return cookable;
                 };
 
+                //TODO: keeping console.logs for now just because cooking has so much potential for bugs!
+                //Remove console logs after much testing and rejoicing.
                 const attemptToCook = (recipe, rawIngredients, maxItems) => {
-                    const ingredientsUsed = []; //TODO: make sure to add but with negative quantity numbers
-                    //use newItem(itemName, itemTypes, qty) can be used to generate the new item with a negative qty.
-
-                    //TODO: get quantities of each raw ingredient available, and we can calculate how many of the recipe we can/will make.
-                    //Obviously don't make more than the maxItems, but do make as many as the ingredients will support as long as it's less (use Math.min)
-                    //For substitute ingredients in the recipe, we can get a grand total for that slot, and then just remove them carefully. lol
+                    const ingredientsUsed = [];
                     let numCooked = 0;
+                    let min = 9999999999999;
+                    for (const ingredient of recipe.ingredients) {
+                        const totalAvailable = rawIngredients.filter(x => ingredient.n.indexOf(x.name) > -1).map(x => x.quantity).reduce((a, x) => a + x, 0);
+                        const canMake = Math.floor(totalAvailable / ingredient.qty);
+                        if (canMake < min) {
+                            min = canMake;
+                            if (canMake <= 1) {
+                                break;
+                            }
+                        }
+                    }
+
+                    if (min > 0) {
+                        numCooked = Math.min(maxItems, min);
+                        for (const ingredient of recipe.ingredients) {
+                            const numUsed = numCooked * ingredient.qty;
+                            let consumed = 0;
+                            const correctItems = rawIngredients.filter(x => ingredient.n.indexOf(x.name) > -1);
+                            for (const item of correctItems) {
+                                const toConsume = Math.min((numUsed - consumed), item.quantity);
+                                ingredientsUsed.push(newItem(item.name, item.types, -toConsume));
+                                consumed += toConsume;
+                                if (consumed >= numUsed) {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
                     console.log('recipe', recipe);
+                    console.log('rawIngredientsAvailable', rawIngredients);
+                    console.log('numCooked', numCooked);
+                    console.log('ingredientsUsed', ingredientsUsed);
 
                     return {
                         usedIngredients: numCooked > 0 ? ingredientsUsed : [],
@@ -1865,8 +1896,6 @@
                     };
                 };
 
-                //TODO: delete when done testing:
-                //lootTable.getLoot('cooking', {}, new StateManager());
                 this.getLoot = (activityKey, area, state) => {
                     const activity = activities[activityKey];
                     const averageSkillLevel = activity.skills.map(x => xpToLevel(state.get(x.xpKey))).reduce((a, x) => a + x, 0) / activity.skills.length;
@@ -1878,7 +1907,7 @@
                         //TODO: also need to do one for smithing and probably one for exploration (though that may be handled differently?)
                         switch (activity.title) {
                             case 'Cooking':
-                                const itemsPerLog = 1; //TODO: store as a global variable somewhere?
+                                const itemsPerLog = 1; //TODO: store as a global variable somewhere? Not even needed in the calculation?
                                 const inventory = state.get(stateKeys.inventory);
                                 let rawIngredients = inventory.filter(x => x.types.indexOf(itemTypes.rawFood) > -1);
                                 const fuel = inventory.filter(x => x.types.indexOf(itemTypes.wood) > -1);
@@ -1898,11 +1927,17 @@
                                         break;
                                     }
                                 }
-                                const woodUsed = Math.ceil(numItemsCooked * consumptionRate);
-                                console.log('woodUsed', woodUsed);
-                                //TODO: progressively remove wood from inventory in a loop until we've met the requirement
-                                //tip: state.addToInventory(arrayOfItems) can be used to remove items too, with negative quantity values
-                                //and newItem(itemName, itemTypes, qty) can be used to generate the new item with a negative qty.
+                                const woodUsed = Math.min(Math.ceil(numItemsCooked * consumptionRate), numFuelAvailable);
+                                let woodConsumed = 0;
+                                console.log('woodConsumed', woodConsumed);
+                                while (woodConsumed < woodUsed) {
+                                    const nextWood = state.get(stateKeys.inventory).find(x => x.types.indexOf(itemTypes.wood) > -1);
+                                    const numBurned = Math.min((woodUsed - woodConsumed), nextWood.quantity);
+                                    const burned = newItem(nextWood.name, nextWood.types, -numBurned);
+                                    console.log('burned', burned);
+                                    state.addToInventory([burned]);
+                                    woodConsumed += numBurned;
+                                }
                                 break;
                         }
                         return loot;
