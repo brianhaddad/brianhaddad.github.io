@@ -105,13 +105,16 @@
 
             const getPlayerLevel = (state) => {
                 let xp = 0;
+                let d = 0;
                 for (const n in skills) {
                     const skillXp = state.get(skills[n].xpKey);
                     if (skillXp) {
                         xp += skillXp;
+                        d++;
                     }
                 }
-                return xpToLevel(xp);
+                const avg = xp / d;
+                return Math.floor((xpToLevel(xp) + xpToLevel(avg)) / 2);
             };
 
             for (const n in skills) {
@@ -765,8 +768,25 @@
                         showing = true;
                         resultsDisplay.innerHTML = '';
                         const results = myApp.getLatestActivityResult();
+                        
                         resultsDisplay.appendChild(createElement('h3', {}, results.message));
-                        //TODO: also display the loot and data about experience gained, level increases, etc.
+                        const lootDisplay = makeFieldset('Loot', {'style': `border-radius: 5px;`});
+                        resultsDisplay.appendChild(lootDisplay);
+                        const lootList = createElement('ul', {}, null);
+                        lootDisplay.appendChild(lootList);
+
+                        const loot = {};
+                        for (const item of results.loot) {
+                            if (!loot.hasOwnProperty(item.name)) {
+                                loot[item.name] = 0;
+                            }
+                            loot[item.name] += item.quantity;
+                        }
+
+                        for (const name in loot) {
+                            lootList.appendChild(createElement('li', {}, `${name} x ${loot[name]}`));
+                        }
+                        //TODO: data about experience gained?
                     }
                 };
 
@@ -989,6 +1009,7 @@
                                 }
                                 currentActivityResult = activities[currentActivityKey].evaluateComplete(currentAreaData, state);
                                 state.addToInventory(currentActivityResult.loot);
+                                //TODO: need a "dev mode" to allow an override here I think!
                                 const xpGained = Math.max(10, Math.floor(timerTarget/60)) * currentAreaData.level; //TODO: tell the player how much XP was gained?
                                 for (const skill of activities[currentActivityKey].skills) {
                                     state.addXp(skill.xpKey, xpGained);
@@ -1381,7 +1402,7 @@
                                 {n: `Dead Twig`, t: [itemTypes.junk]},
                             ],
                             common: [
-                                {n: `Cactus Fruit`, t:  [itemTypes.preppedFood, itemTypes.rawFood]},
+                                {n: `Cactus Fruit`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
                             ],
                             rare: [
                                 {n: `Coconut`, t: [itemTypes.preppedFood]},
@@ -1394,8 +1415,9 @@
                                 {n: `Rock`, t: [itemTypes.junk]},
                             ],
                             common: [
+                                {n: `Iron Ore`, t: [itemTypes.rawOre]},
                                 {n: `Strawberry`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
-                                {n: `Cap Mushroom`, t:  [itemTypes.preppedFood, itemTypes.rawFood]},
+                                {n: `Cap Mushroom`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
                             ],
                             rare: [
                                 {n: `Flint`, t: [itemTypes.flint]},
@@ -1403,7 +1425,7 @@
                         },
                         forest: {
                             bountiful: [
-                                {n: `Button Mushroom`, t:  [itemTypes.preppedFood, itemTypes.rawFood]},
+                                {n: `Button Mushroom`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
                                 {n: `Stick`, t: [itemTypes.wood]},
                                 {n: `Rock`, t: [itemTypes.junk]},
                             ],
@@ -1415,6 +1437,7 @@
                             ],
                             rare: [
                                 {n: `Flint`, t: [itemTypes.flint]},
+                                {n: `Iron Ore`, t: [itemTypes.rawOre]},
                                 {n: `Honeycomb`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
                             ],
                         },
@@ -1431,6 +1454,7 @@
                             rare: [
                                 {n: `Coconut`, t: [itemTypes.preppedFood]},
                                 {n: `Onion`, t: [itemTypes.rawFood]},
+                                {n: `Iron Ore`, t: [itemTypes.rawOre]},
                                 {n: `Raw Cashew Nut`, t: [itemTypes.rawFood]},
                             ],
                         },
@@ -1450,6 +1474,7 @@
                             ],
                             rare: [
                                 {n: `Flint`, t: [itemTypes.flint]},
+                                {n: `Iron Ore`, t: [itemTypes.rawOre]},
                                 {n: `Honeycomb`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
                             ],
                         },
@@ -1461,6 +1486,7 @@
                             common: [
                                 {n: `Edlerberry`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
                                 {n: `Cattail`, t: [itemTypes.rawFood]},
+                                {n: `Iron Ore`, t: [itemTypes.rawOre]},
                                 {n: `Chalk`, t: [itemTypes.junk]},
                             ],
                             rare: [
@@ -1478,6 +1504,7 @@
                             ],
                             rare: [
                                 {n: `Fossil`, t: [itemTypes.junk]},
+                                {n: `Iron Ore`, t: [itemTypes.rawOre]},
                                 {n: `Honeyberry`, t: [itemTypes.preppedFood, itemTypes.rawFood]},
                             ],
                         },
@@ -1490,6 +1517,7 @@
                             ],
                             rare: [
                                 {n: `Diamond`, t: [itemTypes.junk]},
+                                {n: `Iron Ore`, t: [itemTypes.rawOre]},
                             ],
                         },
                         beach: {
@@ -1824,7 +1852,7 @@
 
                 const getFromTable = (table) => {
                     const dieRoll = rollDie(20);
-                    if (dieRoll === 20) {
+                    if (dieRoll > 18) {
                         return pickFromArray(table.rare);
                     }
                     if (dieRoll >= 10) {
@@ -1901,7 +1929,7 @@
                     const activity = activities[activityKey];
                     const averageSkillLevel = activity.skills.map(x => xpToLevel(state.get(x.xpKey))).reduce((a, x) => a + x, 0) / activity.skills.length;
                     const playerLevel = getPlayerLevel(state);
-                    const workEffort = Math.max(1, state.get(stateKeys.workPeriod) / 60);
+                    const workEffort = Math.max(10, state.get(stateKeys.workPeriod) / 60);
 
                     const loot = [];
                     if (!activity.areaDependent) {
@@ -1916,7 +1944,8 @@
                                 const fireSkill = xpToLevel(state.get(skills.fire.xpKey));
                                 const consumptionRate = (1) / (itemsPerLog * fireSkill);
                                 const numFuelAvailable = fuel.map(x => x.quantity).reduce((a, x) => a + x, 0);
-                                const targetNumDishes = Math.min(Math.max(1, Math.floor(Math.random() * averageSkillLevel * workEffort)), Math.floor(numFuelAvailable / consumptionRate));
+                                const numLoot = Math.floor(Math.random() * workEffort * .2) + Math.floor(Math.random() * averageSkillLevel);
+                                const targetNumDishes = Math.min(numLoot, Math.floor(numFuelAvailable / consumptionRate));
                                 let numItemsCooked = 0;
                                 for (let i = 0; i < canCook.length; i++) {
                                     const result = attemptToCook(canCook[i], rawIngredients, targetNumDishes - numItemsCooked);
@@ -1928,6 +1957,8 @@
                                         break;
                                     }
                                 }
+                                //TODO: break woodburning into a separate function to use with smithing as well?
+                                //Also, have a chance to break a flint, lower chance with a higher fire skill?
                                 const woodUsed = Math.min(Math.ceil(numItemsCooked * consumptionRate), numFuelAvailable);
                                 let woodConsumed = 0;
                                 console.log('woodConsumed', woodConsumed);
@@ -1951,11 +1982,11 @@
                         return loot;
                     }
 
-                    const numLoot = Math.max(3, Math.floor(Math.random() * area.level * averageSkillLevel));
+                    const numLoot = Math.floor(Math.random() * workEffort * .5) + Math.floor(Math.random() * area.level * averageSkillLevel);
 
                     for (let x = 0; x < numLoot; x++) {
                         const selection = getFromTable(table);
-                        const num = Math.floor(Math.random() * area.level * workEffort * playerLevel);
+                        const num = Math.floor(Math.random() * area.level * playerLevel) + 1;
                         if (selection && selection.hasOwnProperty('n') & num > 0) {
                             loot.push(newItem(selection.n, selection.t, num));
                         }
