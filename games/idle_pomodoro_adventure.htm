@@ -1982,8 +1982,8 @@
                         return loot;
                     }
 
-                    const maxLoot = Math.floor(workEffort  * .2) + (area.level * averageSkillLevel);
-                    const minLoot = Math.min(maxLoot, area.level + playerLevel);
+                    const maxLoot = Math.floor(workEffort  * .8) + (area.level * averageSkillLevel);
+                    const minLoot = Math.min(maxLoot, area.level + playerLevel + Math.floor(workEffort  * .2));
                     const numLoot = Math.floor(Math.random() * (maxLoot - minLoot)) + minLoot;
 
                     for (let x = 0; x < numLoot; x++) {
