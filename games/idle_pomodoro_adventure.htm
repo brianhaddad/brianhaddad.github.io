@@ -1982,7 +1982,9 @@
                         return loot;
                     }
 
-                    const numLoot = Math.floor(Math.random() * workEffort * .5) + Math.floor(Math.random() * area.level * averageSkillLevel);
+                    const maxLoot = Math.floor(workEffort  * .2) + (area.level * averageSkillLevel);
+                    const minLoot = Math.min(maxLoot, area.level + playerLevel);
+                    const numLoot = Math.floor(Math.random() * (maxLoot - minLoot)) + minLoot;
 
                     for (let x = 0; x < numLoot; x++) {
                         const selection = getFromTable(table);
