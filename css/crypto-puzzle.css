@@ -1,0 +1,79 @@
+body
+{
+    padding: 1em;
+}
+
+input[type="text"]
+{
+    width: 1em;
+    padding: 6px;
+    font-size: 1.5em;
+    font-weight: bold;
+    text-align: center;
+}
+
+.app-container
+{
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2em;
+}
+
+.puzzle-holder
+{
+    width: 1000px;
+}
+
+.win-output
+{
+    color: #26ab26;
+    font-weight: bold;
+    font-size: 2em;
+}
+
+.full-preview
+{
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    width: 450px;
+    height: 375px;
+    resize: none;
+    border: none;
+    font-weight: bold;
+    padding: 8px;
+    font-size: 2em;
+}
+
+.letter-column
+{
+    display: flex;
+    flex-wrap: nowrap;
+    flex-direction: column;
+    align-items: center;
+}
+
+.letter-column > div {
+    font-size: 2em;
+}
+
+.letter-input
+{
+    width: 16px;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    border-bottom: 1px solid black;
+    text-align: center;
+    background-color: #ddd;
+}
+
+.bar-graph
+{
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: flex-end;
+    font-weight: bold;
+}
