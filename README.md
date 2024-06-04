@@ -7,4 +7,4 @@ My site for sharing projects I've made.
 
 * I am working on my own take on the gamified pomodoro timer. I call it [Idle Pomodoro Adventure](/games/idle_pomodoro_adventure.htm). This is a work in progress, but woodcutting and foraging are mostly fully implemented, with more features on the way. It already works fine as a pomodoro timer.
 
-* I have adapted some puzzles, some for use in lessons and some for fun. They can be found [here](/puzzles/index.html).
+* I have adapted some puzzles from another project I created for loved ones. Some are for use in lessons and some are for fun. They can be found [here](/puzzles/index.html).
