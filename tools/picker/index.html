@@ -23,7 +23,7 @@
             function TagSelector(parent, name) {
                 const selectedList = [];
                 //TODO: use flex formatting to get them all packed in more neatly
-                const selectedItemsContainer = createElement('div', {}, null);
+                const selectedItemsContainer = createElement('div', { 'style': `display:flex; flex-direction:row; gap:8px;` }, null);
 
                 this.getSelectedList = () => [...selectedList];
                 const label = createElement('label', {'for': name}, 'Tag Filters');
@@ -38,7 +38,7 @@
                 };
 
                 const addSelectedItem = (tag) => {
-                    const item = createElement('input', {'type': 'button', 'value': tag}, null);
+                    const item = createElement('input', {'type': 'button', 'value': tag, 'style': `width:fit-content;`}, null);
                     const removeMe = () => {
                         selectedItemsContainer.removeChild(item);
                         this.unselect(tag);
