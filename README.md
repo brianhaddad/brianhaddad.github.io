@@ -1,5 +1,5 @@
 # brianhaddad.github.io
-My site for sharing projects I've made.
+My site for sharing projects I've made and things I'm working on.
 
 * First up, we have the [LCR simulator](/demos/lcr.htm). I planned on making it much fancier and then I didn't do that so... it is what it is.
 
