@@ -10,6 +10,12 @@ input[type="text"]
     font-size: 1.5em;
     font-weight: bold;
     text-align: center;
+    margin-bottom: 0px;
+}
+
+input[type="text"]:placeholder-shown
+{
+    background-color: #555;
 }
 
 .app-container
@@ -56,7 +62,10 @@ input[type="text"]
 }
 
 .letter-column > div {
-    font-size: 2em;
+    font-size: 1.5em;
+    margin-bottom: 0px;
+    height: 28px;
+    padding: 6px;
 }
 
 .letter-input

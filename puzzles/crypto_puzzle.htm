@@ -207,7 +207,7 @@
 
             function createLetterDisplay(displayLetter, id) {
                 const container = createElement('div', { 'class': 'letter-column'}, null);
-                const inputDisplay = createElement('input', { 'type': 'text', 'id': id, 'maxlength': '1', 'class': 'letter-input' }, null);
+                const inputDisplay = createElement('input', { 'type': 'text', 'placeholder': ' ', 'id': id, 'maxlength': '1', 'class': 'letter-input' }, null);
                 inputDisplay.addEventListener(
                     'keyup',
                     function (event) { updateRuleFromInput(displayLetter, id, event); },
