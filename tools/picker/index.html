@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html color-mode="user">
+    <head>
+        <title>Picker</title>
+        <link rel="stylesheet" href="../../css/mvp.css">
+    </head>
+    <body>
+        <script src="../../scripts/html_tools.js"></script>
+        <script src="../../scripts/string_tools.js"></script>
+        <script>
+            //Note: this will actually be useful for more than just names if I am right about its final design.
+            //Really it's just a general "draw from a hat" contraption.
+            //TODO: the rest of the owl
+            //Use localstorage as temp database for names
+            //Get names from tons of sources and enter them (maybe have a bulk name insert tool?)
+            //each name containing a collection of tags including active time periods, genders, etc.
+            //multiple tag filters can be defined before asking for a random selection of names fitting the criteria
+            //names that are used are tracked so that the next "random" selection can avoid recently used names?
+
+            const main = createElement('main', {}, null);
+            document.body.appendChild(main);
+
+            function TagSelector(parent, name) {
+                const selectedList = [];
+                //TODO: use flex formatting to get them all packed in more neatly
+                const selectedItemsContainer = createElement('div', {}, null);
+
+                this.getSelectedList = () => [...selectedList];
+                const label = createElement('label', {'for': name}, 'Tag Filters');
+                const selector = makeSelect(name);
+
+                const makeSelection = () => {
+                    const i = selector.selectedIndex;
+                    const v = selector.options[i].value;
+                    selectedList.push(v);
+                    selector.options.remove(i);
+                    addSelectedItem(v);
+                };
+
+                const addSelectedItem = (tag) => {
+                    const item = createElement('input', {'type': 'button', 'value': tag}, null);
+                    const removeMe = () => {
+                        selectedItemsContainer.removeChild(item);
+                        this.unselect(tag);
+                    }
+                    item.addEventListener('click', removeMe);
+                    selectedItemsContainer.appendChild(item);
+                    selector.selectedIndex = 0;
+                };
+
+                selector.addEventListener('change', () => makeSelection());
+                
+                this.updateTagList = () => {
+                    populateTagList();
+                };
+
+                this.unselect = (value) => {
+                    selectedList.splice(selectedList.indexOf(value), 1);
+                    populateTagList();
+                };
+
+                this.resetAll = () => {
+                    selectedList.splice(0, selectedList.length);
+                    while (selectedItemsContainer.children.length > 0) {
+                        selectedItemsContainer.removeChild(selectedItemsContainer.children[0]);
+                    }
+                    populateTagList();
+                };
+
+                const populateTagList = () => {
+                    //TODO: read in tags from saved data
+                    const tempTags = [
+                        'male',
+                        'female',
+                        'contemporary',
+                        'medieval',
+                    ];
+
+                    while (selector.options.length > 0) {
+                        selector.options.remove(0);
+                    }
+
+                    const placeholder = createElement('option', {'value': null, 'disabled': true, 'selected': true}, 'Select a Tag...');
+                    selector.appendChild(placeholder);
+                    for (const tag of tempTags) {
+                        if (selectedList.indexOf(tag) < 0) {
+                            const option = createElement('option', { 'value': tag }, tag);
+                            selector.appendChild(option);
+                        }
+                    }
+                };
+
+                parent.appendChild(label);
+                parent.appendChild(selector);
+                parent.appendChild(selectedItemsContainer);
+                populateTagList();
+            }
+
+            function Picker(parent) {
+                const pickerContents = createElement('div', {}, null);
+
+                const tagSelector = new TagSelector(pickerContents, 'picker-tag-selector');
+                //TODO: need a dropdown with the currently available tag filters (needs to refresh when adding tags)
+                //On selection, each is added to a list of the required filters (maybe a live view of how many options meet the filter criteria?)
+                const pickButton = createElement('button', {'type': 'submit'}, `Pick!`);
+                pickerContents.appendChild(pickButton);
+                const pickerDetail = makeDetail(`Picker`, pickerContents, true);
+                parent.appendChild(pickerDetail);
+
+                this.updateTags = () => {
+                    tagSelector.updateTagList();
+                };
+            }
+
+            const picker = new Picker(main);
+        </script>
+    </body>
+</html>
