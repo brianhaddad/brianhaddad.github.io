@@ -14,20 +14,27 @@
             //Use localstorage as temp database for names
             //Get names from tons of sources and enter them (maybe have a bulk name insert tool?)
             //each name containing a collection of tags including active time periods, genders, etc.
-            //multiple tag filters can be defined before asking for a random selection of names fitting the criteria
-            //names that are used are tracked so that the next "random" selection can avoid recently used names?
 
             //TODO: create a file containing the base "names" collection and allow the user to "restore" to that collection for initialization or repair.
             //Do the same for tags and anything else required to get this up and running.
 
-            const main = createElement('main', {}, null);
-            document.body.appendChild(main);
-
             function TagSelector(parent, name) {
+                const subscribers = {};
                 const selectedList = [];
                 const selectedItemsContainer = createElement('div', { 'style': `display:flex; flex-direction:row; gap:8px;` }, null);
 
+                this.registerSubscriber = (subscriberName, subscriberAction) => {
+                    subscribers[subscriberName] = subscriberAction;
+                };
+
+                const updateSubscribers = () => {
+                    for (const sub in subscribers) {
+                        subscribers[sub]();
+                    }
+                };
+
                 this.getSelectedList = () => [...selectedList];
+
                 const label = createElement('label', {'for': name}, 'Tag Filters');
                 const selector = makeSelect(name);
 
@@ -37,6 +44,7 @@
                     selectedList.push(v);
                     selector.options.remove(i);
                     addSelectedItem(v);
+                    updateSubscribers();
                 };
 
                 const addSelectedItem = (tag) => {
@@ -52,6 +60,7 @@
 
                 selector.addEventListener('change', () => makeSelection());
                 
+                //TODO: might not need this one
                 this.updateTagList = () => {
                     populateTagList();
                 };
@@ -70,13 +79,14 @@
                 };
 
                 const populateTagList = () => {
-                    //TODO: read in tags from saved data
+                    //TODO: read in tags from saved data, but not every time?
                     const tempTags = [
                         'male',
                         'female',
                         'contemporary',
                         'medieval',
                     ];
+                    let tags = [...tempTags];
 
                     while (selector.options.length > 0) {
                         selector.options.remove(0);
@@ -84,12 +94,13 @@
 
                     const placeholder = createElement('option', {'value': null, 'disabled': true, 'selected': true}, 'Select a Tag...');
                     selector.appendChild(placeholder);
-                    for (const tag of tempTags) {
+                    for (const tag of tags) {
                         if (selectedList.indexOf(tag) < 0) {
                             const option = createElement('option', { 'value': tag }, tag);
                             selector.appendChild(option);
                         }
                     }
+                    updateSubscribers();
                 };
 
                 parent.appendChild(label);
@@ -98,14 +109,113 @@
                 populateTagList();
             }
 
-            function Picker(parent) {
-                const pickerContents = createElement('div', {}, null);
+            function DataSource() {
+                //TODO: read in data from saved data
+                let data = [];
+                //TODO: is this collection strictly necessary? Should it reset every now and then?
+                const idsUsedThisSession = [];
 
+                const getNextId = () => {
+                    if (data.length === 0) {
+                        return 0;
+                    }
+                    return Math.max(...data.map(d => d['id'])) + 1;
+                };
+
+                const newEntry = (name, tags) => {
+                    return {
+                        'id': getNextId(),
+                        'name': name,
+                        'tags': [...tags],
+                        'timesPicked': 0,
+                    };
+                };
+
+                data.push(newEntry('Brandon', ['contemporary', 'male']));
+                data.push(newEntry('Peter', ['contemporary', 'medieval', 'male']));
+                data.push(newEntry('Bartholomew', ['medieval', 'male']));
+                data.push(newEntry('Pat', ['contemporary', 'male', 'female']));
+                data.push(newEntry('Megan', ['contemporary', 'female']));
+                data.push(newEntry('Hildegard', ['medieval', 'female']));
+                data.push(newEntry('Mary', ['contemporary', 'medieval', 'female']));
+
+                const meetsFilterCriteria = (itemTags, filterTags) => {
+                    for (const filter of filterTags) {
+                        if (itemTags.indexOf(filter) < 0) {
+                            return false;
+                        }
+                    }
+                    return true;
+                };
+
+                const getData = (filterList) => {
+                    const unusedData = data.filter(d => idsUsedThisSession.indexOf(d['id']) < 0);
+                    if (!filterList || filterList.length === 0) {
+                        return unusedData;
+                    }
+
+                    return unusedData.filter(d => meetsFilterCriteria(d['tags'], filterList));
+                };
+
+                this.getFilteredValues = (filterList) => getData(filterList).map(d => d['name']);
+
+                this.pickOne = (filterList) => {
+                    const options = getData(filterList);
+                    const maxTimesPicked = Math.max(...options.map(d => d['timesPicked']));
+                    const hat = [];
+                    for (const option of options) {
+                        console.log(option);
+                        const num = (maxTimesPicked - option['timesPicked']) + 1;
+                        for (let i = 0; i < num; i++) {
+                            hat.push(option);
+                        }
+                    }
+                    console.log(hat);
+                    const selection = hat[Math.floor(Math.random() * hat.length)];
+                    selection['timesPicked']++;
+                    idsUsedThisSession.push(selection['id']);
+                    //TODO: return an object with the name and an ID so that the user can choose to unselect it?
+                    return selection['name'];
+                };
+            }
+
+            function Picker(parent, dataSource) {
+                const pickerContents = createElement('div', {}, null);
+                const data = dataSource;
                 const tagSelector = new TagSelector(pickerContents, 'picker-tag-selector');
-                //TODO: need a dropdown with the currently available tag filters (needs to refresh when adding tags)
-                //On selection, each is added to a list of the required filters (maybe a live view of how many options meet the filter criteria?)
                 const pickButton = createElement('button', {'type': 'submit'}, `Pick!`);
+                //TODO: pretty formatting?
+                const selectedItems = createElement('div', {}, null);
+
+                const tagsUpdated = () => {
+                    const latestTags = tagSelector.getSelectedList();
+                    console.log(latestTags);
+                    const previewList = data.getFilteredValues(latestTags);
+                    console.log(previewList);
+                    //TODO: update a preview to show the user?
+                    pickButton.disabled = previewList.length === 0;
+                };
+
+                const addSelectedResult = (item) => {
+                    //For now, item is just a text string
+                    //TODO: may take in an object instead?
+                    selectedItems.appendChild(createElement('h2', {}, item));
+                };
+
+                const pickButtonClick = () => {
+                    const result = data.pickOne(tagSelector.getSelectedList());
+                    console.log(result);
+                    addSelectedResult(result);
+                    tagSelector.updateTagList();
+                };
+                
+                tagSelector.registerSubscriber('parent_selector', tagsUpdated);
+
+                pickButton.addEventListener('click', pickButtonClick);
                 pickerContents.appendChild(pickButton);
+
+                pickerContents.appendChild(selectedItems);
+
                 const pickerDetail = makeDetail(`Picker`, pickerContents, true);
                 parent.appendChild(pickerDetail);
 
@@ -114,7 +224,13 @@
                 };
             }
 
-            const picker = new Picker(main);
+            const main = createElement('main', {}, null);
+            document.body.appendChild(main);
+
+            const dataSource = new DataSource();
+            const picker = new Picker(main, dataSource);
+            //TODO: editor for the tag list
+            //TODO: editor for the data source
         </script>
     </body>
 </html>
