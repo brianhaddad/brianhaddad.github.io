@@ -18,13 +18,13 @@
             //names that are used are tracked so that the next "random" selection can avoid recently used names?
 
             //TODO: create a file containing the base "names" collection and allow the user to "restore" to that collection for initialization or repair.
+            //Do the same for tags and anything else required to get this up and running.
 
             const main = createElement('main', {}, null);
             document.body.appendChild(main);
 
             function TagSelector(parent, name) {
                 const selectedList = [];
-                //TODO: use flex formatting to get them all packed in more neatly
                 const selectedItemsContainer = createElement('div', { 'style': `display:flex; flex-direction:row; gap:8px;` }, null);
 
                 this.getSelectedList = () => [...selectedList];
