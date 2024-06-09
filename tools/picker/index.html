@@ -216,6 +216,8 @@
 
                 pickerContents.appendChild(selectedItems);
 
+                //TODO: the 'true' here indicates it defaults to being open
+                //do we want to store/track that value?
                 const pickerDetail = makeDetail(`Picker`, pickerContents, true);
                 parent.appendChild(pickerDetail);
 
