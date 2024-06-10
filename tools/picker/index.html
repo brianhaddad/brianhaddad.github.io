@@ -5,17 +5,14 @@
         <link rel="stylesheet" href="../../css/mvp.css">
     </head>
     <body>
+        <script src="../../scripts/picker_initial_data.js"></script>
         <script src="../../scripts/html_tools.js"></script>
-        <script src="../../scripts/string_tools.js"></script>
         <script>
             //Note: this will actually be useful for more than just names if I am right about its final design.
             //Really it's just a general "draw from a hat" contraption.
-            //TODO: the rest of the owl
-            //Use localstorage as temp database for names
-            //Get names from tons of sources and enter them (maybe have a bulk name insert tool?)
-            //each name containing a collection of tags including active time periods, genders, etc.
+            //TODO: tags for regions?
 
-            //TODO: create a file containing the base "names" collection and allow the user to "restore" to that collection for initialization or repair.
+            //TODO: allow the user to "restore" to initial picker data collection for initialization or repair.
             //Do the same for tags and anything else required to get this up and running.
 
             function TagSelector(parent, name) {
@@ -70,6 +67,8 @@
                     populateTagList();
                 };
 
+                //TODO: mignt not need this one? No RESET button for tag filters at this time.
+                //TODO: Might want a reset button once the tag list gets really long?
                 this.resetAll = () => {
                     selectedList.splice(0, selectedList.length);
                     while (selectedItemsContainer.children.length > 0) {
@@ -80,13 +79,7 @@
 
                 const populateTagList = () => {
                     //TODO: read in tags from saved data, but not every time?
-                    const tempTags = [
-                        'male',
-                        'female',
-                        'contemporary',
-                        'medieval',
-                    ];
-                    let tags = [...tempTags];
+                    let tags = [...initialTags];
 
                     while (selector.options.length > 0) {
                         selector.options.remove(0);
@@ -110,10 +103,22 @@
             }
 
             function DataSource() {
-                //TODO: read in data from saved data
-                let data = [];
-                //TODO: is this collection strictly necessary? Should it reset every now and then?
-                const idsUsedThisSession = [];
+                const dataKey = 'picker_data_key';
+                const saveData = () => {
+                    localStorage.setItem(dataKey, JSON.stringify(data));
+                };
+                const loadData = () => {
+                    if (localStorage.hasOwnProperty(dataKey)) {
+                        return JSON.parse(localStorage.getItem(dataKey));
+                    }
+
+                    const newData = [];
+                    let id = 0;
+                    for (const n in initialData) {
+                        newData.push(newEntry(n, initialData[n], id++));
+                    }
+                    return newData;
+                };
 
                 const getNextId = () => {
                     if (data.length === 0) {
@@ -122,22 +127,51 @@
                     return Math.max(...data.map(d => d['id'])) + 1;
                 };
 
-                const newEntry = (name, tags) => {
+                const newEntry = (name, tags, idOverride) => {
                     return {
-                        'id': getNextId(),
+                        'id': !isNaN(idOverride) ? idOverride : getNextId(),
                         'name': name,
                         'tags': [...tags],
                         'timesPicked': 0,
                     };
                 };
 
-                data.push(newEntry('Brandon', ['contemporary', 'male']));
-                data.push(newEntry('Peter', ['contemporary', 'medieval', 'male']));
-                data.push(newEntry('Bartholomew', ['medieval', 'male']));
-                data.push(newEntry('Pat', ['contemporary', 'male', 'female']));
-                data.push(newEntry('Megan', ['contemporary', 'female']));
-                data.push(newEntry('Hildegard', ['medieval', 'female']));
-                data.push(newEntry('Mary', ['contemporary', 'medieval', 'female']));
+                //TODO: read in data from saved data
+                const data = loadData();
+                //TODO: is this collection strictly necessary? Should it reset every now and then?
+                const idsUsedThisSession = [];
+
+                const addOrUpdate = (name, tags) => {
+                    const existingItem = data.find(x => x['name'] === name);
+                    if (existingItem) {
+                        for (const tag of tags) {
+                            if (existingItem['tags'].indexOf(tag) < 0) {
+                                existingItem['tags'].push(tag);
+                            }
+                        }
+                    }
+                    else {
+                        data.push(newEntry(name, tags));
+                    }
+                };
+
+                this.addOrUpdateItem = (name, tags) => {
+                    addOrUpdate(name, tags);
+                    saveData();
+                    return JSON.parse(JSON.stringify(data));
+                };
+
+                this.bulkAddOrUpdateItems = (names, tags) => {
+                    const done = [];
+                    for (const name of names) {
+                        if (done.indexOf(name) < 0) {
+                            addOrUpdate(name, tags);
+                            done.push(name);
+                        }
+                    }
+                    saveData();
+                    return JSON.parse(JSON.stringify(data));
+                };
 
                 const meetsFilterCriteria = (itemTags, filterTags) => {
                     for (const filter of filterTags) {
@@ -164,17 +198,16 @@
                     const maxTimesPicked = Math.max(...options.map(d => d['timesPicked']));
                     const hat = [];
                     for (const option of options) {
-                        console.log(option);
                         const num = (maxTimesPicked - option['timesPicked']) + 1;
                         for (let i = 0; i < num; i++) {
                             hat.push(option);
                         }
                     }
-                    console.log(hat);
                     const selection = hat[Math.floor(Math.random() * hat.length)];
                     selection['timesPicked']++;
                     idsUsedThisSession.push(selection['id']);
                     //TODO: return an object with the name and an ID so that the user can choose to unselect it?
+                    saveData();
                     return selection['name'];
                 };
             }
@@ -184,14 +217,12 @@
                 const data = dataSource;
                 const tagSelector = new TagSelector(pickerContents, 'picker-tag-selector');
                 const pickButton = createElement('button', {'type': 'submit'}, `Pick!`);
-                //TODO: pretty formatting?
+                //TODO: prettier formatting?
                 const selectedItems = createElement('div', {}, null);
 
                 const tagsUpdated = () => {
                     const latestTags = tagSelector.getSelectedList();
-                    console.log(latestTags);
                     const previewList = data.getFilteredValues(latestTags);
-                    console.log(previewList);
                     //TODO: update a preview to show the user?
                     pickButton.disabled = previewList.length === 0;
                 };
@@ -204,7 +235,6 @@
 
                 const pickButtonClick = () => {
                     const result = data.pickOne(tagSelector.getSelectedList());
-                    console.log(result);
                     addSelectedResult(result);
                     tagSelector.updateTagList();
                 };
@@ -221,6 +251,69 @@
                 const pickerDetail = makeDetail(`Picker`, pickerContents, true);
                 parent.appendChild(pickerDetail);
 
+                //TODO: this will be important once the master tag list can be updated by an editor interface
+                //TODO: instead, maybe have the data source handle tag data and give everyone the ability to subscribe to data updates?
+                this.updateTags = () => {
+                    tagSelector.updateTagList();
+                };
+
+                tagsUpdated();
+            }
+
+            function BulkDataAdder(parent, dataSource) {
+                const contents = createElement('div', {}, null);
+                const data = dataSource;
+                const tagSelector = new TagSelector(contents, 'bda-tag-selector');
+
+                const sortByName = (a, b) => {
+                    if (a['name'] < b['name']) {
+                        return -1;
+                    }
+                    if (a['name'] < b['name']) {
+                        return 1;
+                    }
+                    return 0;
+                };
+
+                const submit = () => {
+                    const tags = tagSelector.getSelectedList();
+                    const rawInput = input.value;
+                    if (tags.length < 1 || rawInput.length < 1) {
+                        output.value = `Error. Must select at least one tag and the input field must not be empty.`;
+                        return;
+                    }
+                    const itemNames = rawInput.replaceAll(',', '\n')
+                        .split('\n')
+                        .map(x => x.trim())
+                        .filter(x => x.length > 0)
+                        .sort();
+
+                    const result = data.bulkAddOrUpdateItems(itemNames, tags).sort(sortByName);
+                    const newInitialData = {};
+                    for (const item of result) {
+                        newInitialData[item['name']] = item['tags'];
+                    }
+                    output.value = JSON.stringify(newInitialData, null, '  ');
+                };
+
+                const input = createElement('textarea', {'rows': 10, 'cols': 100}, null);
+                contents.appendChild(input);
+
+                const processButton = createElement('input', {'type': 'button', 'value': `Process`}, null);
+                processButton.addEventListener('click', submit);
+                contents.appendChild(processButton);
+
+                const output = createElement('textarea', {'rows': 10, 'cols': 100}, null);
+                contents.appendChild(output);
+
+                //TODO: the 'true' here indicates it defaults to being open
+                //do we want to store/track that value?
+                //Maybe we want this one to default to false?
+                const detail = makeDetail(`Bulk Data Adder`, contents, true);
+                parent.appendChild(detail);
+
+                //TODO: this will be important once the master tag list can be updated by an editor interface
+                //TODO: instead, maybe have the data source handle tag data and give everyone the ability to subscribe to data updates?
                 this.updateTags = () => {
                     tagSelector.updateTagList();
                 };
@@ -231,8 +324,10 @@
 
             const dataSource = new DataSource();
             const picker = new Picker(main, dataSource);
+            const bulkDataAdder = new BulkDataAdder(main, dataSource);
             //TODO: editor for the tag list
-            //TODO: editor for the data source
+            //TODO: editor for the data source (search for individual item, if found allow edit, if not allow add)
+            //Alternatively or also, allow full table view of the entire collection.
         </script>
     </body>
 </html>
