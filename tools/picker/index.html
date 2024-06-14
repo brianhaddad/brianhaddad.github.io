@@ -136,7 +136,6 @@
                     };
                 };
 
-                //TODO: read in data from saved data
                 const data = loadData();
                 //TODO: is this collection strictly necessary? Should it reset every now and then?
                 const idsUsedThisSession = [];
@@ -191,7 +190,7 @@
                     return unusedData.filter(d => meetsFilterCriteria(d['tags'], filterList));
                 };
 
-                this.getFilteredValues = (filterList) => getData(filterList).map(d => d['name']);
+                this.getFilteredValues = (filterList) => getData(filterList);//.map(d => d['name']);
 
                 this.pickOne = (filterList) => {
                     const options = getData(filterList);
@@ -206,9 +205,16 @@
                     const selection = hat[Math.floor(Math.random() * hat.length)];
                     selection['timesPicked']++;
                     idsUsedThisSession.push(selection['id']);
-                    //TODO: return an object with the name and an ID so that the user can choose to unselect it?
                     saveData();
-                    return selection['name'];
+                    return selection;
+                };
+
+                this.unPick = (id) => {
+                    const item = data.find(x => x['id'] === id);
+                    if (item) {
+                        item['timesPicked']--;
+                        saveData();
+                    }
                 };
             }
 
@@ -223,14 +229,22 @@
                 const tagsUpdated = () => {
                     const latestTags = tagSelector.getSelectedList();
                     const previewList = data.getFilteredValues(latestTags);
-                    //TODO: update a preview to show the user?
                     pickButton.disabled = previewList.length === 0;
                 };
 
+                const undoPick = (id, child) => {
+                    data.unPick(id);
+                    selectedItems.removeChild(child);
+                };
+
                 const addSelectedResult = (item) => {
-                    //For now, item is just a text string
-                    //TODO: may take in an object instead?
-                    selectedItems.appendChild(createElement('h2', {}, item));
+                    const removeButton = createElement('input', {'type': 'button', 'value': `x`}, null);
+                    const nameDisplay = createElement('h2', {'style':`margin:0px;`}, item['name']);
+                    const row = createElement('div', {'style': 'display:flex;flex-direction:col;gap:8px;'}, )
+                    row.appendChild(removeButton);
+                    row.appendChild(nameDisplay);
+                    removeButton.addEventListener('click', () => undoPick(item['id'], row));
+                    selectedItems.appendChild(row);
                 };
 
                 const pickButtonClick = () => {
@@ -306,10 +320,7 @@
                 const output = createElement('textarea', {'rows': 10, 'cols': 100}, null);
                 contents.appendChild(output);
 
-                //TODO: the 'true' here indicates it defaults to being open
-                //do we want to store/track that value?
-                //Maybe we want this one to default to false?
-                const detail = makeDetail(`Bulk Data Adder`, contents, true);
+                const detail = makeDetail(`Bulk Data Adder`, contents, false);
                 parent.appendChild(detail);
 
                 //TODO: this will be important once the master tag list can be updated by an editor interface
