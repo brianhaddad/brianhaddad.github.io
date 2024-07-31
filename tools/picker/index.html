@@ -190,7 +190,7 @@
                     return unusedData.filter(d => meetsFilterCriteria(d['tags'], filterList));
                 };
 
-                this.getFilteredValues = (filterList) => getData(filterList);//.map(d => d['name']);
+                this.getFilteredValues = (filterList) => getData(filterList);
 
                 this.pickOne = (filterList) => {
                     const options = getData(filterList);
@@ -240,9 +240,11 @@
                 const addSelectedResult = (item) => {
                     const removeButton = createElement('input', {'type': 'button', 'value': `x`}, null);
                     const nameDisplay = createElement('h2', {'style':`margin:0px;`}, item['name']);
+                    const tagsDisplay = createElement('span', {}, `(${item['tags'].join(', ')})`);
                     const row = createElement('div', {'style': 'display:flex;flex-direction:col;gap:8px;'}, )
                     row.appendChild(removeButton);
                     row.appendChild(nameDisplay);
+                    row.appendChild(tagsDisplay);
                     removeButton.addEventListener('click', () => undoPick(item['id'], row));
                     selectedItems.appendChild(row);
                 };
