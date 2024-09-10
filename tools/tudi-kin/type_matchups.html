@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html color-mode="user">
+    <head>
+        <title>Tudi-Kin Type Matchup Viewer</title>
+        <link rel="stylesheet" href="../../css/mvp.css">
+    </head>
+    <body>
+        <script src="../../scripts/tudi-kin.js"></script>
+        <script src="../../scripts/html_tools.js"></script>
+        <script>
+            const tudiKin = new TudiKin(Math.pow(2, 53) - 1);
+
+            //console.log(tudiKin.getId());
+            //console.log(tudiKin.getExp());
+            //console.log(tudiKin.getType());
+
+            const rando = new TudiKin(CreateRandomTudiKin(0));
+
+            //console.log(rando.getId());
+            //console.log(rando.getExp());
+            //console.log(rando.getType());
+
+            const main = createElement('main', {}, null);
+            document.body.appendChild(main);
+
+            //Type Matchup Visualization Table
+            //const tableContainer = createElement('div', {}, null);
+            //main.appendChild(tableContainer);
+
+            const table = createElement('table', {}, null);
+            main.appendChild(table);
+
+            const tableHeader = createElement('thead', {}, null);
+            table.appendChild(tableHeader);
+
+            const headerRow = createElement('tr', {}, null);
+            tableHeader.appendChild(headerRow);
+
+            headerRow.appendChild(createElement('th', {}, `Attacking`));
+            for (let i = 0; i < Math.pow(2, 4); i++) {
+               headerRow.appendChild(createElement('th', {}, getTypeName(i)));
+            }
+
+            const tableBody = createElement('tbody', {}, null);
+            table.appendChild(tableBody);
+
+            for (let i = 0; i < Math.pow(2, 4); i++) {
+               const row = createElement('tr', {}, null);
+               tableBody.appendChild(row);
+
+               row.appendChild(createElement('td', {}, getTypeName(i)));
+
+                for (let j = 0; j < Math.pow(2, 4); j++) {
+                row.appendChild(createElement('td', {}, getTypeAdvantage(i, j).toString()));
+                }
+            }
+            //TODO: need to track stats such as the grand total per line (all should still add up to 16 I think)
+            //and maybe things like standard deviation to make sure nobody is too stacked?
+        </script>
+    </body>
+</html>
