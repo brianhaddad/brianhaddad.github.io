@@ -3,6 +3,12 @@
     <head>
         <title>Tudi-Kin Type Matchup Viewer</title>
         <link rel="stylesheet" href="../../css/mvp.css">
+        <style>
+            main {
+                max-width: unset;
+                width: fit-content;
+            }
+        </style>
     </head>
     <body>
         <script src="../../scripts/tudi-kin.js"></script>
@@ -41,18 +47,25 @@
                headerRow.appendChild(createElement('th', {}, getTypeName(i)));
             }
 
+            headerRow.appendChild(createElement('th', {}, `Total`));
+
             const tableBody = createElement('tbody', {}, null);
             table.appendChild(tableBody);
 
             for (let i = 0; i < Math.pow(2, 4); i++) {
-               const row = createElement('tr', {}, null);
-               tableBody.appendChild(row);
+                const row = createElement('tr', {}, null);
+                tableBody.appendChild(row);
 
-               row.appendChild(createElement('td', {}, getTypeName(i)));
+                row.appendChild(createElement('td', {}, getTypeName(i)));
 
+                let rowTotal = 0;
                 for (let j = 0; j < Math.pow(2, 4); j++) {
-                row.appendChild(createElement('td', {}, getTypeAdvantage(i, j).toString()));
+                    const mult = getTypeAdvantage(i, j);
+                    rowTotal += mult;
+                    row.appendChild(createElement('td', {}, mult.toString()));
                 }
+
+                row.appendChild(createElement('td', {}, rowTotal.toString()));
             }
             //TODO: need to track stats such as the grand total per line (all should still add up to 16 I think)
             //and maybe things like standard deviation to make sure nobody is too stacked?

@@ -73,6 +73,7 @@ function getTypeName(typeNum) {
 //TODO: I messed this up already I think
 //The range should be from 0 to 2 in half increments:
 //0, .5, 1, 1.5, 2
+//TODO: Also this needs to be easy to recreate in C for the Arduino... Hrm...
 function getTypeAdvantage(attacker, defender) {
     const aType = getTypeName(attacker);
     const dType = getTypeName(defender);
@@ -108,5 +109,33 @@ function getTypeAdvantage(attacker, defender) {
     const defenderHighLowFlag = flagSet(defender, 2);
     const defenderMetaphysicalPhysicalFlag = flagSet(defender, 3);
 
-    return 1;
+    //TODO: reconsider some of these... More shuffling/matching/pairing?
+    let total = 0;
+    if (attackerHotColdFlag && !defenderHotColdFlag) {
+        total += .5;
+    }
+    if (attackerArmoredFastFlag && !defenderArmoredFastFlag) {
+        total += .5;
+    }
+    if (attackerHighLowFlag && !defenderHighLowFlag) {
+        total += .5;
+    }
+    if (attackerMetaphysicalPhysicalFlag && !defenderMetaphysicalPhysicalFlag) {
+        total += .5;
+    }
+
+    if (defenderHotColdFlag && !attackerArmoredFastFlag) {
+        total += .5;
+    }
+    if (defenderArmoredFastFlag && !attackerHotColdFlag) {
+        total += .5;
+    }
+    if (defenderHighLowFlag && !attackerMetaphysicalPhysicalFlag) {
+        total += .5;
+    }
+    if (defenderMetaphysicalPhysicalFlag && !attackerHighLowFlag) {
+        total += .5;
+    }
+
+    return total;
 }
