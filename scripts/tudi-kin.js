@@ -31,46 +31,6 @@ const type = {
     normal: 'normal',
 };
 
-const attack = {};
-
-attack[type.hot] = {};
-attack[type.hot][type.cold] = 1;
-attack[type.hot][type.armored] = -2;
-attack[type.hot][type.metaphysical] = 1;
-
-attack[type.cold] = {};
-attack[type.cold][type.armored] = -1;
-attack[type.cold][type.fast] = 1;
-attack[type.cold][type.low] = 1;
-attack[type.cold][type.normal] = -1;
-
-attack[type.armored] = {};
-attack[type.armored][type.hot] = .5;
-attack[type.armored][type.cold] = -1;
-attack[type.armored][type.fast] = -2;
-attack[type.armored][type.high] = 1;
-attack[type.armored][type.normal] = 1.5;
-
-attack[type.fast] = {};
-attack[type.fast][type.cold] = -.5;
-attack[type.fast][type.armored] = 2;
-attack[type.fast][type.metaphysical] = -1.5;
-
-attack[type.high] = {};
-attack[type.high][type.hot] = -.5;
-attack[type.high][type.armored] = -.5;
-attack[type.high][type.low] = 2;
-
-attack[type.low] = {};
-attack[type.low][type.high] = -2;
-
-attack[type.metaphysical] = {};
-attack[type.metaphysical][type.metaphysical] = -.5;
-attack[type.metaphysical][type.normal] = .5;
-
-attack[type.normal] = {};
-attack[type.normal][type.metaphysical] = -2;
-
 const tudiKinData = {
     type: {
         numBits: 4,
@@ -80,7 +40,8 @@ const tudiKinData = {
 
 const offset = (n, o) => o > 0 ? (n << (o - 1)) * 2 : n;
 const bitMask = (numBits, o) => offset(Math.pow(2, numBits) - 1, o);
-const flagGet = (bits, pos) => bits >> pos & 1 === 1;
+const getFlag = (bits, pos) => bits >> pos & 1;
+const invertBit = (bit) => bit === 0 ? true : false;
 
 function TudiKin(data) {
     const id = parseInt(data.toString(2).substr(0, 32), 2);
@@ -107,10 +68,10 @@ function getTypeName(typeNum) {
         return typeNames[typeNum];
     }
 
-    const hotColdFlag = flagGet(typeNum, 0);
-    const armoredFastFlag = flagGet(typeNum, 1);
-    const highLowFlag = flagGet(typeNum, 2);
-    const metaphysicalPhysicalFlag = flagGet(typeNum, 3);
+    const hotColdFlag = getFlag(typeNum, 0) === 1;
+    const armoredFastFlag = getFlag(typeNum, 1) === 1;
+    const highLowFlag = getFlag(typeNum, 2) === 1;
+    const metaphysicalPhysicalFlag = getFlag(typeNum, 3) === 1;
 
     //If all else fails, just return the collection of flags:
     const labels = [];
@@ -121,36 +82,59 @@ function getTypeName(typeNum) {
     return typeNum + ': ' + labels.join(' ');
 }
 
-//TODO: I messed this up already I think
-//The range should be from 0 to 2 in half increments:
-//0, .5, 1, 1.5, 2
-//TODO: Also this needs to be easy to recreate in C for the Arduino... Hrm...
-function getBonus(attacker, defender) {
-    const data = attack[attacker];
-    return data.hasOwnProperty(defender) ? data[defender] : 0;
-}
-
 function getTypeAdvantage(attacker, defender) {
-    const attacks = [
-        flagGet(attacker, 0) ? type.hot : type.cold,
-        flagGet(attacker, 1) ? type.armored : type.fast,
-        flagGet(attacker, 2) ? type.high : type.low,
-        flagGet(attacker, 3) ? type.metaphysical : type.normal,
-    ];
-    const defenses = [
-        flagGet(defender, 0) ? type.hot : type.cold,
-        flagGet(defender, 1) ? type.armored : type.fast,
-        flagGet(defender, 2) ? type.high : type.low,
-        flagGet(defender, 3) ? type.metaphysical : type.normal,
-    ];
+    const aHotCold = getFlag(attacker, 0);
+    const aArmoredFast = getFlag(attacker, 1);
+    const aHighLow = getFlag(attacker, 2);
+    const aMetaNormal = getFlag(attacker, 3);
+    
+    const dHotCold = getFlag(defender, 0);
+    const dArmoredFast = getFlag(defender, 1);
+    const dHighLow = getFlag(defender, 2);
+    const dMetaNormal = getFlag(defender, 3);
 
-    let total = 1;
+    let bonus = 1;
 
-    for (const a of attacks) {
-        for (const d of defenses) {
-            total += getBonus(a, d);
-        }
+    const sBonus = .25;
+    const mBonus = .5;
+
+    //TODO: need better calculations... these suck.
+    
+    bonus += (aHotCold * sBonus) - (dHotCold * sBonus);
+    bonus += (aArmoredFast * sBonus) - (dArmoredFast * sBonus);
+    bonus += (aHighLow * mBonus) - (dHighLow * mBonus);
+    bonus += (aMetaNormal * sBonus) - (dMetaNormal * sBonus);
+
+    bonus += (aHotCold * sBonus) - (dMetaNormal * sBonus);
+    bonus += (aArmoredFast * sBonus) - (dHighLow * sBonus);
+    bonus += (aHighLow * sBonus) - (dHotCold * sBonus);
+    bonus += (aMetaNormal * sBonus) - (dArmoredFast * sBonus);
+
+    //Special Cases
+
+    //Metaphysical attacking metaphysical
+    if (aMetaNormal + dMetaNormal === 2) {
+        bonus -= sBonus;
     }
 
-    return Math.min(Math.max(0, total), 2);
+    //Hot attacking hot
+    if (aHotCold + dHotCold === 2) {
+        bonus += sBonus;
+    }
+
+    //Metaphysical attacking fast
+    if (aMetaNormal > dArmoredFast) {
+        bonus += sBonus;
+    }
+
+    //Armored attacking high
+    if (aArmoredFast + dHighLow === 2) {
+        bonus += sBonus;
+    }
+
+    bonus = Math.floor(bonus * 2) / 2;
+
+    //return Math.max(0, bonus);
+
+    return Math.min(Math.max(0, bonus), 2);
 }

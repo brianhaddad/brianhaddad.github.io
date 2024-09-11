@@ -43,10 +43,11 @@
             tableHeader.appendChild(headerRow);
 
             headerRow.appendChild(createElement('th', {}, `Attacking`));
-            const typeTotals = [];
+            const typeDisadvantages = [];
+            const typeScores = [];
             for (let i = 0; i < Math.pow(2, 4); i++) {
                headerRow.appendChild(createElement('th', {}, getTypeName(i)));
-               typeTotals[i] = 0;
+               typeDisadvantages[i] = 0;
             }
 
             headerRow.appendChild(createElement('th', {}, `Total`));
@@ -64,21 +65,30 @@
                 for (let j = 0; j < Math.pow(2, 4); j++) {
                     const mult = getTypeAdvantage(i, j);
                     rowTotal += mult;
-                    typeTotals[j] += mult;
+                    typeDisadvantages[j] += mult;
                     row.appendChild(createElement('td', {}, mult.toString()));
                 }
 
                 row.appendChild(createElement('td', {}, rowTotal.toString()));
+                typeScores[i] = rowTotal;
             }
 
-            const footerRow = createElement('tr', {}, null);
-            table.appendChild(footerRow);
-
-            footerRow.appendChild(createElement('td', {}, `Total`));
+            const disadvantagesRow = createElement('tr', {}, null);
+            table.appendChild(disadvantagesRow);
+            disadvantagesRow.appendChild(createElement('td', {}, `Sum`));
             for (let i = 0; i < Math.pow(2, 4); i++) {
-                footerRow.appendChild(createElement('td', {}, typeTotals[i].toString()));
+                disadvantagesRow.appendChild(createElement('td', {}, typeDisadvantages[i].toString()));
+                typeScores[i] -= typeDisadvantages[i];
             }
-            footerRow.appendChild(createElement('td', {}, `&nbsp;`));
+            disadvantagesRow.appendChild(createElement('td', {}, `&nbsp;`));
+
+            const scoresRow = createElement('tr', {}, null);
+            table.appendChild(scoresRow);
+            scoresRow.appendChild(createElement('td', {}, `Score`));
+            for (let i = 0; i < Math.pow(2, 4); i++) {
+                scoresRow.appendChild(createElement('td', {}, typeScores[i].toString()));
+            }
+            scoresRow.appendChild(createElement('td', {}, `&nbsp;`));
             //TODO: maybe compute things like standard deviation to make sure nobody is too stacked?
         </script>
     </body>
