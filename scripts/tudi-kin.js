@@ -2,15 +2,15 @@ const MAX_TUDI_KIN_VALUE = Math.pow(2, 53 - 1);
 const EXP_BITS = 21;
 
 const typeNames = {
-    0: 'Water',
+    0: 'Plant',
     1: 'Fighting',
     2: 'Rocky',
-    3: 'Plant',
+    3: 'Steel',
     4: 'Bug',
     5: 'Flying',
     6: 'Shadow',
     7: 'Light',
-    8: 'Robot',
+    8: 'Water',
     9: 'Fire',
     10: 'Ice',
     11: 'Poison',
@@ -19,6 +19,57 @@ const typeNames = {
     14: 'Ghost',
     15: 'Dragon',
 };
+
+const type = {
+    hot: 'hot',
+    cold: 'cold',
+    armored: 'armored',
+    fast: 'fast',
+    high: 'high',
+    low: 'low',
+    metaphysical: 'metaphysical',
+    normal: 'normal',
+};
+
+const attack = {};
+
+attack[type.hot] = {};
+attack[type.hot][type.cold] = 1;
+attack[type.hot][type.armored] = -2;
+attack[type.hot][type.metaphysical] = 1;
+
+attack[type.cold] = {};
+attack[type.cold][type.armored] = -1;
+attack[type.cold][type.fast] = 1;
+attack[type.cold][type.low] = 1;
+attack[type.cold][type.normal] = -1;
+
+attack[type.armored] = {};
+attack[type.armored][type.hot] = .5;
+attack[type.armored][type.cold] = -1;
+attack[type.armored][type.fast] = -2;
+attack[type.armored][type.high] = 1;
+attack[type.armored][type.normal] = 1.5;
+
+attack[type.fast] = {};
+attack[type.fast][type.cold] = -.5;
+attack[type.fast][type.armored] = 2;
+attack[type.fast][type.metaphysical] = -1.5;
+
+attack[type.high] = {};
+attack[type.high][type.hot] = -.5;
+attack[type.high][type.armored] = -.5;
+attack[type.high][type.low] = 2;
+
+attack[type.low] = {};
+attack[type.low][type.high] = -2;
+
+attack[type.metaphysical] = {};
+attack[type.metaphysical][type.metaphysical] = -.5;
+attack[type.metaphysical][type.normal] = .5;
+
+attack[type.normal] = {};
+attack[type.normal][type.metaphysical] = -2;
 
 const tudiKinData = {
     type: {
@@ -29,7 +80,7 @@ const tudiKinData = {
 
 const offset = (n, o) => o > 0 ? (n << (o - 1)) * 2 : n;
 const bitMask = (numBits, o) => offset(Math.pow(2, numBits) - 1, o);
-const flagSet = (bits, pos) => bits >> pos & 1 === 1;
+const flagGet = (bits, pos) => bits >> pos & 1 === 1;
 
 function TudiKin(data) {
     const id = parseInt(data.toString(2).substr(0, 32), 2);
@@ -56,10 +107,10 @@ function getTypeName(typeNum) {
         return typeNames[typeNum];
     }
 
-    const hotColdFlag = flagSet(typeNum, 0);
-    const armoredFastFlag = flagSet(typeNum, 1);
-    const highLowFlag = flagSet(typeNum, 2);
-    const metaphysicalPhysicalFlag = flagSet(typeNum, 3);
+    const hotColdFlag = flagGet(typeNum, 0);
+    const armoredFastFlag = flagGet(typeNum, 1);
+    const highLowFlag = flagGet(typeNum, 2);
+    const metaphysicalPhysicalFlag = flagGet(typeNum, 3);
 
     //If all else fails, just return the collection of flags:
     const labels = [];
@@ -74,68 +125,32 @@ function getTypeName(typeNum) {
 //The range should be from 0 to 2 in half increments:
 //0, .5, 1, 1.5, 2
 //TODO: Also this needs to be easy to recreate in C for the Arduino... Hrm...
+function getBonus(attacker, defender) {
+    const data = attack[attacker];
+    return data.hasOwnProperty(defender) ? data[defender] : 0;
+}
+
 function getTypeAdvantage(attacker, defender) {
-    const aType = getTypeName(attacker);
-    const dType = getTypeName(defender);
+    const attacks = [
+        flagGet(attacker, 0) ? type.hot : type.cold,
+        flagGet(attacker, 1) ? type.armored : type.fast,
+        flagGet(attacker, 2) ? type.high : type.low,
+        flagGet(attacker, 3) ? type.metaphysical : type.normal,
+    ];
+    const defenses = [
+        flagGet(defender, 0) ? type.hot : type.cold,
+        flagGet(defender, 1) ? type.armored : type.fast,
+        flagGet(defender, 2) ? type.high : type.low,
+        flagGet(defender, 3) ? type.metaphysical : type.normal,
+    ];
 
-    if (aType === 'Water' && dType === 'Fire') {
-        return 2;
-    }
+    let total = 1;
 
-    if (aType === 'Fire' && dType === 'Water') {
-        return .5;
-    }
-
-    if (aType === 'Fire' && dType === 'Ice') {
-        return 2;
-    }
-
-    if (aType === 'Light' && dType === 'Shadow') {
-        return 2;
-    }
-
-    if (aType === 'Shadow' && dType === 'Light') {
-        return 0;
+    for (const a of attacks) {
+        for (const d of defenses) {
+            total += getBonus(a, d);
+        }
     }
 
-    //If all else fails, use generic flag checks
-    const attackerHotColdFlag = flagSet(attacker, 0);
-    const attackerArmoredFastFlag = flagSet(attacker, 1);
-    const attackerHighLowFlag = flagSet(attacker, 2);
-    const attackerMetaphysicalPhysicalFlag = flagSet(attacker, 3);
-    
-    const defenderHotColdFlag = flagSet(defender, 0);
-    const defenderArmoredFastFlag = flagSet(defender, 1);
-    const defenderHighLowFlag = flagSet(defender, 2);
-    const defenderMetaphysicalPhysicalFlag = flagSet(defender, 3);
-
-    //TODO: reconsider some of these... More shuffling/matching/pairing?
-    let total = 0;
-    if (attackerHotColdFlag && !defenderHotColdFlag) {
-        total += .5;
-    }
-    if (attackerArmoredFastFlag && !defenderArmoredFastFlag) {
-        total += .5;
-    }
-    if (attackerHighLowFlag && !defenderHighLowFlag) {
-        total += .5;
-    }
-    if (attackerMetaphysicalPhysicalFlag && !defenderMetaphysicalPhysicalFlag) {
-        total += .5;
-    }
-
-    if (defenderHotColdFlag && !attackerArmoredFastFlag) {
-        total += .5;
-    }
-    if (defenderArmoredFastFlag && !attackerHotColdFlag) {
-        total += .5;
-    }
-    if (defenderHighLowFlag && !attackerMetaphysicalPhysicalFlag) {
-        total += .5;
-    }
-    if (defenderMetaphysicalPhysicalFlag && !attackerHighLowFlag) {
-        total += .5;
-    }
-
-    return total;
+    return Math.min(Math.max(0, total), 2);
 }
