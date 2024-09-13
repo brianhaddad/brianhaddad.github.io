@@ -234,7 +234,7 @@ function CreateRandomTudiKin() {
     //console.log(attackNum.toString(2).padStart(16, '0'));
     //console.log(speedNum.toString(2).padStart(16, '0'));
 
-    const id = typeNum | variationNum | defenseNum | attackNum | speedNum; //TODO: 'or' all the numbers together?
+    const id = typeNum | variationNum | defenseNum | attackNum | speedNum;
     //console.log(id.toString(2).padStart(16, '0'), id);
     return id;
 }
