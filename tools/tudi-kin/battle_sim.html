@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html color-mode="user">
+    <head>
+        <title>Tudi-Kin Battle Sim</title>
+        <link rel="stylesheet" href="../../css/mvp.css">
+    </head>
+    <body>
+        <script src="../../scripts/tudi-kin.js"></script>
+        <script src="../../scripts/html_tools.js"></script>
+        <script>
+            const tudiKin = new TudiKin(Math.pow(2, 16) - 1, 0);
+
+            //console.log(tudiKin.getId());
+            //console.log(tudiKin.getExp());
+            //console.log(tudiKin.getType());
+
+            const rando = new TudiKin(CreateRandomTudiKin(), 0);
+
+            //console.log(rando.getId());
+            //console.log(rando.getExp());
+            //console.log(rando.getType());
+
+            //TODO: need a way to print out a "card" with their stats and info.
+            //Eventually need to sort out how to draw/name these guys...
+
+            const main = createElement('main', {}, null);
+            document.body.appendChild(main);
+
+            //TODO: make the battle sim.
+        </script>
+    </body>
+</html>
