@@ -14,7 +14,7 @@ const typeNames = {
     9: 'Fire',
     10: 'Ice',
     11: 'Poison',
-    12: 'Electric',
+    12: 'Robot',
     13: 'Fairy',
     14: 'Ghost',
     15: 'Dragon',
@@ -58,6 +58,11 @@ function TudiKin(data) {
 function CreateRandomTudiKin(exp) {
     const typeNum = offset(Math.floor(Math.random() * Math.pow(2, tudiKinData.type.numBits)), tudiKinData.type.offset);
 
+    //TODO: generate the rest of the tudi-kin and simulate some battles.
+    //It might be possible to use the rest of the stats (plus some training options)
+    //to even out the playing field and create situations where "bad" ones can still
+    //become competetive.
+
     const id = typeNum; //TODO: 'or' all the numbers together?
 
     return parseInt((id.toString(2) + exp.toString(2).padStart(EXP_BITS, '0')), 2);
@@ -93,15 +98,21 @@ function getTypeAdvantage(attacker, defender) {
     const dHighLow = getFlag(defender, 2);
     const dMetaNormal = getFlag(defender, 3);
 
-    let bonus = 1;
-
     const sBonus = .25;
     const mBonus = .5;
-
-    //TODO: need better calculations... these suck.
+    const lBonus = 1;
     
+    //TODO: better calculations? These will work for now I guess.
+    //Could do a series of bitwise operations and math and see how that turns out...
+    let bonus = .5;
+
+    //small balancing bonus
+    const balanceBonus = ((1/(attacker + 1)) / 1) + ((defender + 1) / 17);
+    bonus += Math.min(1, balanceBonus * balanceBonus * balanceBonus);
+    
+    //Base Bonuses
     bonus += (aHotCold * sBonus) - (dHotCold * sBonus);
-    bonus += (aArmoredFast * sBonus) - (dArmoredFast * sBonus);
+    bonus += (invertBit(aArmoredFast) * sBonus) - (invertBit(dArmoredFast) * sBonus);
     bonus += (aHighLow * mBonus) - (dHighLow * mBonus);
     bonus += (aMetaNormal * sBonus) - (dMetaNormal * sBonus);
 
@@ -112,29 +123,27 @@ function getTypeAdvantage(attacker, defender) {
 
     //Special Cases
 
-    //Metaphysical attacking metaphysical
-    if (aMetaNormal + dMetaNormal === 2) {
-        bonus -= sBonus;
-    }
-
     //Hot attacking hot
     if (aHotCold + dHotCold === 2) {
         bonus += sBonus;
     }
 
     //Metaphysical attacking fast
-    if (aMetaNormal > dArmoredFast) {
-        bonus += sBonus;
-    }
+    bonus += Math.max(0, (aMetaNormal * sBonus) - (dArmoredFast * sBonus));
 
     //Armored attacking high
-    if (aArmoredFast + dHighLow === 2) {
-        bonus += sBonus;
+    bonus += Math.max(0, (aArmoredFast * sBonus) - (invertBit(dHighLow) * sBonus));
+
+    //Water attacking fire
+    if (attacker === 8 && defender === 9) {
+        bonus += lBonus + mBonus;
+    }
+    //Fire attacking water
+    if (attacker === 9 && defender === 8) {
+        bonus -= mBonus;
     }
 
     bonus = Math.floor(bonus * 2) / 2;
-
-    //return Math.max(0, bonus);
 
     return Math.min(Math.max(0, bonus), 2);
 }
