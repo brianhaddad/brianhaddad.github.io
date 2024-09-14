@@ -32,11 +32,19 @@ const type = {
     normal: 'normal',
 };
 
+const tudiKinGender = ['♀', '♂'];
+const gender = {
+    female: tudiKinGender[0],
+    male: tudiKinGender[1],
+};
+
 const offset = (n, o) => o > 0 ? (n << (o - 1)) * 2 : n;
 const bitMask = (numBits, o) => offset(Math.pow(2, numBits) - 1, o);
 const getFlag = (bits, pos) => bits >> pos & 1;
 const invertBit = (bit) => bit === 0 ? true : false;
 const getVal = (bits, numBits, offset) => (bits >> offset) & (Math.pow(2, numBits) - 1);
+
+const formTrainingDataValue = (exp, training) => (exp << TRAINING_BITS) | training;
 
 
 const tudiKinData = {
@@ -44,8 +52,16 @@ const tudiKinData = {
         numBits: 4,
         offset: BASE_BITS - 4,
     },
-    variation: {
-        numBits: 6,
+    species: {
+        numBits: 4,
+        offset: BASE_BITS - 8,
+    },
+    gender: {
+        numBits: 1,
+        offset: BASE_BITS - 9,
+    },
+    special: {
+        numBits: 1,
         offset: BASE_BITS - 10,
     },
     baseDefense: {
@@ -64,6 +80,12 @@ const tudiKinData = {
 
 const tudiKinDataParser = {
     type: (data) => getVal(data, tudiKinData.type.numBits, tudiKinData.type.offset),
+    species: (data) => getVal(data, tudiKinData.species.numBits, tudiKinData.species.offset),
+    gender: (data) => getVal(data, tudiKinData.gender.numBits, tudiKinData.gender.offset),
+    special: (data) => getVal(data, tudiKinData.special.numBits, tudiKinData.special.offset),
+    baseDefense: (data) => getVal(data, tudiKinData.baseDefense.numBits, tudiKinData.baseDefense.offset),
+    baseAttack: (data) => getVal(data, tudiKinData.baseAttack.numBits, tudiKinData.baseAttack.offset),
+    baseSpeed: (data) => getVal(data, tudiKinData.baseSpeed.numBits, tudiKinData.baseSpeed.offset),
 };
 
 //For leveling with 2^12 bits, from 0-4095, this combo lands
@@ -103,6 +125,14 @@ function getTypeName(typeNum) {
     labels.push(highLowFlag ? 'high' : 'low');
     labels.push(metaphysicalPhysicalFlag ? 'metaphysical' : 'normal');
     return typeNum + ': ' + labels.join(' ');
+}
+
+function buildFullTudiKinName(typeNum, speciesNum) {
+    //TODO: do we want to incorporate gender and special-ness into some of the names?
+    //TODO: need a way to translate type + species into a unique name
+    //I am not manually naming 256 different Tudi-Kin
+
+    return typeNum.toString(2).padStart(4, '0') + speciesNum.toString(2).padStart(4, '0');
 }
 
 function getTypeAdvantage(attacker, defender) {
@@ -172,13 +202,40 @@ function TudiKin(data, trainingData) {
     let training = getVal(trainingData, TRAINING_BITS, 0);
 
     const type = tudiKinDataParser.type(data);
+    const species = tudiKinDataParser.species(data);
+    const gender = tudiKinGender[tudiKinDataParser.gender(data)];
+    const isSpecial = tudiKinDataParser.special(data) === 1;
+    const baseDefense = tudiKinDataParser.baseDefense(data);
+    const baseAttack = tudiKinDataParser.baseAttack(data);
+    const baseSpeed = tudiKinDataParser.baseSpeed(data);
 
+    const fullDisplayName = buildFullTudiKinName(type, species);
+    const catalogueNumber = parseInt(type.toString(2).padStart(4, '0') + species.toString(2).padStart(4, '0'), 2);
+
+    //Used for save data
     this.getId = () => id;
+    this.getFullTrainingData = () => formTrainingDataValue(exp, training);
+
+    //TODO: some save data (such as current health, held item?, party position, etc.) will be part of the player data rather than the tudi-kin data.
+
+    //Advanced display data (not typically displayed to user)
     this.getExp = () => exp;
     this.getTraining = () => training;
-
     this.getType = () => type.toString(2);
+    this.getBaseDefense = () => baseDefense;
+    this.getBaseAttack = () => baseAttack;
+    this.getBaseSpeed = () => baseSpeed;
+    
+    //Used for display
+    this.getFullName = () => fullDisplayName;
+    this.getCatalogueNumber = () => catalogueNumber;
+    this.getGender = () => gender;
+    this.getIsSpecial = () => isSpecial;
     this.getTypeName = () => getTypeName(type);
+    this.getLevel = () => xpToLevel(exp);
+    this.getProgressToNextLevel = () => (this.getLevel() === 100)
+        ? 1
+        : (exp - levelToXp(this.getLevel())) / (levelToXp(this.getLevel() + 1) - levelToXp(this.getLevel()));
 
     //Moves:
     //Defensive Posture
@@ -207,12 +264,15 @@ function TudiKin(data, trainingData) {
     //  Thus the total training bonus needs to be divisible by 2, 3, and 4. Probably 12 points to award, total,
     //  but those points need to translate into fractions of certain maximums for each stat.
 
-    //TODO: move availability is determined by variation plus the three lower bits in the base stats
+    //TODO: move availability is determined by species and gender plus the three lower bits in the base stats
     //Need to determine which order the moves are available in, and at what levels
     
-    //TODO: calculate stats from variation bits, base stat bits, exp, training, and type.
-    //Example, max health comes from armored flag, base defense, level, training distribution, and possibly a little from variation too.
-    //Defense comes from base defense, training distribution, and level.
+    //TODO: calculate stats from species/gender/special bits, base stat bits, exp, training, and type.
+    //Example, max health comes from armored flag, base defense, level, training distribution, and possibly a little from species/gender/special too.
+    //Defense comes from gender, base defense, training distribution, and level.
+    //Speed comes from gender, base speed, training, distribution, and level.
+    //Gender has +1 defense for male, +1 speed for female.
+    //Special generally gives a bonus multiplier to stats?
     //All base stats are multiplied by some even number (makes it easier to cut in half for strong attack)
 
     //TODO: simulate some battles.
@@ -221,20 +281,40 @@ function TudiKin(data, trainingData) {
     //become competetive.
 }
 
-function CreateRandomTudiKin() {
+function makeRandomTrainingData(minLevel, maxLevel) {
+    const minExp = levelToXp(minLevel);
+    const maxExp = Math.min(levelToXp(maxLevel + 1), Math.pow(2, EXP_BITS));
+    //console.log(`minLevel: ${minLevel}, minExp: ${minExp}`);
+    //console.log(`maxLevel: ${maxLevel}, maxExp: ${maxExp}`);
+
+    const exp = Math.floor(Math.random() * (maxExp - minExp)) + minExp;
+    //console.log(`generated exp: ${exp}`);
+    const training = Math.floor(Math.random() * Math.pow(2, TRAINING_BITS));
+    //console.log('generated training', training);
+
+    return formTrainingDataValue(exp, training);
+}
+
+const specialBit = () => Math.floor(Math.random() * Math.pow(2, 14)) < 2 ? 1 : 0;
+
+function createRandomTudiKinId() {
     const typeNum = offset(Math.floor(Math.random() * Math.pow(2, tudiKinData.type.numBits)), tudiKinData.type.offset);
-    const variationNum = offset(Math.floor(Math.random() * Math.pow(2, tudiKinData.variation.numBits)), tudiKinData.variation.offset);
+    const speciesNum = offset(Math.floor(Math.random() * Math.pow(2, tudiKinData.species.numBits)), tudiKinData.species.offset);
+    const genderNum = offset(Math.floor(Math.random() * Math.pow(2, tudiKinData.gender.numBits)), tudiKinData.gender.offset);
+    const specialNum = offset(specialBit(), tudiKinData.special.offset);
     const defenseNum = offset(Math.floor(Math.random() * Math.pow(2, tudiKinData.baseDefense.numBits)), tudiKinData.baseDefense.offset);
     const attackNum = offset(Math.floor(Math.random() * Math.pow(2, tudiKinData.baseAttack.numBits)), tudiKinData.baseAttack.offset);
     const speedNum = offset(Math.floor(Math.random() * Math.pow(2, tudiKinData.baseSpeed.numBits)), tudiKinData.baseSpeed.offset);
 
-    //console.log(typeNum.toString(2).padStart(16, '0'));
-    //console.log(variationNum.toString(2).padStart(16, '0'));
-    //console.log(defenseNum.toString(2).padStart(16, '0'));
-    //console.log(attackNum.toString(2).padStart(16, '0'));
-    //console.log(speedNum.toString(2).padStart(16, '0'));
+    //console.log(typeNum.toString(2).padStart(16, '0'), 'type', typeNum);
+    //console.log(speciesNum.toString(2).padStart(16, '0'), 'species', speciesNum);
+    //console.log(genderNum.toString(2).padStart(16, '0'), 'gender', genderNum);
+    //console.log(specialNum.toString(2).padStart(16, '0'), 'special', specialNum);
+    //console.log(defenseNum.toString(2).padStart(16, '0'), 'defense', defenseNum);
+    //console.log(attackNum.toString(2).padStart(16, '0'), 'attack', attackNum);
+    //console.log(speedNum.toString(2).padStart(16, '0'), 'speed', speedNum);
 
-    const id = typeNum | variationNum | defenseNum | attackNum | speedNum;
+    const id = typeNum | speciesNum | genderNum | specialNum | defenseNum | attackNum | speedNum;
     //console.log(id.toString(2).padStart(16, '0'), id);
     return id;
 }

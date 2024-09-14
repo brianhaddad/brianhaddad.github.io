@@ -3,30 +3,105 @@
     <head>
         <title>Tudi-Kin Battle Sim</title>
         <link rel="stylesheet" href="../../css/mvp.css">
+        <style>
+            .tudi-kin-displays {
+                display: flex;
+                flex-direction: row;
+                gap: 16x;
+            }
+            .tudi-kin-card {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                border: thick double #32a1ce;
+                border-radius: 8px;
+                padding: 8px;
+                margin: 4px;
+            }
+            .tudi-kin-title-display {
+                display: flex;
+                flex-direction: row;
+                gap: 8px;
+            }
+            .tudi-kin-title-display h2 {
+                margin: 0;
+                padding: 0;
+            }
+        </style>
     </head>
     <body>
         <script src="../../scripts/tudi-kin.js"></script>
         <script src="../../scripts/html_tools.js"></script>
         <script>
-            const tudiKin = new TudiKin(Math.pow(2, 16) - 1, 0);
+            function makeTotallyRandomTudiKin() {
+                return new TudiKin(createRandomTudiKinId(), makeRandomTrainingData(0, 100));
+            }
 
-            //console.log(tudiKin.getId());
-            //console.log(tudiKin.getExp());
-            //console.log(tudiKin.getType());
+            function makeSameLevelOpponent(firstTudiKin) {
+                return new TudiKin(createRandomTudiKinId(), makeRandomTrainingData(firstTudiKin.getLevel(), firstTudiKin.getLevel()));
+            }
 
-            const rando = new TudiKin(CreateRandomTudiKin(), 0);
+            function htmlGenderSign(symbol) {
+                return symbol === '♀'
+                    ? '&#9792;'
+                    : '&#9794;';
+            }
+            //TODO: Eventually need to sort out how to draw/name these guys...
 
-            //console.log(rando.getId());
-            //console.log(rando.getExp());
-            //console.log(rando.getType());
+            function TudiKinDisplay(tk, parentContainer) {
+                const tudiKin = tk;
+                //TODO: formatting to make it look like a card with rounded corners and a nice border and stuff
+                const myContainer = createElement('div', {'class': 'tudi-kin-card'}, null);
+                parentContainer.appendChild(myContainer);
 
-            //TODO: need a way to print out a "card" with their stats and info.
-            //Eventually need to sort out how to draw/name these guys...
+                const draw = () => {
+                    //Card title
+                    const basicTitleDisplay = createElement('div', {'class': 'tudi-kin-title-display'}, null);
+                    basicTitleDisplay.appendChild(createElement('h2', {}, `${tudiKin.getFullName()}&nbsp;(${tudiKin.getCatalogueNumber()})`));
+                    basicTitleDisplay.appendChild(createElement('p', {}, `[${tudiKin.getTypeName()}]`));
+                    basicTitleDisplay.appendChild(createElement('p', {}, `${htmlGenderSign(tudiKin.getGender())}Lvl${tudiKin.getLevel()}`));
+                    myContainer.appendChild(basicTitleDisplay);
+
+                    //TODO: make the HP display
+                    const hpDisplay = createElement('div', {}, `[HP DISPLAY PLACEHOLDER]`);
+                    myContainer.appendChild(hpDisplay);
+
+                    //TODO: moves display
+                    //TODO: should the class be aware of whether it is the player or not? Should it be player against player or player vs computer?
+                    //Need to be able to ask the tudi-kin object what moveset it has available
+                    const movesContainer = createElement('div', {}, `[MOVES DISPLAY PLACEHOLDER]`);
+                    myContainer.appendChild(movesContainer);
+
+                    //Level up progress
+                    const currentLevelUpProgress = tudiKin.getProgressToNextLevel();
+                    //console.log(currentLevelUpProgress, 'currentLevelUpProgress');
+                    const progressValue = Math.floor(currentLevelUpProgress * 100);
+                    const levelUpProgress = createElement('progress', {'max': 100, 'value': progressValue}, `${progressValue}%`);
+                    myContainer.appendChild(levelUpProgress);
+                };
+
+                this.redraw = () => {
+                    console.log('redrawing');
+                    myContainer.innerHTML = '';
+                    draw();
+                };
+
+                draw();
+            }
 
             const main = createElement('main', {}, null);
             document.body.appendChild(main);
 
+            //TODO: flex formatting to place them side by side, handle gap/spacing, make it look like a nice panel, etc.
+            const tudiKinDisplays = createElement('div', {'class': 'tudi-kin-displays'}, null);
+            main.appendChild(tudiKinDisplays);
+
+            const tudiKin1 = makeTotallyRandomTudiKin();
+            const playerTudiKin = new TudiKinDisplay(tudiKin1, tudiKinDisplays);
+            const opponentTudiKin = new TudiKinDisplay(makeSameLevelOpponent(tudiKin1), tudiKinDisplays);
+
             //TODO: make the battle sim.
+            //TODO: have controls for battle setup, including restricting types, setting level ranges, etc.
         </script>
     </body>
 </html>
