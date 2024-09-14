@@ -2,6 +2,9 @@ const EXP_BITS = 12;
 const TRAINING_BITS = 4;
 const BASE_BITS = 16;
 
+//Memory considerations:
+//The Arduboy has 32 kilobytes of flash storage, as well as 1 kilobyte of EEPROM
+
 const typeNames = {
     0: 'Plant',
     1: 'Fighting',
