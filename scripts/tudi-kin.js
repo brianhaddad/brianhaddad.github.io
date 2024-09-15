@@ -41,6 +41,8 @@ const gender = {
     male: tudiKinGender[1],
 };
 
+const decimalPortion = (n) => parseFloat((n - Math.trunc(n)).toPrecision(16));
+
 const offset = (n, o) => o > 0 ? (n << (o - 1)) * 2 : n;
 const bitMask = (numBits, o) => offset(Math.pow(2, numBits) - 1, o);
 const getFlag = (bits, pos) => bits >> pos & 1;
@@ -49,6 +51,7 @@ const getVal = (bits, numBits, offset) => (bits >> offset) & (Math.pow(2, numBit
 
 const formTrainingDataValue = (exp, training) => (exp << TRAINING_BITS) | training;
 
+const capitalizeFirstLetter = (input) => input.substr(0, 1).toUpperCase() + input.substr(1).toLowerCase();
 
 const tudiKinData = {
     type: {
@@ -132,10 +135,248 @@ function getTypeName(typeNum) {
 
 function buildFullTudiKinName(typeNum, speciesNum) {
     //TODO: do we want to incorporate gender and special-ness into some of the names?
-    //TODO: need a way to translate type + species into a unique name
-    //I am not manually naming 256 different Tudi-Kin
+    //TODO: clean it up and condense it? It's too lengthy and complex for the arduino.
+    //Make sure there are no repeat names (testable by calling printAllNames() in the console)
 
-    return typeNum.toString(2).padStart(4, '0') + speciesNum.toString(2).padStart(4, '0');
+    const r1 = decimalPortion(((((typeNum << 5) + (speciesNum * 1.5)) * 490147) / 783902341) * 2340985);
+    const r2 = decimalPortion((((speciesNum + (typeNum << 4)) * 3421) / 392345) * 624359);
+    const r3 = decimalPortion(((((speciesNum << 4) + (typeNum + 7)) * 253469) / 87461783) * 4309298701);
+    const r4 = decimalPortion(((((speciesNum << 4) + typeNum) * 901407) / 739023419) * 2098345);
+    const r5 = decimalPortion(((((typeNum << 4) + speciesNum) * 1041547) / 79031073) * 123456789);
+    
+    const hotSounds = [
+        'flam',
+        'flame',
+        'cali',
+        'pyro',
+        'ember',
+        'py',
+        'pyre',
+        'veno',
+        'spici',
+        'hot',
+    ];
+
+    const coldSounds = [
+        'bur',
+        'cool',
+        'frigi',
+        'frio',
+        'coo',
+        'frozi',
+        'chili',
+        'cooli',
+    ];
+
+    const strongSounds = [
+        'armor',
+        'rigi',
+        'power',
+        'tough',
+        'hardi',
+        'rough',
+        'steel',
+        'har',
+        'gon',
+        'rocky',
+    ];
+
+    const fastSounds = [
+        'rapi',
+        'quick',
+        'qui',
+        'spee',
+        'spree',
+        'lyra',
+        'zipi',
+        'whee',
+        'zoomi',
+    ];
+
+    const highSounds = [
+        'alto',
+        'alta',
+        'flutter',
+        'yip',
+        'wee',
+        'whoo',
+        'bird',
+        'fly',
+        'wizi',
+    ];
+
+    const lowSounds = [
+        'lo',
+        'ear',
+        'groun',
+        'boom',
+        'gro',
+        'runo',
+        'rumbo',
+    ];
+
+    const metaSounds = [
+        'psy',
+        'magi',
+        'mysti',
+        'meta',
+        'crypto',
+        'tele',
+        'vudu',
+        'vexi',
+    ];
+
+    const normalSounds = [
+        'avro',
+        'norm',
+        'normo',
+        'norma',
+        'normi',
+        'com',
+        'usu',
+        'bobi',
+        'bobo',
+    ];
+
+    const extraSounds1 = [
+        'abi',
+        'noto',
+        'propa',
+        'zulu',
+        'efo',
+        'ilua',
+        'lapa',
+        'prudo',
+        'spoodu',
+        'pupu',
+        'pipi',
+    ];
+
+    const extraSounds2 = [
+        'ravi',
+        'roto',
+        'cuda',
+        'wulu',
+        'grum',
+        'juju',
+        'mama',
+        'quapo',
+        'vando',
+        'xandu',
+    ];
+
+    const extraSounds3 = [
+        'swavi',
+        'skolo',
+        'branda',
+        'drulu',
+        'ite',
+        'kande',
+        'nano',
+        'rako',
+        'waxo',
+        'yapa',
+    ];
+
+    const extraSounds4 = [
+        'nono',
+        'peno',
+        'pepe',
+        'wubli',
+        'panti',
+    ];
+
+    const extraSounds5 = [
+        'nana',
+        'pano',
+        'lepu',
+        'wabli',
+        'posti',
+        'banana',
+    ];
+
+    const extraSounds6 = [
+        'nene',
+        'pino',
+        'stinki',
+        'wobli',
+        'pebli',
+    ];
+
+    const isHotCold = getFlag(typeNum, 0) === 1;
+    const isArmoredFast = getFlag(typeNum, 1) === 1;
+    const isHighLow = getFlag(typeNum, 2) === 1;
+    const isMetaNormal = getFlag(typeNum, 3) === 1;
+
+    const sounds = [];
+
+    isHotCold ? sounds.push(...hotSounds) : sounds.push(...coldSounds);
+    r1 > .5 ? sounds.push(...extraSounds1) : sounds.push(...extraSounds4);
+    isArmoredFast ? sounds.push(...strongSounds) : sounds.push(...fastSounds);
+    r2 > .5 ? sounds.push(...extraSounds2) : sounds.push(...extraSounds5);
+    isHighLow ? sounds.push(...highSounds) : sounds.push(...lowSounds);
+    r3 > .5 ? sounds.push(...extraSounds3) : sounds.push(...extraSounds6);
+    isMetaNormal ? sounds.push(...metaSounds) : sounds.push(...normalSounds);
+
+    const typeName = getTypeName(typeNum);
+    const sound1 = sounds.splice(Math.floor(r2 * sounds.length), 1)[0];
+    const sound5 = sounds.splice(Math.floor(r1 * sounds.length), 1)[0];
+    const sound3 = sounds.splice(Math.floor(r4 * sounds.length), 1)[0];
+    const sound2 = sounds.splice(Math.floor(r3 * sounds.length), 1)[0];
+    const sound4 = sounds.splice(Math.floor(r5 * sounds.length), 1)[0];
+    
+    if (r1 >= .9) {
+        return r2 > .5
+            ? capitalizeFirstLetter(`${sound4}${sound2}`)
+            : capitalizeFirstLetter(`${sound5}${sound3}`);
+    }
+    if (r1 >= .8) {
+        return r3 > .5
+            ? capitalizeFirstLetter(`${sound1}${typeName}`)
+            : capitalizeFirstLetter(`${sound2}${typeName}`);
+    }
+    if (r1 >= .7) {
+        return r4 > .5
+            ? capitalizeFirstLetter(`${typeName}${sound2}`)
+            : capitalizeFirstLetter(`${typeName}${sound1}`);
+    }
+    if (r1 >= .6) {
+        return r5 > .5
+            ? capitalizeFirstLetter(`${sound2}${sound3}`)
+            : capitalizeFirstLetter(`${sound3}${sound4}`);
+    }
+    if (r1 >= .5) {
+        return r2 > .5
+            ? capitalizeFirstLetter(`${sound4}${sound3}`)
+            : capitalizeFirstLetter(`${sound3}${sound2}`);
+    }
+    if (r1 >= .4) {
+        return r3 > .5
+            ? capitalizeFirstLetter(`${typeName}${sound4}`)
+            : capitalizeFirstLetter(`${typeName}${sound5}`);
+    }
+    if (r1 >= .3) {
+        return r4 > .5
+            ? capitalizeFirstLetter(`${sound4}${typeName}`)
+            : capitalizeFirstLetter(`${sound5}${typeName}`);
+    }
+    if (r1 >= .2) {
+        return r5 > .5
+            ? capitalizeFirstLetter(`${sound5}${typeName}`)
+            : capitalizeFirstLetter(`${sound3}${typeName}`);
+    }
+    if (r1 >= .1) {
+        return r2 > .5
+            ? capitalizeFirstLetter(`${typeName}${sound3}`)
+            : capitalizeFirstLetter(`${typeName}${sound5}`);
+    }
+    else {
+        return r3 > .5
+            ? capitalizeFirstLetter(`${sound3}${sound5}`)
+            : capitalizeFirstLetter(`${sound4}${sound1}`);
+    }
+
+    //return typeNum.toString(2).padStart(4, '0') + speciesNum.toString(2).padStart(4, '0');
 }
 
 function getTypeAdvantage(attacker, defender) {
@@ -320,4 +561,25 @@ function createRandomTudiKinId() {
     const id = typeNum | speciesNum | genderNum | specialNum | defenseNum | attackNum | speedNum;
     //console.log(id.toString(2).padStart(16, '0'), id);
     return id;
+}
+
+//TEMP TEST FUNCTIONS
+
+function printAllNames() {
+    const allNames = [];
+    let repeats = 0;
+    for (let t = 0; t < 16; t++) {
+        for (let s = 0; s < 16; s++) {
+            const name = buildFullTudiKinName(t, s);
+            if (allNames.indexOf(name) > -1) {
+                console.log(`REPEAT ${name} @ ${t}:${s}`);
+                repeats++;
+            }
+            else {
+                allNames.push(name);
+                console.log(name);
+            }
+        }
+    }
+    console.log(`Total repeats: ${repeats}`);
 }
