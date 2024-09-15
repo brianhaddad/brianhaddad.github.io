@@ -48,6 +48,7 @@ const bitMask = (numBits, o) => offset(Math.pow(2, numBits) - 1, o);
 const getFlag = (bits, pos) => bits >> pos & 1;
 const invertBit = (bit) => bit === 0 ? true : false;
 const getVal = (bits, numBits, offset) => (bits >> offset) & (Math.pow(2, numBits) - 1);
+const incrementBits = (bits, numBits) => (++bits) & (Math.pow(2, numBits) - 1); //TODO: will be used for evolution? increment species value?
 
 const formTrainingDataValue = (exp, training) => (exp << TRAINING_BITS) | training;
 
