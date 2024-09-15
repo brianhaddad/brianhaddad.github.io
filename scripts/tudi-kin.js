@@ -135,110 +135,71 @@ function getTypeName(typeNum) {
 }
 
 function buildFullTudiKinName(typeNum, speciesNum) {
-    //TODO: do we want to incorporate gender and special-ness into some of the names?
-    //TODO: clean it up and condense it? It's too lengthy and complex for the arduino.
-    //Make sure there are no repeat names (testable by calling printAllNames() in the console)
-
-    const r1 = decimalPortion(((((typeNum << 5) + (speciesNum * 1.5)) * 490147) / 783902341) * 2340985);
-    const r2 = decimalPortion((((speciesNum + (typeNum << 4)) * 3421) / 392345) * 624359);
-    const r3 = decimalPortion(((((speciesNum << 4) + (typeNum + 7)) * 253469) / 87461783) * 4309298701);
-    const r4 = decimalPortion(((((speciesNum << 4) + typeNum) * 901407) / 739023419) * 2098345);
-    const r5 = decimalPortion(((((typeNum << 4) + speciesNum) * 1041547) / 79031073) * 123456789);
-    
     const hotSounds = [
         'flam',
-        'flame',
-        'cali',
         'pyro',
         'ember',
-        'py',
-        'pyre',
         'veno',
         'spici',
         'hot',
     ];
-
+    
     const coldSounds = [
         'bur',
         'cool',
         'frigi',
-        'frio',
-        'coo',
         'frozi',
         'chili',
-        'cooli',
     ];
-
+    
     const strongSounds = [
-        'armor',
         'rigi',
-        'power',
-        'tough',
         'hardi',
+        'ite',
         'rough',
         'steel',
-        'har',
-        'gon',
         'rocky',
     ];
-
+    
     const fastSounds = [
         'rapi',
-        'quick',
         'qui',
-        'spee',
-        'spree',
-        'lyra',
         'zipi',
-        'whee',
+        'wee',
         'zoomi',
     ];
-
+    
     const highSounds = [
-        'alto',
-        'alta',
         'flutter',
-        'yip',
-        'wee',
-        'whoo',
         'bird',
         'fly',
-        'wizi',
     ];
-
+    
     const lowSounds = [
         'lo',
         'ear',
-        'groun',
         'boom',
         'gro',
-        'runo',
         'rumbo',
     ];
-
+    
     const metaSounds = [
-        'psy',
         'magi',
         'mysti',
         'meta',
         'crypto',
-        'tele',
-        'vudu',
         'vexi',
+        'lyra',
     ];
-
+    
     const normalSounds = [
         'avro',
         'norm',
-        'normo',
-        'norma',
         'normi',
-        'com',
         'usu',
-        'bobi',
         'bobo',
     ];
-
+    
     const extraSounds1 = [
         'abi',
         'noto',
@@ -248,136 +209,89 @@ function buildFullTudiKinName(typeNum, speciesNum) {
         'ilua',
         'lapa',
         'prudo',
-        'spoodu',
         'pupu',
         'pipi',
     ];
-
+    
     const extraSounds2 = [
-        'ravi',
-        'roto',
-        'cuda',
         'wulu',
         'grum',
         'juju',
-        'mama',
-        'quapo',
-        'vando',
+        'stinki',
         'xandu',
     ];
-
+    
     const extraSounds3 = [
-        'swavi',
         'skolo',
-        'branda',
         'drulu',
-        'ite',
+        'aya',
         'kande',
         'nano',
         'rako',
-        'waxo',
+        'pizo',
         'yapa',
     ];
-
+    
     const extraSounds4 = [
         'nono',
         'peno',
         'pepe',
-        'wubli',
+        'pebli',
         'panti',
     ];
-
+    
     const extraSounds5 = [
         'nana',
-        'pano',
         'lepu',
-        'wabli',
-        'posti',
-        'banana',
+        'nene',
+        'wobli',
+        'pino',
     ];
 
-    const extraSounds6 = [
-        'nene',
-        'pino',
-        'stinki',
-        'wobli',
-        'pebli',
-    ];
+    const fullVariationNum = (typeNum << 4) + speciesNum;
 
     const isHotCold = getFlag(typeNum, 0) === 1;
     const isArmoredFast = getFlag(typeNum, 1) === 1;
     const isHighLow = getFlag(typeNum, 2) === 1;
     const isMetaNormal = getFlag(typeNum, 3) === 1;
 
-    const sounds = [];
-
-    isHotCold ? sounds.push(...hotSounds) : sounds.push(...coldSounds);
-    r1 > .5 ? sounds.push(...extraSounds1) : sounds.push(...extraSounds4);
-    isArmoredFast ? sounds.push(...strongSounds) : sounds.push(...fastSounds);
-    r2 > .5 ? sounds.push(...extraSounds2) : sounds.push(...extraSounds5);
-    isHighLow ? sounds.push(...highSounds) : sounds.push(...lowSounds);
-    r3 > .5 ? sounds.push(...extraSounds3) : sounds.push(...extraSounds6);
-    isMetaNormal ? sounds.push(...metaSounds) : sounds.push(...normalSounds);
+    const speciesSounds = [];
+    isHotCold ? speciesSounds.push(hotSounds[(speciesNum) % hotSounds.length]) : speciesSounds.push(coldSounds[(speciesNum) % coldSounds.length]);
+    isArmoredFast ? speciesSounds.push(strongSounds[(speciesNum) % strongSounds.length]) : speciesSounds.push(fastSounds[(speciesNum) % fastSounds.length]);
+    isHighLow ? speciesSounds.push(highSounds[(speciesNum) % highSounds.length]) : speciesSounds.push(lowSounds[(speciesNum) % lowSounds.length]);
+    isMetaNormal ? speciesSounds.push(metaSounds[(speciesNum) % metaSounds.length]) : speciesSounds.push(normalSounds[(speciesNum) % normalSounds.length]);
+    
+    const extraSounds = [];
+    extraSounds.push(extraSounds1[(speciesNum + typeNum) % extraSounds1.length]);
+    extraSounds.push(extraSounds2[(speciesNum + typeNum) % extraSounds2.length]);
+    extraSounds.push(extraSounds3[(speciesNum + typeNum) % extraSounds3.length]);
+    extraSounds.push(extraSounds4[(speciesNum + typeNum) % extraSounds4.length]);
+    extraSounds.push(extraSounds5[(speciesNum + typeNum) % extraSounds5.length]);
 
     const typeName = getTypeName(typeNum);
-    const sound1 = sounds.splice(Math.floor(r2 * sounds.length), 1)[0];
-    const sound5 = sounds.splice(Math.floor(r1 * sounds.length), 1)[0];
-    const sound3 = sounds.splice(Math.floor(r4 * sounds.length), 1)[0];
-    const sound2 = sounds.splice(Math.floor(r3 * sounds.length), 1)[0];
-    const sound4 = sounds.splice(Math.floor(r5 * sounds.length), 1)[0];
-    
-    if (r1 >= .9) {
-        return r2 > .5
-            ? capitalizeFirstLetter(`${sound4}${sound2}`)
-            : capitalizeFirstLetter(`${sound5}${sound3}`);
-    }
-    if (r1 >= .8) {
-        return r3 > .5
-            ? capitalizeFirstLetter(`${sound1}${typeName}`)
-            : capitalizeFirstLetter(`${sound2}${typeName}`);
-    }
-    if (r1 >= .7) {
-        return r4 > .5
-            ? capitalizeFirstLetter(`${typeName}${sound2}`)
-            : capitalizeFirstLetter(`${typeName}${sound1}`);
-    }
-    if (r1 >= .6) {
-        return r5 > .5
-            ? capitalizeFirstLetter(`${sound2}${sound3}`)
-            : capitalizeFirstLetter(`${sound3}${sound4}`);
-    }
-    if (r1 >= .5) {
-        return r2 > .5
-            ? capitalizeFirstLetter(`${sound4}${sound3}`)
-            : capitalizeFirstLetter(`${sound3}${sound2}`);
-    }
-    if (r1 >= .4) {
-        return r3 > .5
-            ? capitalizeFirstLetter(`${typeName}${sound4}`)
-            : capitalizeFirstLetter(`${typeName}${sound5}`);
-    }
-    if (r1 >= .3) {
-        return r4 > .5
-            ? capitalizeFirstLetter(`${sound4}${typeName}`)
-            : capitalizeFirstLetter(`${sound5}${typeName}`);
-    }
-    if (r1 >= .2) {
-        return r5 > .5
-            ? capitalizeFirstLetter(`${sound5}${typeName}`)
-            : capitalizeFirstLetter(`${sound3}${typeName}`);
-    }
-    if (r1 >= .1) {
-        return r2 > .5
-            ? capitalizeFirstLetter(`${typeName}${sound3}`)
-            : capitalizeFirstLetter(`${typeName}${sound5}`);
-    }
-    else {
-        return r3 > .5
-            ? capitalizeFirstLetter(`${sound3}${sound5}`)
-            : capitalizeFirstLetter(`${sound4}${sound1}`);
-    }
 
-    //return typeNum.toString(2).padStart(4, '0') + speciesNum.toString(2).padStart(4, '0');
+    switch ((fullVariationNum + 1) % 7) {
+        case 0:
+            return capitalizeFirstLetter(speciesSounds[(fullVariationNum) % speciesSounds.length] + extraSounds[(speciesNum) % extraSounds.length]);
+            
+        case 1:
+            return capitalizeFirstLetter(extraSounds[(speciesNum) % extraSounds.length] + speciesSounds[(fullVariationNum) % speciesSounds.length]);
+                
+        case 2:
+            return capitalizeFirstLetter(speciesSounds[(speciesNum) % speciesSounds.length] + typeName);
+                    
+        case 3:
+            return capitalizeFirstLetter(typeName + extraSounds[(speciesNum) % extraSounds.length]);
+                        
+        case 4:
+            return capitalizeFirstLetter(extraSounds[(speciesNum) % extraSounds.length] + typeName);
+                            
+        case 5:
+            return capitalizeFirstLetter(typeName + speciesSounds[(speciesNum) % speciesSounds.length]);
+
+        default:
+            return capitalizeFirstLetter(speciesSounds[(fullVariationNum + 23) % speciesSounds.length] + speciesSounds[(speciesNum + 17) % speciesSounds.length]);
+    }
 }
 
 function getTypeAdvantage(attacker, defender) {
@@ -566,6 +480,7 @@ function createRandomTudiKinId() {
 
 //TEMP TEST FUNCTIONS
 
+//TODO: rather than making this temp, adopt it for use in the "dex" or encylopedia function.
 function printAllNames() {
     const allNames = [];
     let repeats = 0;
@@ -583,4 +498,51 @@ function printAllNames() {
         }
     }
     console.log(`Total repeats: ${repeats}`);
+    return allNames;
 }
+
+//The 'findUnusedSounds' method requires access to the sound arrays, so it is commented out until needed again.
+//Hopefully it won't be needed again!
+//function checkSounds(allNames, sounds, soundsName) {
+//    let total = 0
+//    const soundChecks = {};
+//    for (const n of allNames) {
+//        for (const s of sounds) {
+//            if (!soundChecks.hasOwnProperty(s)) {
+//                soundChecks[s] = false;
+//            }
+//            if (n.startsWith(s) || n.endsWith(s)) {
+//                soundChecks[s] = true;
+//                total++;
+//                break;
+//            }
+//        }
+//    }
+//    if (total < sounds.length) {
+//        console.log(`-----------NO sounds in ${soundsName} are used!!!-----------`);
+//    }
+//    else {
+//        for (const s in soundChecks) {
+//            if (soundChecks[s] === false) {
+//                console.log(`'${s}' in ${soundsName} is unused.`);
+//            }
+//        }
+//    }
+//}
+//
+//function findUnusedSounds() {
+//    const allNames = printAllNames();
+//    checkSounds(allNames, hotSounds, 'hotSounds');
+//    checkSounds(allNames, coldSounds, 'coldSounds');
+//    checkSounds(allNames, strongSounds, 'strongSounds');
+//    checkSounds(allNames, fastSounds, 'fastSounds');
+//    checkSounds(allNames, highSounds, 'highSounds');
+//    checkSounds(allNames, lowSounds, 'lowSounds');
+//    checkSounds(allNames, metaSounds, 'metaSounds');
+//    checkSounds(allNames, normalSounds, 'normalSounds');
+//    checkSounds(allNames, extraSounds1, 'extraSounds1');
+//    checkSounds(allNames, extraSounds2, 'extraSounds2');
+//    checkSounds(allNames, extraSounds3, 'extraSounds3');
+//    checkSounds(allNames, extraSounds4, 'extraSounds4');
+//    checkSounds(allNames, extraSounds5, 'extraSounds5');
+//}
