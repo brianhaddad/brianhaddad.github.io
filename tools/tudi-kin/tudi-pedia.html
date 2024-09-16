@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html color-mode="user">
+    <head>
+        <title>Tudi-Pedia</title>
+        <link rel="stylesheet" href="../../css/mvp.css">
+        <style>
+            .tudi-pedia {
+                display: flex;
+                flex-direction: column;
+                gap: 16x;
+            }
+            .tudi-kin-card {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                border: thick double #32a1ce;
+                border-radius: 8px;
+                padding: 8px;
+                margin: 4px;
+            }
+            .tudi-kin-title-display {
+                display: flex;
+                flex-direction: row;
+                gap: 8px;
+            }
+            .tudi-kin-title-display h2 {
+                margin: 0;
+                padding: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <script src="../../scripts/tudi-kin.js"></script>
+        <script src="../../scripts/html_tools.js"></script>
+        <script>
+            function makeTotallyRandomTudiKin() {
+                return new TudiKin(createRandomTudiKinId(), makeRandomTrainingData(0, 100));
+            }
+
+            function makeSameLevelOpponent(firstTudiKin) {
+                return new TudiKin(createRandomTudiKinId(), makeRandomTrainingData(firstTudiKin.getLevel(), firstTudiKin.getLevel()));
+            }
+
+            function htmlGenderSign(symbol) {
+                return symbol === '♀'
+                    ? '&#9792;'
+                    : '&#9794;';
+            }
+
+            function TudiKinEntry(idNum) {
+                const id = idNum << 8;
+
+                const type = tudiKinDataParser.type(id);
+                const species = tudiKinDataParser.species(id);
+
+                const fullDisplayName = buildFullTudiKinName(type, species);
+                const catalogueNumber = ((type << 4) + species) + 1; //for display
+
+                this.getType = () => type.toString(2).padStart(tudiKinData.type.numBits, '0');
+                
+                //Used for display
+                this.getFullName = () => fullDisplayName;
+                this.getCatalogueNumber = () => catalogueNumber;
+                this.getTypeName = () => getTypeName(type);
+            }
+
+            //TODO: Eventually need to sort out how to draw these guys...
+
+            function TudiKinDisplay(tk, parentContainer) {
+                const tudiKin = tk;
+                //TODO: formatting to make it look like a card with rounded corners and a nice border and stuff
+                const myContainer = createElement('div', {'class': 'tudi-kin-card'}, null);
+                parentContainer.appendChild(myContainer);
+
+                const draw = () => {
+                    //Card title
+                    const basicTitleDisplay = createElement('div', {'class': 'tudi-kin-title-display'}, null);
+                    basicTitleDisplay.appendChild(createElement('h2', {}, `${tudiKin.getFullName()}&nbsp;(${tudiKin.getCatalogueNumber()})`));
+                    basicTitleDisplay.appendChild(createElement('p', {}, `[${tudiKin.getTypeName()} Type]`));
+                    myContainer.appendChild(basicTitleDisplay);
+
+                    //TODO: make the HP display
+                    const extraDataPlaceholder = createElement('div', {}, `[EXTRA DATA AND IMAGE DISPLAY PLACEHOLDER]`);
+                    myContainer.appendChild(extraDataPlaceholder);
+                };
+
+                this.redraw = () => {
+                    console.log('redrawing');
+                    myContainer.innerHTML = '';
+                    draw();
+                };
+
+                draw();
+            }
+
+            const main = createElement('main', {}, null);
+            document.body.appendChild(main);
+
+            main.appendChild(createElement('h1', {}, `Tudi-Pedia`));
+
+            //TODO: flex formatting to place them side by side, handle gap/spacing, make it look like a nice panel, etc.
+            const tudiKinDisplays = createElement('div', {'class': 'tudi-pedia'}, null);
+            main.appendChild(tudiKinDisplays);
+
+            for (let i = 0; i < 256; i++) {
+                const tudiKin = new TudiKinEntry(i);
+                _ = new TudiKinDisplay(tudiKin, tudiKinDisplays);
+            }
+        </script>
+    </body>
+</html>

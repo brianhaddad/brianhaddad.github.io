@@ -1,6 +1,7 @@
 const EXP_BITS = 12;
 const TRAINING_BITS = 4;
 const BASE_BITS = 16;
+const VOWELS = 'aeiouy';
 
 //Memory considerations:
 //The Arduboy has 32 kilobytes of flash storage, as well as 1 kilobyte of EEPROM
@@ -24,17 +25,6 @@ const typeNames = {
     15: 'Dragon',
 };
 
-const type = {
-    hot: 'hot',
-    cold: 'cold',
-    armored: 'armored',
-    fast: 'fast',
-    high: 'high',
-    low: 'low',
-    metaphysical: 'metaphysical',
-    normal: 'normal',
-};
-
 const tudiKinGender = ['♀', '♂'];
 const gender = {
     female: tudiKinGender[0],
@@ -53,6 +43,31 @@ const incrementBits = (bits, numBits) => (++bits) & (Math.pow(2, numBits) - 1); 
 const formTrainingDataValue = (exp, training) => (exp << TRAINING_BITS) | training;
 
 const capitalizeFirstLetter = (input) => input.substr(0, 1).toUpperCase() + input.substr(1).toLowerCase();
+const endsWithVowel = (input) => {
+    for (let i = 0; i < VOWELS.length; i++) {
+        if (input.toLowerCase().endsWith(VOWELS[i])) {
+            return true;
+        }
+    }
+    return false;
+};
+const startsWithVowel = (input) => {
+    for (let i = 0; i < VOWELS.length; i++) {
+        if (input.toLowerCase().startsWith(VOWELS[i])) {
+            return true;
+        }
+    }
+    return false;
+};
+const combineNameParts =(part1, part2) => {
+    if (!endsWithVowel(part1)
+        && !part1.toLowerCase().endsWith('w')
+        && !part1.toLowerCase().endsWith('r')
+        && !startsWithVowel(part2)) {
+        return capitalizeFirstLetter(part1 + 'i' + part2)
+    }
+    return capitalizeFirstLetter(part1 + part2);
+};
 
 const tudiKinData = {
     type: {
@@ -95,8 +110,7 @@ const tudiKinDataParser = {
     baseSpeed: (data) => getVal(data, tudiKinData.baseSpeed.numBits, tudiKinData.baseSpeed.offset),
 };
 
-//For leveling with 2^12 bits, from 0-4095, this combo lands
-//exactly on level 100 at 4095.
+//For leveling with 2^12 bits, from 0-4095, this combo lands exactly on level 100 at 4095.
 const rateOfAdvancement = 1.5627;
 const levelUpDifficulty = 2;
 const xpToLevel = (xp) => {
@@ -120,18 +134,7 @@ function getTypeName(typeNum) {
         return typeNames[typeNum];
     }
 
-    const hotColdFlag = getFlag(typeNum, 0) === 1;
-    const armoredFastFlag = getFlag(typeNum, 1) === 1;
-    const highLowFlag = getFlag(typeNum, 2) === 1;
-    const metaphysicalPhysicalFlag = getFlag(typeNum, 3) === 1;
-
-    //If all else fails, just return the collection of flags:
-    const labels = [];
-    labels.push(hotColdFlag ? 'hot' : 'cold');
-    labels.push(armoredFastFlag ? 'armored' : 'fast');
-    labels.push(highLowFlag ? 'high' : 'low');
-    labels.push(metaphysicalPhysicalFlag ? 'metaphysical' : 'normal');
-    return typeNum + ': ' + labels.join(' ');
+    return typeNum.toString(2).padStart(4, '0');
 }
 
 function buildFullTudiKinName(typeNum, speciesNum) {
@@ -170,14 +173,14 @@ function buildFullTudiKinName(typeNum, speciesNum) {
     ];
     
     const highSounds = [
-        'flutter',
-        'bird',
         'fly',
+        'bird',
+        'flutter',
     ];
     
     const lowSounds = [
         'lo',
-        'ear',
+        'dirti',
         'boom',
         'gro',
         'rumbo',
@@ -200,47 +203,31 @@ function buildFullTudiKinName(typeNum, speciesNum) {
         'bobo',
     ];
     
-    const extraSounds1 = [
+    const extraSounds = [
         'abi',
         'noto',
         'propa',
         'zulu',
-        'efo',
-        'ilua',
         'lapa',
         'prudo',
         'pupu',
         'pipi',
-    ];
-    
-    const extraSounds2 = [
         'wulu',
         'grum',
         'juju',
         'stinki',
         'xandu',
-    ];
-    
-    const extraSounds3 = [
         'skolo',
         'drulu',
         'aya',
-        'kande',
         'nano',
         'rako',
         'pizo',
         'yapa',
-    ];
-    
-    const extraSounds4 = [
         'nono',
         'peno',
         'pepe',
-        'pebli',
         'panti',
-    ];
-    
-    const extraSounds5 = [
         'nana',
         'lepu',
         'nene',
@@ -260,37 +247,32 @@ function buildFullTudiKinName(typeNum, speciesNum) {
     isArmoredFast ? speciesSounds.push(strongSounds[(speciesNum) % strongSounds.length]) : speciesSounds.push(fastSounds[(speciesNum) % fastSounds.length]);
     isHighLow ? speciesSounds.push(highSounds[(speciesNum) % highSounds.length]) : speciesSounds.push(lowSounds[(speciesNum) % lowSounds.length]);
     isMetaNormal ? speciesSounds.push(metaSounds[(speciesNum) % metaSounds.length]) : speciesSounds.push(normalSounds[(speciesNum) % normalSounds.length]);
-    
-    const extraSounds = [];
-    extraSounds.push(extraSounds1[(speciesNum + typeNum) % extraSounds1.length]);
-    extraSounds.push(extraSounds2[(speciesNum + typeNum) % extraSounds2.length]);
-    extraSounds.push(extraSounds3[(speciesNum + typeNum) % extraSounds3.length]);
-    extraSounds.push(extraSounds4[(speciesNum + typeNum) % extraSounds4.length]);
-    extraSounds.push(extraSounds5[(speciesNum + typeNum) % extraSounds5.length]);
+
+    const extraSound = extraSounds[(speciesNum + typeNum) % extraSounds.length];
 
     const typeName = getTypeName(typeNum);
 
     switch ((fullVariationNum + 1) % 7) {
         case 0:
-            return capitalizeFirstLetter(speciesSounds[(fullVariationNum) % speciesSounds.length] + extraSounds[(speciesNum) % extraSounds.length]);
+            return combineNameParts(speciesSounds[(fullVariationNum) % speciesSounds.length], extraSound);
             
         case 1:
-            return capitalizeFirstLetter(extraSounds[(speciesNum) % extraSounds.length] + speciesSounds[(fullVariationNum) % speciesSounds.length]);
+            return combineNameParts(extraSound, speciesSounds[(fullVariationNum) % speciesSounds.length]);
                 
         case 2:
-            return capitalizeFirstLetter(speciesSounds[(speciesNum) % speciesSounds.length] + typeName);
+            return combineNameParts(speciesSounds[(speciesNum) % speciesSounds.length], typeName);
                     
         case 3:
-            return capitalizeFirstLetter(typeName + extraSounds[(speciesNum) % extraSounds.length]);
+            return combineNameParts(typeName, extraSound);
                         
         case 4:
-            return capitalizeFirstLetter(extraSounds[(speciesNum) % extraSounds.length] + typeName);
+            return combineNameParts(extraSound, typeName);
                             
         case 5:
-            return capitalizeFirstLetter(typeName + speciesSounds[(speciesNum) % speciesSounds.length]);
+            return combineNameParts(typeName, speciesSounds[(speciesNum) % speciesSounds.length]);
 
         default:
-            return capitalizeFirstLetter(speciesSounds[(fullVariationNum + 23) % speciesSounds.length] + speciesSounds[(speciesNum + 17) % speciesSounds.length]);
+            return combineNameParts(speciesSounds[(fullVariationNum + 23) % speciesSounds.length], speciesSounds[(speciesNum + 17) % speciesSounds.length]);
     }
 }
 
@@ -369,7 +351,7 @@ function TudiKin(data, trainingData) {
     const baseSpeed = tudiKinDataParser.baseSpeed(data);
 
     const fullDisplayName = buildFullTudiKinName(type, species);
-    const catalogueNumber = parseInt(type.toString(2).padStart(4, '0') + species.toString(2).padStart(4, '0'), 2);
+    const catalogueNumber = ((type << 4) + species) + 1; //for display
 
     //Used for save data
     this.getId = () => id;
@@ -380,7 +362,7 @@ function TudiKin(data, trainingData) {
     //Advanced display data (not typically displayed to user)
     this.getExp = () => exp;
     this.getTraining = () => training;
-    this.getType = () => type.toString(2);
+    this.getType = () => type.toString(2).padStart(tudiKinData.type.numBits, '0');
     this.getBaseDefense = () => baseDefense;
     this.getBaseAttack = () => baseAttack;
     this.getBaseSpeed = () => baseSpeed;
@@ -480,7 +462,7 @@ function createRandomTudiKinId() {
 
 //TEMP TEST FUNCTIONS
 
-//TODO: rather than making this temp, adopt it for use in the "dex" or encylopedia function.
+//TODO: rather than making this temp, adopt it for use in the "dex" or encylopedia function?
 function printAllNames() {
     const allNames = [];
     let repeats = 0;
@@ -529,7 +511,7 @@ function printAllNames() {
 //        }
 //    }
 //}
-//
+
 //function findUnusedSounds() {
 //    const allNames = printAllNames();
 //    checkSounds(allNames, hotSounds, 'hotSounds');
@@ -540,9 +522,5 @@ function printAllNames() {
 //    checkSounds(allNames, lowSounds, 'lowSounds');
 //    checkSounds(allNames, metaSounds, 'metaSounds');
 //    checkSounds(allNames, normalSounds, 'normalSounds');
-//    checkSounds(allNames, extraSounds1, 'extraSounds1');
-//    checkSounds(allNames, extraSounds2, 'extraSounds2');
-//    checkSounds(allNames, extraSounds3, 'extraSounds3');
-//    checkSounds(allNames, extraSounds4, 'extraSounds4');
-//    checkSounds(allNames, extraSounds5, 'extraSounds5');
+//    checkSounds(allNames, extraSounds, 'extraSounds');
 //}
