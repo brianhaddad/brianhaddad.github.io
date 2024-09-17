@@ -276,6 +276,11 @@ function buildFullTudiKinName(typeNum, speciesNum) {
     }
 }
 
+function drawTudiKin(ctx, typeNum, speciesNum) {
+    const fullVariationNum = (typeNum << 4) + speciesNum;
+    //TODO: the rest of the owl. No return type, just a draw method.
+}
+
 function getTypeAdvantage(attacker, defender) {
     const aHotCold = getFlag(attacker, 0);
     const aArmoredFast = getFlag(attacker, 1);
