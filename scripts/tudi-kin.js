@@ -279,6 +279,7 @@ function buildFullTudiKinName(typeNum, speciesNum) {
 function drawTudiKin(ctx, typeNum, speciesNum) {
     const fullVariationNum = (typeNum << 4) + speciesNum;
     //TODO: the rest of the owl. No return type, just a draw method.
+    //TODO: create a new page (tudi-kin-drawing) with a canvas set to the size of an Arduboy screen: (128 x 64)
 }
 
 function getTypeAdvantage(attacker, defender) {
