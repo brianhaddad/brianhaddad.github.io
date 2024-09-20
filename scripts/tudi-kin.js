@@ -396,6 +396,14 @@ function TudiKin(data, trainingData) {
     //  Can cause damage when normal attack can't
     //  Cuts the user's defense stat for that round
 
+    //Max Health:
+    //9 bits: 512 max
+    //3 bits are given: min health is 7 (111 in binary)
+    //The other six bits are calculated based on armored flag, base defense, level, training distribution, and possibly a little from species/gender/special too.
+    //(see stats calculations below)
+    //This means that the battle data only needs to store 6 bits for current health (add on the 3 given 1's at the beginning).
+    //If we want more battle status data, we still have 10 bits to work with to track other status changes/flags. :)
+
     //Training:
     //  There are 4 types of training:
     //    Special
