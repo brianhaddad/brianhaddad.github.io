@@ -1,0 +1,75 @@
+<!doctype HTML>
+<html color-mode="user">
+    <head>
+        <title>Tudi-Draw</title>
+        <link rel="stylesheet" href="../../css/mvp.css">
+    </head>
+    <body>
+        <script src="../../scripts/tudi-kin.js"></script>
+        <script src="../../scripts/html_tools.js"></script>
+        <script>
+            const w = 64;
+            const h = 64;
+            const s = 4; //scaling for the bigger display
+            const drawDiv = createElement('div', {}, null);
+            document.body.appendChild(drawDiv);
+
+            const canvas = createElement('canvas', {'width': w, 'height': h}, null);
+            const ctx = canvas.getContext('2d');
+            drawDiv.appendChild(canvas);
+            
+            const bigViewCanvas = createElement('canvas', {'width': w * s, 'height': h * s}, null);
+            const ctx2 = bigViewCanvas.getContext('2d');
+            ctx2.imageSmoothingEnabled = false;
+            drawDiv.appendChild(bigViewCanvas);
+
+            const navContainer = createElement('div', {'style': `display:flex;flex-direction:row;gap:16px;`}, null);
+            drawDiv.appendChild(navContainer);
+
+            const previous = createElement('a', {'style': `cursor:pointer;`}, 'Previous');
+            previous.addEventListener('click', () => previousTudiKin());
+            navContainer.appendChild(previous);
+
+            const current = createElement('span', {}, null);
+            navContainer.appendChild(current);
+
+            const next = createElement('a', {'style': `cursor:pointer;`}, 'Next');
+            next.addEventListener('click', () => nextTudiKin());
+            navContainer.appendChild(next);
+
+            let currentId = 0;
+
+            function redraw(tudiKinId) {
+                const tudiKin = new TudiKin(tudiKinId << 8, 0);
+
+                current.innerHTML = `${(tudiKinId + 1)}: ${tudiKin.getFullName()}`;
+
+                ctx.clearRect(0, 0, w, h);
+                ctx.fillStyle = 'rgb(0,0,0)';
+                ctx.fillRect(0, 0, w, h);
+
+                drawTudiKin(ctx, tudiKin.getTypeNum(), tudiKin.getSpeciesNum());
+                
+                ctx2.drawImage(canvas, 0, 0, w, h, 0, 0, w * s, h * s);
+            }
+
+            function nextTudiKin() {
+                currentId++;
+                if (currentId >= Math.pow(2, 8)) {
+                    currentId = 0;
+                }
+                redraw(currentId);
+            }
+
+            function previousTudiKin() {
+                currentId--;
+                if (currentId < 0) {
+                    currentId = Math.pow(2, 8) - 1;
+                }
+                redraw(currentId);
+            }
+
+            redraw(currentId);
+        </script>
+    </body>
+</html>

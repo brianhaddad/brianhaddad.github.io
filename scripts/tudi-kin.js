@@ -278,8 +278,18 @@ function buildFullTudiKinName(typeNum, speciesNum) {
 
 function drawTudiKin(ctx, typeNum, speciesNum) {
     const fullVariationNum = (typeNum << 4) + speciesNum;
+    const hotCold = getFlag(typeNum, 0);
+    const armoredFast = getFlag(typeNum, 1);
+    const highLow = getFlag(typeNum, 2);
+    const metaNormal = getFlag(typeNum, 3);
     //TODO: the rest of the owl. No return type, just a draw method.
-    //TODO: create a new page (tudi-kin-drawing) with a canvas set to the size of an Arduboy screen: (128 x 64)
+    ctx.save();
+    ctx.font = `bold 12px Arial`;
+    ctx.fillStyle = 'rgb(255,255,255)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(buildFullTudiKinName(typeNum, speciesNum), 32, 32);
+    ctx.restore();
 }
 
 function getTypeAdvantage(attacker, defender) {
@@ -384,6 +394,9 @@ function TudiKin(data, trainingData) {
         ? 1
         : (exp - levelToXp(this.getLevel())) / (levelToXp(this.getLevel() + 1) - levelToXp(this.getLevel()));
 
+    this.getTypeNum = () => type;
+    this.getSpeciesNum = () => species;
+
     //Moves:
     //Defensive Posture
     //  Double's defense stat but doesn't deal damage
@@ -472,6 +485,14 @@ function createRandomTudiKinId() {
     const id = typeNum | speciesNum | genderNum | specialNum | defenseNum | attackNum | speedNum;
     //console.log(id.toString(2).padStart(16, '0'), id);
     return id;
+}
+
+function makeTotallyRandomTudiKin() {
+    return new TudiKin(createRandomTudiKinId(), makeRandomTrainingData(0, 100));
+}
+
+function makeSameLevelOpponent(firstTudiKin) {
+    return new TudiKin(createRandomTudiKinId(), makeRandomTrainingData(firstTudiKin.getLevel(), firstTudiKin.getLevel()));
 }
 
 //TEMP TEST FUNCTIONS

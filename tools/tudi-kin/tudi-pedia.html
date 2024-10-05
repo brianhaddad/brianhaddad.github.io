@@ -33,14 +33,6 @@
         <script src="../../scripts/tudi-kin.js"></script>
         <script src="../../scripts/html_tools.js"></script>
         <script>
-            function makeTotallyRandomTudiKin() {
-                return new TudiKin(createRandomTudiKinId(), makeRandomTrainingData(0, 100));
-            }
-
-            function makeSameLevelOpponent(firstTudiKin) {
-                return new TudiKin(createRandomTudiKinId(), makeRandomTrainingData(firstTudiKin.getLevel(), firstTudiKin.getLevel()));
-            }
-
             function htmlGenderSign(symbol) {
                 return symbol === '♀'
                     ? '&#9792;'
