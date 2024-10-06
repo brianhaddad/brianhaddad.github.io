@@ -277,6 +277,9 @@ function buildFullTudiKinName(typeNum, speciesNum) {
 }
 
 function drawTudiKin(ctx, typeNum, speciesNum) {
+    //screen size 128 x 64
+    const tudiWidth = 32;
+    const tudiHeight = 32;
     const fullVariationNum = (typeNum << 4) + speciesNum;
     const hotCold = getFlag(typeNum, 0);
     const armoredFast = getFlag(typeNum, 1);
@@ -284,11 +287,11 @@ function drawTudiKin(ctx, typeNum, speciesNum) {
     const metaNormal = getFlag(typeNum, 3);
     //TODO: the rest of the owl. No return type, just a draw method.
     ctx.save();
-    ctx.font = `bold 12px Arial`;
+    ctx.font = `bold 6px Arial`;
     ctx.fillStyle = 'rgb(255,255,255)';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(buildFullTudiKinName(typeNum, speciesNum), 32, 32);
+    ctx.fillText(buildFullTudiKinName(typeNum, speciesNum), tudiWidth/2, tudiHeight/2);
     ctx.restore();
 }
 
