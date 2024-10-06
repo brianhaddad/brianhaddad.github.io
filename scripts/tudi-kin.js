@@ -1,3 +1,20 @@
+//BITMAPS
+const testImage = [
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xe0, 0x70,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x60, 0x30, 0x0c, 0x03, 0x01, 0x00, 0x3f,
+    0xe0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xe0, 0x1e, 0x07, 0x04, 0x04, 0x04, 0x04, 0x02, 0x02, 0x02,
+    0x03, 0x02, 0x7e, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x03, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+];
+
+const WHITE = 'rgb(255,255,255)';
+const BLACK = 'rgb(0,0,0)';
+
+//The rest of the code:
+
 const EXP_BITS = 12;
 const TRAINING_BITS = 4;
 const BASE_BITS = 16;
@@ -278,6 +295,10 @@ function buildFullTudiKinName(typeNum, speciesNum) {
 
 function drawTudiKin(ctx, typeNum, speciesNum) {
     //screen size 128 x 64
+    //image editor:
+    //https://emutyworks.github.io/BitmapEditor/demo/index.html
+    const x = 0;
+    const y = 0;
     const tudiWidth = 32;
     const tudiHeight = 32;
     const fullVariationNum = (typeNum << 4) + speciesNum;
@@ -285,14 +306,40 @@ function drawTudiKin(ctx, typeNum, speciesNum) {
     const armoredFast = getFlag(typeNum, 1);
     const highLow = getFlag(typeNum, 2);
     const metaNormal = getFlag(typeNum, 3);
-    //TODO: the rest of the owl. No return type, just a draw method.
+    //TODO: come up with a series of images and ways to layer them in order to draw
+    //the various tudi-kin creatures.
     ctx.save();
-    ctx.font = `bold 6px Arial`;
-    ctx.fillStyle = 'rgb(255,255,255)';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(buildFullTudiKinName(typeNum, speciesNum), tudiWidth/2, tudiHeight/2);
+    arduboyDrawBitmap(ctx, 0, 0, testImage, 32, 32, WHITE);
     ctx.restore();
+}
+
+function arduboyDrawBitmap(ctx, x, y, byteArray, w, h, color) {
+    let sector = -1;
+    let sx = 0;
+    let sy = 0;
+    const sectorWidth = 8;
+    const sectorHeight = 8;
+    const sectorsWide = w / 8;
+    const drawX = () => ((sector % sectorsWide) * sectorWidth) + sx;
+    const drawY = () => (Math.floor(sector / sectorsWide) * sectorHeight) + sy;
+    ctx.fillStyle = color;
+    for (let i = 0; i < byteArray.length; i++) {
+        if (i % 8 === 0) {
+            sector++;
+        }
+        const bits = byteArray[i].toString(2).padStart(8, '0');
+        for (p = 0; p < bits.length; p++) {
+            sy = 7-p;
+            sx = i % 8;
+            if (bits[p] === '1') {
+                putPixel(ctx, drawX(), drawY());
+            }
+        }
+    }
+}
+
+function putPixel(ctx, x, y) {
+    ctx.fillRect(x, y, 1, 1);
 }
 
 function getTypeAdvantage(attacker, defender) {
