@@ -317,22 +317,23 @@ function arduboyDrawBitmap(ctx, x, y, byteArray, w, h, color) {
     let sector = -1;
     let sx = 0;
     let sy = 0;
-    const sectorWidth = 8;
-    const sectorHeight = 8;
-    const sectorsWide = w / 8;
-    const drawX = () => ((sector % sectorsWide) * sectorWidth) + sx;
-    const drawY = () => (Math.floor(sector / sectorsWide) * sectorHeight) + sy;
+    const sectorSize = 8;
+    const sectorsWide = Math.floor(w / sectorSize);
+    const drawX = () => ((sector % sectorsWide) * sectorSize) + sx;
+    const drawY = () => (Math.floor(sector / sectorsWide) * sectorSize) + sy;
     ctx.fillStyle = color;
     for (let i = 0; i < byteArray.length; i++) {
-        if (i % 8 === 0) {
+        if (i % sectorSize === 0) {
             sector++;
         }
         const bits = byteArray[i].toString(2).padStart(8, '0');
         for (p = 0; p < bits.length; p++) {
             sy = 7-p;
-            sx = i % 8;
-            if (bits[p] === '1') {
-                putPixel(ctx, drawX(), drawY());
+            sx = i % sectorSize;
+            const nx = drawX();
+            const ny = drawY();
+            if (bits[p] === '1' && nx < w && ny < h) {
+                putPixel(ctx, x + nx, y + ny);
             }
         }
     }
