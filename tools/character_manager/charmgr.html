@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html color-mode="user">
+    <head>
+        <title>Character Manager</title>
+        <link rel="stylesheet" href="../../css/mvp.css">
+    </head>
+    <body>
+        <script src="../../scripts/html_tools.js"></script>
+        <script src="../../scripts/file_manager.js"></script>
+        <div id="main">
+            <main>
+                <input type="file" name="inputText" id="inputText" accept=".json" />
+                <input type="button" value="Init From File" onclick="javascript:app.loadFromFile('inputText');" />
+                <input type="button" value="Init Without File" onclick="javascript:app.loadFromLocalStorage();" />
+            </main>
+        </div>
+        <script>
+            const AppModes = Object.freeze({
+                VIEW: Symbol('view'),
+                EDIT: Symbol('edit'),
+            });
+
+            function App(divId) {
+                //constants
+                const mainDiv = document.getElementById(divId);
+                const viewDiv = createElement('main');
+                const dataStorageKey = `char_man_data_storage`;
+                let masterData = new AppData();
+                let viewMode = AppModes.VIEW;
+
+                this.loadFromFile = async (id) => {
+                    const data = await loadJsonFiles(id);
+                    if (data !== null && data.length === 1) {
+                        setLoadedData(data[0]);
+                        saveToLocalStorage();
+                    }
+                    else {
+                        loadFromLocalStorage();
+                    }
+                    start();
+                };
+
+                this.loadFromLocalStorage = () => {
+                    const text = localStorage.getItem(dataStorageKey);
+                    if (text !== null) {
+                        setLoadedData(JSON.parse(text));
+                    }
+                    start();
+                };
+
+                function start() {
+                    saveToLocalStorage();
+                    renderFull();
+                }
+
+                function renderFull() {
+                    mainDiv.innerHTML = '';
+                    renderCommonMenu();
+                    mainDiv.appendChild(viewDiv);
+                    renderViewOnly();
+                }
+
+                function renderViewOnly() {
+                    viewDiv.innerHTML = '';
+                    switch (viewMode) {
+                        case AppModes.VIEW:
+                            renderViewModeBody();
+                            break;
+
+                        case AppModes.EDIT:
+                            renderEditModeBody();
+                            break;
+                    }
+                }
+
+                function renderViewModeBody() {
+                    //temp:
+                    const header = createElement('h1', {}, `View Mode`);
+                    viewDiv.appendChild(header);
+                    //TODO: show a slider for the timeline
+                    masterData.characters.forEach(element => {
+                        viewDiv.appendChild(createElement('hr'));
+                        //TODO: create a view panel for each character (using section/header and section/aside cards)
+                    });
+                }
+
+                function renderEditModeBody() {
+                    //temp:
+                    const header = createElement('h1', {}, `Edit Mode`);
+                    viewDiv.appendChild(header);
+                    masterData.characters.forEach(element => {
+                        viewDiv.appendChild(createElement('hr'));
+                        //TODO: create a view panel for each character (using section/form)
+                    });
+                }
+
+                function renderCommonMenu() {
+                    const header = createElement('header');
+                    const nav = createElement('nav');
+                    header.appendChild(nav);
+                    mainDiv.appendChild(header);
+
+                    const appTitle = createElement('h1', {}, `Character Manager`);
+                    nav.appendChild(appTitle);
+
+                    const menu = createElement('ul');
+                    nav.appendChild(menu);
+
+                    const viewMenuItem = createElement('li');
+                    menu.appendChild(viewMenuItem);
+                    const viewButton = createElement('button', {}, `VIEW`);
+                    viewButton.addEventListener('click', () => changeMode(AppModes.VIEW));
+                    viewMenuItem.appendChild(viewButton);
+
+                    const editMenuItem = createElement('li');
+                    menu.appendChild(editMenuItem);
+                    const editButton = createElement('button', {}, `EDIT`);
+                    editButton.addEventListener('click', () => changeMode(AppModes.EDIT));
+                    editMenuItem.appendChild(editButton);
+
+                    const saveMenuItem = createElement('li');
+                    menu.appendChild(saveMenuItem);
+                    const saveButton = createElement('input', {'type': 'button', 'value': 'Save File'});
+                    saveButton.addEventListener('click', () => triggerFileDownload());
+                    saveMenuItem.appendChild(saveButton);
+                }
+
+                function changeMode(newMode) {
+                    if (newMode !== viewMode) {
+                        viewMode = newMode;
+                        renderViewOnly();
+                    }
+                }
+
+                function setLoadedData(rawData) {
+                    Object.setPrototypeOf(rawData, AppData.prototype);
+                    masterData = rawData;
+                }
+
+                function saveToLocalStorage() {
+                    localStorage.setItem(dataStorageKey, JSON.stringify(masterData));
+                }
+
+                function triggerFileDownload() {
+                    const fakeLink = createElement('a', {'download': 'character_data.json', 'href': createDataSaveDownloadLinkUrl(JSON.stringify(masterData))});
+                    const clickEvent = new MouseEvent('click');
+                    fakeLink.dispatchEvent(clickEvent);
+                }
+            }
+
+            function AppData() {
+                this.characters = [];
+            }
+
+            const app = new App('main');
+        </script>
+    </body>
+</html>
