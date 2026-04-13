@@ -22,9 +22,25 @@
 
             function App(divId) {
                 //constants
+                const Months = Object.freeze([
+                    'January',
+                    'February',
+                    'March',
+                    'April',
+                    'May',
+                    'June',
+                    'July',
+                    'August',
+                    'September',
+                    'October',
+                    'November',
+                    'December',
+                ]);
                 const mainDiv = document.getElementById(divId);
                 const viewDiv = createElement('main');
                 const dataStorageKey = `char_man_data_storage`;
+                const saveInterval = 500;
+                let saveTimer = null;
                 let masterData = new AppData();
                 let viewMode = AppModes.VIEW;
 
@@ -32,7 +48,7 @@
                     const data = await loadJsonFiles(id);
                     if (data !== null && data.length === 1) {
                         setLoadedData(data[0]);
-                        saveToLocalStorage();
+                        queueSave();
                     }
                     else {
                         loadFromLocalStorage();
@@ -49,7 +65,7 @@
                 };
 
                 function start() {
-                    saveToLocalStorage();
+                    queueSave();
                     renderFull();
                 }
 
@@ -77,7 +93,7 @@
                     //temp:
                     const header = createElement('h1', {}, `View Mode`);
                     viewDiv.appendChild(header);
-                    //TODO: show a slider for the timeline
+                    //TODO: show a slider for the timeline, checkbox for "only show living individuals"
                     masterData.characters.forEach(element => {
                         viewDiv.appendChild(createElement('hr'));
                         //TODO: create a view panel for each character (using section/header and section/aside cards)
@@ -85,13 +101,39 @@
                 }
 
                 function renderEditModeBody() {
-                    //temp:
                     const header = createElement('h1', {}, `Edit Mode`);
                     viewDiv.appendChild(header);
-                    masterData.characters.forEach(element => {
-                        viewDiv.appendChild(createElement('hr'));
-                        //TODO: create a view panel for each character (using section/form)
+                    const characterListContainer = createElement('div');
+                    viewDiv.appendChild(characterListContainer);
+                    masterData.characters.forEach((element, i) => {
+                        characterListContainer.appendChild(createElement('hr'));
+                        renderCharacterEditPanel(characterListContainer, element, i);
                     });
+                    const addCharacterButton = createElement('button', {}, `Add Character`);
+                    addCharacterButton.addEventListener('click', () => {
+                        characterListContainer.appendChild(createElement('hr'));
+                        const newCharacter = new CharacterProfile();
+                        masterData.characters.push(newCharacter);
+                        renderCharacterEditPanel(characterListContainer, newCharacter, masterData.characters.length - 1);
+                        queueSave();
+                    });
+                    viewDiv.appendChild(addCharacterButton);
+                }
+
+                function renderCharacterEditPanel(container, character, i) {
+                    const section = createElement('section');
+                    container.appendChild(section);
+                    const form = createElement('form');
+                    form.addEventListener('keyup', queueSave);
+                    //TODO: need to trigger queuesave or something either with keycapture on the form or on each input
+                    container.appendChild(form);
+
+                    const header = createElement('header');
+                    form.appendChild(header);
+                    header.appendChild(createElement('h2', {}, `Character Worksheet`));
+
+                    form.appendChild(createElement('label', {'for': `${i}-name`}, `Character Name`));
+                    form.appendChild(createElement('input', {'type': 'text', 'name': `${i}-name`}));
                 }
 
                 function renderCommonMenu() {
@@ -120,7 +162,7 @@
 
                     const saveMenuItem = createElement('li');
                     menu.appendChild(saveMenuItem);
-                    const saveButton = createElement('input', {'type': 'button', 'value': 'Save File'});
+                    const saveButton = createElement('input', {'type': 'button', 'value': 'Download Data'});
                     saveButton.addEventListener('click', () => triggerFileDownload());
                     saveMenuItem.appendChild(saveButton);
                 }
@@ -134,11 +176,32 @@
 
                 function setLoadedData(rawData) {
                     Object.setPrototypeOf(rawData, AppData.prototype);
+                    rawData.characters.forEach(c => Object.setPrototypeOf(c, CharacterProfile.prototype));
                     masterData = rawData;
                 }
 
-                function saveToLocalStorage() {
-                    localStorage.setItem(dataStorageKey, JSON.stringify(masterData));
+                function queueSave() {
+                    if (saveTimer !== null) {
+                        clearTimeout(saveTimer);
+                    }
+                    saveTimer = setTimeout(() => {
+                        loadInMasterData();
+                        localStorage.setItem(dataStorageKey, JSON.stringify(masterData));
+                        //TODO: add some kind of indicator to the UI? An icon for pending save and an icon for 'data current'?
+                        saveTimer = null;
+                        console.log('Saved');
+                    }, saveInterval);
+                }
+
+                function loadInMasterData() {
+                    if (viewMode === AppModes.EDIT) {
+                        //TODO: more than just the characters?
+                        masterData.characters.forEach((c, i) => {
+                            //TODO: use a function to assemble the element IDs?
+                            c.name = document.getElementsByName(`${i}-name`)[0].value;
+                            //TODO: the other elements when they are done
+                        });
+                    }
                 }
 
                 function triggerFileDownload() {
@@ -149,7 +212,20 @@
             }
 
             function AppData() {
+                this.currentYear = 0;
                 this.characters = [];
+            }
+
+            function CharacterProfile() {
+                this.name = ``;
+                this.birthYear = 0;
+                this.birthMonth = 0;
+                this.birthDay = 0;
+                this.role = ``;
+                this.drivers = ``;
+                this.injunctions = ``;
+                this.description = ``;
+                this.timeline = ``;
             }
 
             const app = new App('main');
