@@ -8,6 +8,7 @@ function makeFieldset(legendText, fieldsetAttributes) {
     return fieldset;
 }
 
+//TODO: refactor for everyone who uses this so that the attributes can be passed in rather than universally applied.
 function makeDetail(summaryText, child, isOpen) {
     const detailsAttributes = {'style': 'padding:8px 16px;margin:3px;border-radius:5px;border:1px solid black;'};
     if (isOpen) {
@@ -16,7 +17,9 @@ function makeDetail(summaryText, child, isOpen) {
     const details = createElement('details', detailsAttributes, null);
     const summary = createElement('summary', {'style': 'cursor:pointer;user-select:none;'}, summaryText);
     details.appendChild(summary);
-    details.appendChild(child);
+    if (child) {
+        details.appendChild(child);
+    }
     return details;
 }
 

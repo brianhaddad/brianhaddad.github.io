@@ -91,13 +91,28 @@
 
                 function renderViewModeBody() {
                     //temp:
-                    const header = createElement('h1', {}, `View Mode`);
-                    viewDiv.appendChild(header);
+                    const section = createElement('section');
+                    viewDiv.appendChild(section);
+                    const header = createElement('header');
+                    section.appendChild(header);
+                    const title = createElement('h1', {}, `View Mode`);
+                    header.appendChild(title);
                     //TODO: show a slider for the timeline, checkbox for "only show living individuals"
-                    masterData.characters.forEach(element => {
-                        viewDiv.appendChild(createElement('hr'));
-                        //TODO: create a view panel for each character (using section/header and section/aside cards)
-                        //These should collapse and expand, with the collapsed version just showing name and age.
+                    masterData.characters.forEach(character => {
+                        const aside = createElement('aside');
+                        section.appendChild(aside);
+                        const age = masterData.currentYear - character.birthYear;
+                        let ageDisplay = age.toString();
+                        if (age < 0) {
+                            ageDisplay = `unborn`;
+                        }
+                        else if (age > character.maxAge) {
+                            ageDisplay = `deceased`;
+                        }
+                        const detail = makeDetail(`${character.firstName} ${character.lastName}: (${ageDisplay})`);
+                        aside.appendChild(detail);
+                        //TODO: append details to the details object.
+                        detail.appendChild(createElement('h3', {}, `test text`));
                     });
                 }
 
@@ -135,8 +150,12 @@
                     header.appendChild(createElement('h2', {}, `Character Worksheet`));
 
                     //Name
-                    form.appendChild(createElement('label', {'for': fn(i, 'name')}, `Character Name`));
-                    form.appendChild(createElement('input', {'type': 'text', 'name': fn(i, 'name'), 'value': character.name}));
+                    form.appendChild(createElement('label', {'for': fn(i, 'firstName')}, `First Name`));
+                    form.appendChild(createElement('input', {'type': 'text', 'name': fn(i, 'firstName'), 'value': character.firstName}));
+                    form.appendChild(createElement('label', {'for': fn(i, 'lastName')}, `Last Name`));
+                    form.appendChild(createElement('input', {'type': 'text', 'name': fn(i, 'lastName'), 'value': character.lastName}));
+                    form.appendChild(createElement('label', {'for': fn(i, 'aliases')}, `Other Aliases`));
+                    form.appendChild(createElement('input', {'type': 'text', 'name': fn(i, 'aliases'), 'value': character.aliases}));
 
                     //Birth Year
                     form.appendChild(createElement('label', {'for': fn(i, 'birthYear')}, `Birth Year`));
@@ -149,6 +168,10 @@
                     //Birth Day
                     form.appendChild(createElement('label', {'for': fn(i, 'birthDay')}, `Birth Day`));
                     form.appendChild(makeNumberSelect(fn(i, 'birthDay'), 1, 31, character.birthDay));
+
+                    //Max Age
+                    form.appendChild(createElement('label', {'for': fn(i, 'maxAge')}, `Maximum Age (Alive Until)`));
+                    form.appendChild(createElement('input', {'type': 'number', 'name': fn(i, 'maxAge'), 'value': character.maxAge}));
 
                     //Role
                     form.appendChild(createElement('label', {'for': fn(i, 'role')}, `Character Role`));
@@ -246,7 +269,9 @@
                     if (viewMode === AppModes.EDIT) {
                         //TODO: more than just the characters?
                         masterData.characters.forEach((c, i) => {
-                            c.name = document.getElementsByName(fn(i, 'name'))[0].value;
+                            c.firstName = document.getElementsByName(fn(i, 'firstName'))[0].value;
+                            c.lastName = document.getElementsByName(fn(i, 'lastName'))[0].value;
+                            c.aliases = document.getElementsByName(fn(i, 'aliases'))[0].value;
 
                             c.birthYear = parseInt(document.getElementsByName(fn(i, 'birthYear'))[0].value);
 
@@ -255,6 +280,8 @@
 
                             const daySelect = document.getElementsByName(fn(i, 'birthDay'))[0];
                             c.birthDay = parseInt(daySelect.options[daySelect.selectedIndex].value);
+
+                            c.maxAge = parseInt(document.getElementsByName(fn(i, 'maxAge'))[0].value);
 
                             c.role = document.getElementsByName(fn(i, 'role'))[0].value;
 
@@ -284,10 +311,13 @@
             }
 
             function CharacterProfile() {
-                this.name = ``;
+                this.firstName = ``;
+                this.lastName = ``;
+                this.aliases = ``;
                 this.birthYear = 0;
                 this.birthMonth = 0;
                 this.birthDay = 0;
+                this.maxAge = 0;
                 this.role = ``;
                 this.drivers = ``;
                 this.injunctions = ``;
