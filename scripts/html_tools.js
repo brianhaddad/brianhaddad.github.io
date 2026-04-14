@@ -20,19 +20,27 @@ function makeDetail(summaryText, child, isOpen) {
     return details;
 }
 
-function makeSelect(name, options) {
+function makeSelect(name, options, selected) {
     const select = createElement('select', { 'name': name, 'id': name }, null);
     for (const v in options) {
-        const option = createElement('option', { 'value': v }, options[v]);
+        const attributes = { 'value': v };
+        if (selected !== null && selected.toString() === v.toString() || selected.toString() === options[v].toString()) {
+            attributes['selected'] = true;
+        }
+        const option = createElement('option', attributes, options[v]);
         select.appendChild(option);
     }
     return select;
 }
 
-function makeNumberSelect(name, min, max) {
+function makeNumberSelect(name, min, max, selected) {
     const select = createElement('select', { 'name': name, 'id': name }, null);
     for (let i = min; i <= max; i++) {
-        const option = createElement('option', { 'value': i }, i.toString());
+        const attributes = { 'value': i };
+        if (selected !== null && selected === i) {
+            attributes['selected'] = true;
+        }
+        const option = createElement('option', attributes, i.toString());
         select.appendChild(option);
     }
     return select;

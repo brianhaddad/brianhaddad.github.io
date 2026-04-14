@@ -97,6 +97,7 @@
                     masterData.characters.forEach(element => {
                         viewDiv.appendChild(createElement('hr'));
                         //TODO: create a view panel for each character (using section/header and section/aside cards)
+                        //These should collapse and expand, with the collapsed version just showing name and age.
                     });
                 }
 
@@ -120,20 +121,68 @@
                     viewDiv.appendChild(addCharacterButton);
                 }
 
+                const fn = (i, n) => `${i}-${n}`;
+
                 function renderCharacterEditPanel(container, character, i) {
                     const section = createElement('section');
                     container.appendChild(section);
                     const form = createElement('form');
-                    form.addEventListener('keyup', queueSave);
-                    //TODO: need to trigger queuesave or something either with keycapture on the form or on each input
+                    form.addEventListener('input', queueSave);
                     container.appendChild(form);
 
                     const header = createElement('header');
                     form.appendChild(header);
                     header.appendChild(createElement('h2', {}, `Character Worksheet`));
 
-                    form.appendChild(createElement('label', {'for': `${i}-name`}, `Character Name`));
-                    form.appendChild(createElement('input', {'type': 'text', 'name': `${i}-name`}));
+                    //Name
+                    form.appendChild(createElement('label', {'for': fn(i, 'name')}, `Character Name`));
+                    form.appendChild(createElement('input', {'type': 'text', 'name': fn(i, 'name'), 'value': character.name}));
+
+                    //Birth Year
+                    form.appendChild(createElement('label', {'for': fn(i, 'birthYear')}, `Birth Year`));
+                    form.appendChild(createElement('input', {'type': 'number', 'name': fn(i, 'birthYear'), 'value': character.birthYear}));
+
+                    //Birth Month
+                    form.appendChild(createElement('label', {'for': fn(i, 'birthMonth')}, `Birth Month`));
+                    form.appendChild(makeSelect(fn(i, 'birthMonth'), Months, character.birthMonth));
+
+                    //Birth Day
+                    form.appendChild(createElement('label', {'for': fn(i, 'birthDay')}, `Birth Day`));
+                    form.appendChild(makeNumberSelect(fn(i, 'birthDay'), 1, 31, character.birthDay));
+
+                    //Role
+                    form.appendChild(createElement('label', {'for': fn(i, 'role')}, `Character Role`));
+                    form.appendChild(createElement('input', {'type': 'text', 'name': fn(i, 'role'), 'value': character.role}));
+
+                    //Drivers (DO axioms)
+                    form.appendChild(createElement('label', {'for': fn(i, 'drivers')}, `Character Drivers`));
+                    form.appendChild(createElement('textarea', {'rows': 5, 'name': fn(i, 'drivers'), 'placeholder': `The Character's DO Axioms`}, character.drivers));
+
+                    //Injunctions (DO NOT axioms)
+                    form.appendChild(createElement('label', {'for': fn(i, 'injunctions')}, `Character Injunctions`));
+                    form.appendChild(createElement('textarea', {'rows': 5, 'name': fn(i, 'injunctions'), 'placeholder': `The Character's DO NOT Axioms`}, character.injunctions));
+
+                    //Believed Lie
+                    form.appendChild(createElement('label', {'for': fn(i, 'believedLie')}, `Believed Lie`));
+                    form.appendChild(createElement('textarea', {'rows': 5, 'name': fn(i, 'believedLie'), 'placeholder': `The Lie the Character Believes`}, character.believedLie));
+
+                    //Description
+                    form.appendChild(createElement('label', {'for': fn(i, 'description')}, `Character Description and Details`));
+                    form.appendChild(createElement('textarea', {'rows': 10, 'name': fn(i, 'description'), 'placeholder': `Write anything else not covered in the other fields...`}, character.description));
+
+                    //Timeline
+                    form.appendChild(createElement('label', {'for': fn(i, 'timeline')}, `Character Timeline`));
+                    form.appendChild(createElement('textarea', {'rows': 10, 'name': fn(i, 'timeline'), 'placeholder': `Significant events in the character's life...`}, character.timeline));
+
+                    //Remove Button
+                    const removeButton = createElement('input', {'type': 'button', 'value': `Remove`});
+                    const myIndex = i;
+                    removeButton.addEventListener('click', () => {
+                        masterData.characters.splice(myIndex, 1);
+                        queueSave();
+                        renderViewOnly();
+                    });
+                    form.appendChild(removeButton);
                 }
 
                 function renderCommonMenu() {
@@ -197,9 +246,27 @@
                     if (viewMode === AppModes.EDIT) {
                         //TODO: more than just the characters?
                         masterData.characters.forEach((c, i) => {
-                            //TODO: use a function to assemble the element IDs?
-                            c.name = document.getElementsByName(`${i}-name`)[0].value;
-                            //TODO: the other elements when they are done
+                            c.name = document.getElementsByName(fn(i, 'name'))[0].value;
+
+                            c.birthYear = parseInt(document.getElementsByName(fn(i, 'birthYear'))[0].value);
+
+                            const monthSelect = document.getElementsByName(fn(i, 'birthMonth'))[0];
+                            c.birthMonth = parseInt(monthSelect.options[monthSelect.selectedIndex].value);
+
+                            const daySelect = document.getElementsByName(fn(i, 'birthDay'))[0];
+                            c.birthDay = parseInt(daySelect.options[daySelect.selectedIndex].value);
+
+                            c.role = document.getElementsByName(fn(i, 'role'))[0].value;
+
+                            c.drivers = document.getElementsByName(fn(i, 'drivers'))[0].value;
+
+                            c.injunctions = document.getElementsByName(fn(i, 'injunctions'))[0].value;
+
+                            c.believedLie = document.getElementsByName(fn(i, 'believedLie'))[0].value;
+
+                            c.description = document.getElementsByName(fn(i, 'description'))[0].value;
+
+                            c.timeline = document.getElementsByName(fn(i, 'timeline'))[0].value;
                         });
                     }
                 }
@@ -224,6 +291,7 @@
                 this.role = ``;
                 this.drivers = ``;
                 this.injunctions = ``;
+                this.believedLie = ``;
                 this.description = ``;
                 this.timeline = ``;
             }
