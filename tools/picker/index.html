@@ -264,7 +264,7 @@
 
                 //TODO: the 'true' here indicates it defaults to being open
                 //do we want to store/track that value?
-                const pickerDetail = makeDetail(`Picker`, pickerContents, true);
+                const pickerDetail = makeDetail(`Picker`, {'style': 'padding:8px 16px;margin:3px;border-radius:5px;border:1px solid black;'}, pickerContents, true);
                 parent.appendChild(pickerDetail);
 
                 //TODO: this will be important once the master tag list can be updated by an editor interface
@@ -322,7 +322,7 @@
                 const output = createElement('textarea', {'rows': 10, 'cols': 100}, null);
                 contents.appendChild(output);
 
-                const detail = makeDetail(`Bulk Data Adder`, contents, false);
+                const detail = makeDetail(`Bulk Data Adder`, {'style': 'padding:8px 16px;margin:3px;border-radius:5px;border:1px solid black;'}, contents, false);
                 parent.appendChild(detail);
 
                 //TODO: this will be important once the master tag list can be updated by an editor interface

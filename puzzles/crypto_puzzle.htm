@@ -81,7 +81,7 @@
             //instructionsContainer.appendChild(instructionsImage);
             //instructionsContainer.appendChild(instructionsDetailsContainer);
 
-            //const puzzleInstructions = makeDetail('Instructions', instructionsContainer);
+            //const puzzleInstructions = makeDetail('Instructions', {'style': 'padding:8px 16px;margin:3px;border-radius:5px;border:1px solid black;'}, instructionsContainer);
 
             //toolsContainer.appendChild(puzzleInstructions);
             //End Instructions
@@ -385,7 +385,7 @@
                 detailContainer.appendChild(container);
                 detailContainer.appendChild(helpLink);
 
-                return makeDetail('Letter Frequencies', detailContainer);
+                return makeDetail('Letter Frequencies', {'style': 'padding:8px 16px;margin:3px;border-radius:5px;border:1px solid black;'}, detailContainer);
             }
 
             function makeId(word, wordIndex, index) {

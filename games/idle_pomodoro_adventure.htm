@@ -1157,7 +1157,7 @@
                     legendText += ' (unavailable)';
                 }
                 const cardContents = createElement('div', {}, null);
-                const card = makeDetail(legendText, cardContents, !disabled);
+                const card = makeDetail(legendText, {'style': 'padding:8px 16px;margin:3px;border-radius:5px;border:1px solid black;'}, cardContents, !disabled);
                 myContainer.appendChild(card);
                 
                 //TODO: need to individually identify each skill or item that is missing rather than just marking the whole line as the problem.

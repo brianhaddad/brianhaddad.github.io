@@ -36,11 +36,15 @@
                     'November',
                     'December',
                 ]);
+                
+                const fn = (i, n) => `${i}-${n}`;
+
                 const mainDiv = document.getElementById(divId);
                 const viewDiv = createElement('main');
                 const dataStorageKey = `char_man_data_storage`;
                 const saveInterval = 500;
                 let saveTimer = null;
+                let queueViewOnlyRedraw = false;
                 let masterData = new AppData();
                 let viewMode = AppModes.VIEW;
 
@@ -77,6 +81,10 @@
                 }
 
                 function renderViewOnly() {
+                    if (viewDiv && viewDiv.innerHTML !== '' && saveTimer !== null) {
+                        queueViewOnlyRedraw = true;
+                        return;
+                    }
                     viewDiv.innerHTML = '';
                     switch (viewMode) {
                         case AppModes.VIEW:
@@ -90,17 +98,40 @@
                 }
 
                 function renderViewModeBody() {
-                    //temp:
+                    const top = createElement('section');
+                    viewDiv.appendChild(top);
+                    const controls = createElement('form');
+                    controls.addEventListener('input', queueSave);
+                    top.appendChild(controls);
+
+                    const yearDisplay = createElement('label', {'for': 'currentYear', 'id': 'yearDisplay'}, `Current Year: ${masterData.currentYear}`);
+                    controls.appendChild(yearDisplay);
+                    const minYear = Math.min(... masterData.characters.map(x => x.birthYear), masterData.currentYear) - 1;
+                    const maxYear = Math.max(... masterData.characters.map(x => x.birthYear + x.maxAge), masterData.currentYear) + 1;
+                    const yearSlider = createElement('input', {'type': 'range', 'min': minYear, 'max': maxYear, 'value': masterData.currentYear, 'name': 'currentYear'});
+                    yearSlider.addEventListener('input', () => yearDisplay.innerHTML = `Current Year: ${yearSlider.value}`);
+                    controls.appendChild(yearSlider);
+
+                    const checkboxLabel = createElement('label', {'for': 'showLivingOnly'});
+                    const checkboxAttributes = {'type': 'checkbox', 'name': 'showLivingOnly', 'id': 'showLivingOnly'};
+                    if (masterData.showLivingOnly) {
+                        checkboxAttributes['checked'] = true;
+                    }
+                    checkboxLabel.appendChild(createElement('input', checkboxAttributes));
+                    checkboxLabel.innerHTML += ` Only Show Living Individuals`;
+                    controls.appendChild(checkboxLabel);
+
+                    const refreshButton = createElement('input', {'type': 'button', 'value': 'Refresh View'});
+                    refreshButton.addEventListener('click', () => renderViewOnly());
+                    controls.appendChild(refreshButton);
+
                     const section = createElement('section');
                     viewDiv.appendChild(section);
                     const header = createElement('header');
                     section.appendChild(header);
                     const title = createElement('h1', {}, `View Mode`);
                     header.appendChild(title);
-                    //TODO: show a slider for the timeline, checkbox for "only show living individuals"
                     masterData.characters.forEach(character => {
-                        const aside = createElement('aside');
-                        section.appendChild(aside);
                         const age = masterData.currentYear - character.birthYear;
                         let ageDisplay = age.toString();
                         if (age < 0) {
@@ -109,10 +140,13 @@
                         else if (age > character.maxAge) {
                             ageDisplay = `deceased`;
                         }
-                        const detail = makeDetail(`${character.firstName} ${character.lastName}: (${ageDisplay})`);
-                        aside.appendChild(detail);
-                        //TODO: append details to the details object.
-                        detail.appendChild(createElement('h3', {}, `test text`));
+                        if (!masterData.showLivingOnly || (age > -1 && age <= character.maxAge)) {
+                            const aside = createElement('aside');
+                            section.appendChild(aside);
+                            const detail = makeDetail(`${character.firstName} ${character.lastName}: (${ageDisplay})`);
+                            aside.appendChild(detail);
+                            detail.appendChild(createElement('h3', {}, `test text`));
+                        }
                     });
                 }
 
@@ -135,8 +169,6 @@
                     });
                     viewDiv.appendChild(addCharacterButton);
                 }
-
-                const fn = (i, n) => `${i}-${n}`;
 
                 function renderCharacterEditPanel(container, character, i) {
                     const section = createElement('section');
@@ -262,12 +294,15 @@
                         //TODO: add some kind of indicator to the UI? An icon for pending save and an icon for 'data current'?
                         saveTimer = null;
                         console.log('Saved');
+                        if (queueViewOnlyRedraw) {
+                            queueViewOnlyRedraw = false;
+                            renderViewOnly();
+                        }
                     }, saveInterval);
                 }
 
                 function loadInMasterData() {
                     if (viewMode === AppModes.EDIT) {
-                        //TODO: more than just the characters?
                         masterData.characters.forEach((c, i) => {
                             c.firstName = document.getElementsByName(fn(i, 'firstName'))[0].value;
                             c.lastName = document.getElementsByName(fn(i, 'lastName'))[0].value;
@@ -296,6 +331,10 @@
                             c.timeline = document.getElementsByName(fn(i, 'timeline'))[0].value;
                         });
                     }
+                    else if (viewMode === AppModes.VIEW) {
+                        masterData.currentYear = parseInt(document.getElementsByName('currentYear')[0].value);
+                        masterData.showLivingOnly = document.getElementsByName('showLivingOnly')[0].checked;
+                    }
                 }
 
                 function triggerFileDownload() {
@@ -306,7 +345,8 @@
             }
 
             function AppData() {
-                this.currentYear = 0;
+                this.currentYear = 2001;
+                this.showLivingOnly = false;
                 this.characters = [];
             }
 

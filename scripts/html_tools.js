@@ -8,9 +8,8 @@ function makeFieldset(legendText, fieldsetAttributes) {
     return fieldset;
 }
 
-//TODO: refactor for everyone who uses this so that the attributes can be passed in rather than universally applied.
-function makeDetail(summaryText, child, isOpen) {
-    const detailsAttributes = {'style': 'padding:8px 16px;margin:3px;border-radius:5px;border:1px solid black;'};
+function makeDetail(summaryText, detailsAttributes, child, isOpen) {
+    detailsAttributes ??= {};
     if (isOpen) {
         detailsAttributes['open'] = 'true';
     }
@@ -27,7 +26,8 @@ function makeSelect(name, options, selected) {
     const select = createElement('select', { 'name': name, 'id': name }, null);
     for (const v in options) {
         const attributes = { 'value': v };
-        if (selected !== null && selected.toString() === v.toString() || selected.toString() === options[v].toString()) {
+        console.log(selected);
+        if (selected && (selected.toString() === v.toString() || selected.toString() === options[v].toString())) {
             attributes['selected'] = true;
         }
         const option = createElement('option', attributes, options[v]);
