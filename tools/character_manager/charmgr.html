@@ -9,6 +9,7 @@
         <script src="../../scripts/file_manager.js"></script>
         <div id="main">
             <main>
+                <!-- TODO: make this something that can be pulled up again from the menu? -->
                 <input type="file" name="inputText" id="inputText" accept=".json" />
                 <input type="button" value="Init From File" onclick="javascript:app.loadFromFile('inputText');" />
                 <input type="button" value="Init Without File" onclick="javascript:app.loadFromLocalStorage();" />
@@ -18,6 +19,11 @@
             const AppModes = Object.freeze({
                 VIEW: Symbol('view'),
                 EDIT: Symbol('edit'),
+            });
+
+            const SortingType = Object.freeze({
+                LASTFIRSTNAME: `Last Name, First Name`,
+                BIRTHDATE: `Birthdate`,
             });
 
             function App(divId) {
@@ -101,13 +107,14 @@
                     const top = createElement('section');
                     viewDiv.appendChild(top);
                     const controls = createElement('form');
-                    controls.addEventListener('input', queueSave);
+                    controls.addEventListener('input', queueSaveAndRedraw);
                     top.appendChild(controls);
 
                     const yearDisplay = createElement('label', {'for': 'currentYear', 'id': 'yearDisplay'}, `Current Year: ${masterData.currentYear}`);
                     controls.appendChild(yearDisplay);
-                    const minYear = Math.min(... masterData.characters.map(x => x.birthYear), masterData.currentYear) - 1;
-                    const maxYear = Math.max(... masterData.characters.map(x => x.birthYear + x.maxAge), masterData.currentYear) + 1;
+                    const minYear = Math.min(... masterData.characters.map(x => x.birthYear), masterData.currentYear);
+                    const maxYear = Math.max(... masterData.characters.map(x => x.birthYear + x.maxAge), masterData.currentYear);
+                    //TODO: can we get the slider to be wider? Or maybe we make it a numerical input instead of a slider?
                     const yearSlider = createElement('input', {'type': 'range', 'min': minYear, 'max': maxYear, 'value': masterData.currentYear, 'name': 'currentYear'});
                     yearSlider.addEventListener('input', () => yearDisplay.innerHTML = `Current Year: ${yearSlider.value}`);
                     controls.appendChild(yearSlider);
@@ -120,10 +127,6 @@
                     checkboxLabel.appendChild(createElement('input', checkboxAttributes));
                     checkboxLabel.innerHTML += ` Only Show Living Individuals`;
                     controls.appendChild(checkboxLabel);
-
-                    const refreshButton = createElement('input', {'type': 'button', 'value': 'Refresh View'});
-                    refreshButton.addEventListener('click', () => renderViewOnly());
-                    controls.appendChild(refreshButton);
 
                     const section = createElement('section');
                     viewDiv.appendChild(section);
@@ -145,6 +148,7 @@
                             section.appendChild(aside);
                             const detail = makeDetail(`${character.firstName} ${character.lastName}: (${ageDisplay})`);
                             aside.appendChild(detail);
+                            //TODO: the rest of the owl
                             detail.appendChild(createElement('h3', {}, `test text`));
                         }
                     });
@@ -173,6 +177,7 @@
                 function renderCharacterEditPanel(container, character, i) {
                     const section = createElement('section');
                     container.appendChild(section);
+
                     const form = createElement('form');
                     form.addEventListener('input', queueSave);
                     container.appendChild(form);
@@ -221,6 +226,10 @@
                     form.appendChild(createElement('label', {'for': fn(i, 'believedLie')}, `Believed Lie`));
                     form.appendChild(createElement('textarea', {'rows': 5, 'name': fn(i, 'believedLie'), 'placeholder': `The Lie the Character Believes`}, character.believedLie));
 
+                    //Contradictions
+                    form.appendChild(createElement('label', {'for': fn(i, 'contradictions')}, `Character Contradictions and Hypocricies`));
+                    form.appendChild(createElement('textarea', {'rows': 10, 'name': fn(i, 'contradictions'), 'placeholder': `The character's internal and external contradictions and hypocricies.`}, character.contradictions));
+
                     //Description
                     form.appendChild(createElement('label', {'for': fn(i, 'description')}, `Character Description and Details`));
                     form.appendChild(createElement('textarea', {'rows': 10, 'name': fn(i, 'description'), 'placeholder': `Write anything else not covered in the other fields...`}, character.description));
@@ -240,6 +249,11 @@
                     form.appendChild(removeButton);
                 }
 
+                function queueSaveAndRedraw() {
+                    queueViewOnlyRedraw = true;
+                    queueSave();
+                }
+
                 function renderCommonMenu() {
                     const header = createElement('header');
                     const nav = createElement('nav');
@@ -251,6 +265,13 @@
 
                     const menu = createElement('ul');
                     nav.appendChild(menu);
+                    
+                    const sortMenuItem = createElement('li');
+                    menu.appendChild(sortMenuItem);
+                    sortMenuItem.appendChild(createElement('label', {'for': 'sortingType'}, `Sort By`));
+                    const sortingSelect = makeSelect('sortingType', SortingType, masterData.sortingType);
+                    sortingSelect.addEventListener('input', queueSaveAndRedraw);
+                    sortMenuItem.appendChild(sortingSelect);
 
                     const viewMenuItem = createElement('li');
                     menu.appendChild(viewMenuItem);
@@ -326,6 +347,8 @@
 
                             c.believedLie = document.getElementsByName(fn(i, 'believedLie'))[0].value;
 
+                            c.contradictions = document.getElementsByName(fn(i, 'contradictions'))[0].value;
+
                             c.description = document.getElementsByName(fn(i, 'description'))[0].value;
 
                             c.timeline = document.getElementsByName(fn(i, 'timeline'))[0].value;
@@ -335,6 +358,41 @@
                         masterData.currentYear = parseInt(document.getElementsByName('currentYear')[0].value);
                         masterData.showLivingOnly = document.getElementsByName('showLivingOnly')[0].checked;
                     }
+                    const sortSelect = document.getElementsByName('sortingType')[0];
+                    masterData.sortingType = sortSelect.options[sortSelect.selectedIndex].value;
+
+                    switch (SortingType[masterData.sortingType]) {
+                        case SortingType.LASTFIRSTNAME:
+                            masterData.characters = masterData.characters.sort(byLastAndFirstName);
+                            break;
+                        case SortingType.BIRTHDATE:
+                            masterData.characters = masterData.characters.sort(byBirthday);
+                            break;
+                    }
+                }
+
+                function byLastAndFirstName(a, b) {
+                    const aName = `${a.lastName.toUpperCase()} ${a.firstName.toUpperCase()}`;
+                    const bName = `${b.lastName.toUpperCase()} ${b.firstName.toUpperCase()}`;
+                    if (aName < bName) {
+                        return -1;
+                    }
+                    if (aName > bName) {
+                        return 1;
+                    }
+                    return 0;
+                }
+
+                function byBirthday(a, b) {
+                    const aDate = new Date(`${a.birthYear}-${(a.birthMonth+1)}-${a.birthDay}`);
+                    const bDate = new Date(`${b.birthYear}-${(b.birthMonth+1)}-${b.birthDay}`);
+                    if (aDate < bDate) {
+                        return -1;
+                    }
+                    if (aDate > bDate) {
+                        return 1;
+                    }
+                    return 0;
                 }
 
                 function triggerFileDownload() {
@@ -347,6 +405,7 @@
             function AppData() {
                 this.currentYear = 2001;
                 this.showLivingOnly = false;
+                this.sortingType = SortingType.LASTFIRSTNAME;
                 this.characters = [];
             }
 
@@ -362,6 +421,7 @@
                 this.drivers = ``;
                 this.injunctions = ``;
                 this.believedLie = ``;
+                this.contradictions = ``;
                 this.description = ``;
                 this.timeline = ``;
             }

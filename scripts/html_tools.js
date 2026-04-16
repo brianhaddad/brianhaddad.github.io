@@ -26,7 +26,6 @@ function makeSelect(name, options, selected) {
     const select = createElement('select', { 'name': name, 'id': name }, null);
     for (const v in options) {
         const attributes = { 'value': v };
-        console.log(selected);
         if (selected && (selected.toString() === v.toString() || selected.toString() === options[v].toString())) {
             attributes['selected'] = true;
         }
