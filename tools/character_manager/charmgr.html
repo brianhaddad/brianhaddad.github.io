@@ -2,6 +2,7 @@
 <html color-mode="user">
     <head>
         <title>Character Manager</title>
+        <!-- TODO: convert to pico? Would need to refactor the HTML structure, unfortunately. -->
         <link rel="stylesheet" href="../../css/mvp.css">
     </head>
     <body>
@@ -135,6 +136,11 @@
                     const title = createElement('h1', {}, `View Mode`);
                     header.appendChild(title);
                     masterData.characters.forEach(character => {
+                        renderCharacterDisplayPanel(section, character)
+                    });
+                }
+
+                function renderCharacterDisplayPanel(container, character) {
                         const age = masterData.currentYear - character.birthYear;
                         let ageDisplay = age.toString();
                         if (age < 0) {
@@ -145,13 +151,44 @@
                         }
                         if (!masterData.showLivingOnly || (age > -1 && age <= character.maxAge)) {
                             const aside = createElement('aside');
-                            section.appendChild(aside);
+                            container.appendChild(aside);
                             const detail = makeDetail(`${character.firstName} ${character.lastName}: (${ageDisplay})`);
                             aside.appendChild(detail);
-                            //TODO: the rest of the owl
-                            detail.appendChild(createElement('h3', {}, `test text`));
+                            
+                            const aliases = character.aliases && character.aliases.length > 0
+                                ? character.aliases
+                                : `none`;
+                            detail.appendChild(createElement('p', {}, `<strong>Aliases:</strong> ${aliases}`));
+                            detail.appendChild(createElement('p', {}, `<strong>Born:</strong> ${Months[character.birthMonth]} ${character.birthDay}, ${character.birthYear}`));
+                            detail.appendChild(createElement('p', {}, `<strong>Max Age:</strong> ${character.maxAge}`));
+                            if (character.role && character.role.length > 0) {
+                                detail.appendChild(createElement('p', {}, `<strong>Role:</strong> ${character.role}`));
+                            }
+                            if (character.drivers && character.drivers.length > 0) {
+                                detail.appendChild(createElement('p', {'style': `margin-bottom: .25em;`}, `<strong>Drivers:</strong>`));
+                                detail.appendChild(createElement('pre', {'style': `white-space: pre-wrap; margin-top: .25em; padding: 0px;`}, character.drivers));
+                            }
+                            if (character.injunctions && character.injunctions.length > 0) {
+                                detail.appendChild(createElement('p', {'style': `margin-bottom: .25em;`}, `<strong>Injunctions:</strong>`));
+                                detail.appendChild(createElement('pre', {'style': `white-space: pre-wrap; margin-top: .25em; padding: 0px;`}, character.injunctions));
+                            }
+                            if (character.believedLie && character.believedLie.length > 0) {
+                                detail.appendChild(createElement('p', {'style': `margin-bottom: .25em;`}, `<strong>Beleived Lie:</strong>`));
+                                detail.appendChild(createElement('pre', {'style': `white-space: pre-wrap; margin-top: .25em; padding: 0px;`}, character.believedLie));
+                            }
+                            if (character.contradictions && character.contradictions.length > 0) {
+                                detail.appendChild(createElement('p', {'style': `margin-bottom: .25em;`}, `<strong>Contradictions:</strong>`));
+                                detail.appendChild(createElement('pre', {'style': `white-space: pre-wrap; margin-top: .25em; padding: 0px;`}, character.contradictions));
+                            }
+                            if (character.description && character.description.length > 0) {
+                                detail.appendChild(createElement('p', {'style': `margin-bottom: .25em;`}, `<strong>Description:</strong>`));
+                                detail.appendChild(createElement('pre', {'style': `white-space: pre-wrap; margin-top: .25em; padding: 0px;`}, character.description));
+                            }
+                            if (character.timeline && character.timeline.length > 0) {
+                                detail.appendChild(createElement('p', {'style': `margin-bottom: .25em;`}, `<strong>Timeline:</strong>`));
+                                detail.appendChild(createElement('pre', {'style': `white-space: pre-wrap; margin-top: .25em; padding: 0px;`}, character.timeline));
+                            }
                         }
-                    });
                 }
 
                 function renderEditModeBody() {
