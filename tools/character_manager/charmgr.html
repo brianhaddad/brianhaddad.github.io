@@ -641,43 +641,63 @@
                     const animalIndex = (year - 1900) % 12;
                     const animal = animals[animalIndex];
 
+                    // Determine Trine
+                    const trineBase = animalIndex % 4;
+                    const trineCompanions = [];
+                    if (animals[trineBase] !== animal) {
+                        trineCompanions.push(animals[trineBase]);
+                    }
+                    if (animals[trineBase+4] !== animal) {
+                        trineCompanions.push(animals[trineBase+4]);
+                    }
+                    if (animals[trineBase+8] !== animal) {
+                        trineCompanions.push(animals[trineBase+8]);
+                    }
+                    const trineDescriptions = [
+                        'These are action-oriented characters who value success.',
+                        'These are methodical, endurance-driven characters.',
+                        'These characters are motivated by personal ideals and protection.',
+                        'These chracters value harmony and emotional intelligence.',
+                    ];
+                    const trineInfo = trineDescriptions[trineBase];
+
                     const animalData = {
                         'Rat': `A clever opportunist. This character is social, resourceful, and excellent ` +
                             `at business shrewdness. Their narrative strength lies in their problem-solving ` +
-                            `ability, though they can be overly ambitious.`,
+                            `ability, though they can be overly ambitious. The Opportunist. Intelligent, resourceful, adaptable.`,
                         'Ox': `A dependable worker. Honest and methodical, they stick with difficult tasks ` +
                             `until they are done right. They value stability and tradition, but may ` +
-                            `clash with others due to their stubbornness.`,
+                            `clash with others due to their stubbornness. The Worker. Diligent, strong, patient, methodical.`,
                         'Tiger': `A brave and competitive leader. They embody courage and unpredictability. ` +
                                 `In a story, they are the inspiring figures who enthusiastically embrace ` +
-                                `challenges but may act on impulsive tendencies.`,
+                                `challenges but may act on impulsive tendencies. The Leader. Brave, competitive, unpredictable.`,
                         'Rabbit': `A gentle diplomat. Sensitive and peace-loving, they excel in social ` +
                                 `situations where harmony is required. They avoid conflict but are ` +
-                                `highly artistic and intuitive friends.`,
+                                `highly artistic and intuitive friends. The Diplomat. Quiet, elegant, kind, responsible.`,
                         'Dragon': `A powerful visionary. Ambitious and charismatic, they dream big and ` +
                                 `possess the energy to pursue those dreams. They can be seen as ` +
-                                `arrogant, but their confidence often leads others to follow them.`,
+                                `arrogant, but their confidence often leads others to follow them. The Visionary. Powerful, ambitious, charismatic.`,
                         'Snake': `A wise strategist. Intelligent and enigmatic, they prefer strategy over ` +
                                 `impulse and value privacy. They have strong inner depth and ` +
-                                `transformation potential, often appearing sophisticated.`,
+                                `transformation potential, often appearing sophisticated. The Strategist. Wise, enigmatic, strategic, graceful.`,
                         'Horse': `An energetic free spirit. They thrive on independence and movement, ` +
                                 `disliking confinement or rigid routines. They are sociable and driven ` +
-                                `by passion, but can be impatient with slower peers.`,
+                                `by passion, but can be impatient with slower peers. The Free Spirit. Energetic, independent, animated.`,
                         'Goat': `A creative and compassionate soul. They value harmony and relationships ` +
                                 `over competition. Their narrative strength is nurturing energy and ` +
-                                `artistic inclination, though they may seem indecisive.`,
+                                `artistic inclination, though they may seem indecisive. The Artist. Compassionate, calm, creative.`,
                         'Monkey': `A sharp-witted inventor. Curious and innovative, they enjoy learning ` +
                                 `in dynamic environments. They succeed when they focus their ` +
-                                `creativity, though they can be cunning or mischievous.`,
+                                `creativity, though they can be cunning or mischievous. The Inventor. Sharp, curious, quick-witted.`,
                         'Rooster': `An honest perfectionist. Detail-oriented and disciplined, they value ` +
                                 `structure and clear communication. Their success comes from ` +
-                                `consistency, but their bluntness can sometimes cause social friction.`,
+                                `consistency, but their bluntness can sometimes cause social friction. The Perfectionist. Observant, courageous, punctual.`,
                         'Dog': `A loyal guardian. Principled and honest, they are deeply protective of ` +
                             `those they care about. They have a strong moral code and value fairness, ` +
-                            `making them the 'moral compass' of a character group.`,
+                            `making them the 'moral compass' of a character group. The Guardian. Honest, loyal, protective, fair.`,
                         'Pig': `A sincere humanitarian. Warm-hearted and emotionally open, they value ` +
                             `abundance and meaningful connections. Their strength lies in ` +
-                            `gratitude and kindness, though they may be too trusting.`
+                            `gratitude and kindness, though they may be too trusting. The Humanitarian. Sincere, generous, compassionat.`
                     };
 
                     const elementTraits = {
@@ -689,7 +709,8 @@
                     };
 
                     return `Chinese Zodiac: ${element} ${animal}. ${animalData[animal]} ` +
-                        `The ${element} element suggests they are especially ${elementTraits[element]}.`;
+                        `The ${element} element suggests they are especially ${elementTraits[element]}. ` +
+                        `The ${animal}'s trine companions are the ${trineCompanions[0]} and the ${trineCompanions[1]}. ${trineInfo}`;
                 };
 
                 /**
