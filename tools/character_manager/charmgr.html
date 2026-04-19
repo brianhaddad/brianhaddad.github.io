@@ -17,7 +17,6 @@
             </main>
         </div>
         <script>
-            //TODO: incorporate zodiac sign stuff? Could be a useful way to give characters a clear personality framework that many readers will understand easily.
             const AppModes = Object.freeze({
                 VIEW: Symbol('view'),
                 EDIT: Symbol('edit'),
@@ -328,13 +327,13 @@
                     form.appendChild(createElement('label', {'for': fn(i, 'timeline')}, `Character Timeline`));
                     form.appendChild(createElement('textarea', {'rows': 10, 'name': fn(i, 'timeline'), 'placeholder': `Significant events in the character's life...`}, character.timeline));
 
+                    //TODO: need to do more testing with this... it may not be working well but I did make a small change that might affect it
                     //Remove Button
                     const removeButton = createElement('input', {'type': 'button', 'value': `Remove`});
                     const myIndex = i;
                     removeButton.addEventListener('click', () => {
                         masterData.characters.splice(myIndex, 1);
-                        queueSave();
-                        renderViewOnly();
+                        queueSaveAndRedraw();
                     });
                     form.appendChild(removeButton);
                 }
