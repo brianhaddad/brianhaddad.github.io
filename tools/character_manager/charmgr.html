@@ -327,15 +327,16 @@
                     form.appendChild(createElement('label', {'for': fn(i, 'timeline')}, `Character Timeline`));
                     form.appendChild(createElement('textarea', {'rows': 10, 'name': fn(i, 'timeline'), 'placeholder': `Significant events in the character's life...`}, character.timeline));
 
-                    //TODO: need to do more testing with this... it may not be working well but I did make a small change that might affect it
+                    //TODO: need to do more testing with this...
+                    //It is DEFINITELY borked. Removing until I can fix it.
                     //Remove Button
-                    const removeButton = createElement('input', {'type': 'button', 'value': `Remove`});
-                    const myIndex = i;
-                    removeButton.addEventListener('click', () => {
-                        masterData.characters.splice(myIndex, 1);
-                        queueSaveAndRedraw();
-                    });
-                    form.appendChild(removeButton);
+                    //const removeButton = createElement('input', {'type': 'button', 'value': `Remove`});
+                    //const myIndex = i;
+                    //removeButton.addEventListener('click', () => {
+                    //    masterData.characters.splice(myIndex, 1);
+                    //    queueSaveAndRedraw();
+                    //});
+                    //form.appendChild(removeButton);
                 }
 
                 function queueSaveAndRedraw() {
@@ -619,7 +620,10 @@
                         'Fire',
                         'Earth',
                     ];
-                    const element = elements[Math.floor((year % 10)/2)];
+                    const yearFix = year < 0
+                        ? Math.ceil(Math.abs(year) / 10) * 10
+                        : 0;
+                    const element = elements[Math.floor(((year + yearFix) % 10)/2)];
                     
                     // Determine Animal (12-year cycle)
                     // 1900 was Year of the Rat
@@ -637,7 +641,10 @@
                         'Dog',
                         'Pig',
                     ];
-                    const animalIndex = (year - 1900) % 12;
+                    const baselineYear = year - 1900;
+                    const animalIndex = baselineYear < 0
+                        ? (baselineYear + (Math.ceil(Math.abs(baselineYear) / 12) * 12)) % 12
+                        : baselineYear % 12;
                     const animal = animals[animalIndex];
 
                     // Determine Trine
@@ -781,7 +788,7 @@
                     };
 
                     // Concatenate year, month+1, and day into a single integer string
-                    const fullString = `${profile.birthYear}${profile.birthMonth + 1}${profile.birthDay}`;
+                    const fullString = `${Math.abs(profile.birthYear)}${profile.birthMonth + 1}${profile.birthDay}`;
                     let total = 0;
                     for (let char of fullString) {
                         total += parseInt(char);
@@ -1032,10 +1039,10 @@
                 this.firstName = ``;
                 this.lastName = ``;
                 this.aliases = ``;
-                this.birthYear = 0;
+                this.birthYear = 1900;
                 this.birthMonth = 0;
-                this.birthDay = 0;
-                this.maxAge = 0;
+                this.birthDay = 1;
+                this.maxAge = 99;
                 this.role = ``;
                 this.drivers = ``;
                 this.injunctions = ``;
