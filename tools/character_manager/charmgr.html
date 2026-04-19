@@ -17,6 +17,7 @@
             </main>
         </div>
         <script>
+            //TODO: incorporate zodiac sign stuff? Could be a useful way to give characters a clear personality framework that many readers will understand easily.
             const AppModes = Object.freeze({
                 VIEW: Symbol('view'),
                 EDIT: Symbol('edit'),
@@ -29,6 +30,8 @@
 
             function App(divId) {
                 //constants
+                const assesser = new PersonalityAssesser();
+
                 const Months = Object.freeze([
                     'January',
                     'February',
@@ -176,6 +179,14 @@
                                 detail.appendChild(createElement('p', {'style': `margin-bottom: .25em;`}, `<strong>Beleived Lie:</strong>`));
                                 detail.appendChild(createElement('pre', {'style': `white-space: pre-wrap; margin-top: .25em; padding: 0px;`}, character.believedLie));
                             }
+                            if (character.thinksWants && character.thinksWants.length > 0) {
+                                detail.appendChild(createElement('p', {'style': `margin-bottom: .25em;`}, `<strong>What He/She Thinks He/She Wants:</strong>`));
+                                detail.appendChild(createElement('pre', {'style': `white-space: pre-wrap; margin-top: .25em; padding: 0px;`}, character.thinksWants));
+                            }
+                            if (character.reallyNeeds && character.reallyNeeds.length > 0) {
+                                detail.appendChild(createElement('p', {'style': `margin-bottom: .25em;`}, `<strong>What He/She Really Needs:</strong>`));
+                                detail.appendChild(createElement('pre', {'style': `white-space: pre-wrap; margin-top: .25em; padding: 0px;`}, character.reallyNeeds));
+                            }
                             if (character.contradictions && character.contradictions.length > 0) {
                                 detail.appendChild(createElement('p', {'style': `margin-bottom: .25em;`}, `<strong>Contradictions:</strong>`));
                                 detail.appendChild(createElement('pre', {'style': `white-space: pre-wrap; margin-top: .25em; padding: 0px;`}, character.contradictions));
@@ -188,7 +199,41 @@
                                 detail.appendChild(createElement('p', {'style': `margin-bottom: .25em;`}, `<strong>Timeline:</strong>`));
                                 detail.appendChild(createElement('pre', {'style': `white-space: pre-wrap; margin-top: .25em; padding: 0px;`}, character.timeline));
                             }
+                            renderAssessments(character, detail);
                         }
+                }
+
+                function renderAssessments(character, container) {
+                    const assessments = makeDetail(`${character.firstName}'s Personality Assessment`);
+                    container.appendChild(assessments);
+
+                    const western = makeFieldset('Western Zodiac');
+                    western.appendChild(createElement('p', {}, assesser.assessWesternZodiac(character)));
+                    assessments.appendChild(western);
+
+                    const chinese = makeFieldset('Chinese Zodiac');
+                    chinese.appendChild(createElement('p', {}, assesser.assessChineseZodiac(character)));
+                    assessments.appendChild(chinese);
+
+                    const celtic = makeFieldset('Celtic Tree Sign');
+                    celtic.appendChild(createElement('p', {}, assesser.assessCelticTree(character)));
+                    assessments.appendChild(celtic);
+
+                    const numerology = makeFieldset('Numerology');
+                    numerology.appendChild(createElement('p', {}, assesser.assessNumerology(character)));
+                    assessments.appendChild(numerology);
+
+                    const totem = makeFieldset('Native American Totem');
+                    totem.appendChild(createElement('p', {}, assesser.assessNativeAmericanTotem(character)));
+                    assessments.appendChild(totem);
+
+                    const egyptian = makeFieldset('Egyptian Zodiac');
+                    egyptian.appendChild(createElement('p', {}, assesser.assessEgyptianZodiac(character)));
+                    assessments.appendChild(egyptian);
+
+                    const mayan = makeFieldset('Mayan Zodiac');
+                    mayan.appendChild(createElement('p', {}, assesser.assessMayanZodiac(character)));
+                    assessments.appendChild(mayan);
                 }
 
                 function renderEditModeBody() {
@@ -262,6 +307,14 @@
                     //Believed Lie
                     form.appendChild(createElement('label', {'for': fn(i, 'believedLie')}, `Believed Lie`));
                     form.appendChild(createElement('textarea', {'rows': 5, 'name': fn(i, 'believedLie'), 'placeholder': `The Lie the Character Believes`}, character.believedLie));
+
+                    //Thinks Wants
+                    form.appendChild(createElement('label', {'for': fn(i, 'thinksWants')}, `Thinks Wants`));
+                    form.appendChild(createElement('textarea', {'rows': 5, 'name': fn(i, 'thinksWants'), 'placeholder': `What He/She Thinks He/She Wants`}, character.thinksWants));
+
+                    //Really Needs
+                    form.appendChild(createElement('label', {'for': fn(i, 'reallyNeeds')}, `Really Needs`));
+                    form.appendChild(createElement('textarea', {'rows': 5, 'name': fn(i, 'reallyNeeds'), 'placeholder': `What He/She Really Needs`}, character.reallyNeeds));
 
                     //Contradictions
                     form.appendChild(createElement('label', {'for': fn(i, 'contradictions')}, `Character Contradictions and Hypocricies`));
@@ -384,6 +437,10 @@
 
                             c.believedLie = document.getElementsByName(fn(i, 'believedLie'))[0].value;
 
+                            c.thinksWants = document.getElementsByName(fn(i, 'thinksWants'))[0].value;
+
+                            c.reallyNeeds = document.getElementsByName(fn(i, 'reallyNeeds'))[0].value;
+
                             c.contradictions = document.getElementsByName(fn(i, 'contradictions'))[0].value;
 
                             c.description = document.getElementsByName(fn(i, 'description'))[0].value;
@@ -439,6 +496,511 @@
                 }
             }
 
+            function PersonalityAssesser() {
+                // Helper to determine range
+                function check(m, d, startM, startD, endM, endD) {
+                    const val = m * 100 + d;
+                    const start = startM * 100 + startD;
+                    const end = endM * 100 + endD;
+                    if (start > end) { // Wraps around year end
+                        return val >= start || val <= end;
+                    }
+                    return val >= start && val <= end;
+                };
+
+                /**
+                 * Assesses the character's Western Zodiac sign based on birth month and day.
+                 * Returns a detailed narrative profile for use in character drafting.
+                 */
+                this.assessWesternZodiac = function(profile) {
+                    const m = profile.birthMonth; // 0-indexed
+                    const d = profile.birthDay;   // 1-indexed
+
+                    if (check(m, d, 2, 21, 3, 19)) {
+                        return `Aries (The Ram, The Catalyst): This character is a natural engine of action. They are likely ` +
+                            `to be the one who initiates the plot, possessing a fiery personality and a ` +
+                            `loyalty to the underdog. However, their tendency to jump in 'feet first' ` +
+                            `without checking facts makes them prone to impulsive mistakes. To make them ` +
+                            `feel authentic, give them a driver for leadership but a contradiction of ` +
+                            `belligerence when their authority is questioned. Courageous, energetic, pioneering. Impulsive, stubborn, belligerent.`;
+                    }
+                    if (check(m, d, 3, 20, 4, 20)) {
+                        return `Taurus (The Bull, The Anchor): A character defined by immense stamina and a practical, ` +
+                            `methodical nature. They value simplicity and functionality. They are ` +
+                            `excellent listeners but can be incredibly stubborn, often not knowing when ` +
+                            `it is time to give ground or quit. Use this character as a stabilizing ` +
+                            `force who might occasionally frustrate others with their self-indulgence. Reliable, diligent, patient. Self-indulgent, inflexible, slow to change.`;
+                    }
+                    if (check(m, d, 4, 21, 5, 20)) {
+                        return `Gemini (The Twins, The Messenger): Characterized by a high degree of adaptability and a ` +
+                            `clever, entertaining persona. They can blend into any social group, but ` +
+                            `this 'mask' often hides an underlying need for deep emotional connection. ` +
+                            `Their responses are unpredictable, and they may struggle with shallow ` +
+                            `engagements or sudden mood swings that confuse their peers. Versatile, witty, imaginative. Inconsistent, shallow, anxious.`;
+                    }
+                    if (check(m, d, 5, 21, 6, 22)) {
+                        return `Cancer (The Crab, The Protector): A traditionalist who appears composed on the surface ` +
+                            `but hides a turmoil of shifting moods underneath. They are fiercely loyal ` +
+                            `and protective of their home life. This character is easily hurt and ` +
+                            `prone to periods of withdrawal. Their narrative role is often that of ` +
+                            `the caregiver whose sensitivity is both their greatest strength and ` +
+                            `their most significant vulnerability. Nurturing, loyal, sympathetic. Moody, overly sensitive, easily hurt.`;
+                    }
+                    if (check(m, d, 6, 23, 7, 22)) {
+                        return `Leo (The Lion, The Sovereign): Exuberant and powerful, this character was born to lead. ` +
+                            `They are brave and intuitive, but their bossiness often hides a ` +
+                            `sensitive soul and a need for validation. To make them believable, ` +
+                            `show their charismatic leadership in public while revealing their ` +
+                            `underlying insecurities in private moments. Charismatic, brave, generous. Arrogant, domineering, vain.`;
+                    }
+                    if (check(m, d, 7, 23, 8, 22)) {
+                        return `Virgo (The Virgin, The Analyst): An analytical and sophisticated character who loathes ` +
+                            `being let down. They are knowledge-seekers who listen more than they ` +
+                            `speak. However, they can be short-tempered and self-serving if they ` +
+                            `perceive a lack of order or competence in those around them. Use them ` +
+                            `as the character who keeps the group on track with detail-oriented planning. Precise, hardworking, sophisticated. Critical, picky, prone to worry.`;
+                    }
+                    if (check(m, d, 8, 23, 9, 22)) {
+                        return `Libra (The Scales, The Diplomat): Driven by a desire for balance and harmony, this ` +
+                            `character is a 'dreamer' rather than a 'doer.' They surround themselves ` +
+                            `with beauty and avoid conflict, but their indecisiveness can lead to ` +
+                            `stagnation. They are compassionate and selfless, yet they often over-reach ` +
+                            `themselves and run out of steam before a project is finished. Charming, equitable, idealistic. Indecisive, naive, easily overwhelmed.`;
+                    }
+                    if (check(m, d, 9, 23, 10, 21)) {
+                        return `Scorpio (The Scorpion, The Strategist): A cool, confident strategist who achieves ` +
+                            `anything they set their mind to. They are secretive and single-minded, ` +
+                            `possessing an intense passion that can be both a blessing and a curse. ` +
+                            `In a story, they are the character who never forgets a perceived treachery ` +
+                            `and will wait years for the perfect moment to settle a score. Intense, passionate, insightful. Suspicious, secretive, vengeful.`;
+                    }
+                    if (check(m, d, 10, 22, 11, 21)) {
+                        return `Sagittarius (The Archer, The Explorer): A philosophical trailblazer who values ` +
+                            `freedom above all. They are brutally honest, which others may mistake ` +
+                            `for heartlessness, though they are actually quite empathetic. They ` +
+                            `focus intensely but lack patience, often shying away from commitment ` +
+                            `to maintain their unconstrained lifestyle. Adventurous, honest, philosophical. Tactless, impatient, restless.`;
+                    }
+                    if (check(m, d, 11, 22, 0, 19)) {
+                        return `Capricorn (The Goat, The Architect): Practical, intellectual, and systematic. This ` +
+                            `character maintains order and stability through sheer perseverance. ` +
+                            `They are rule-followers who gravitate toward tradition. Their ` +
+                            `internal conflict often involves a tendency to dwell on the negative ` +
+                            `and a stubborn refusal to accept unconventional methods. Disciplined, responsible, practical. Unforgiving, cold, pessimistic.`;
+                    }
+                    if (check(m, d, 0, 20, 1, 18)) {
+                        return `Aquarius (The Water Bearer, The Visionary): A quiet, highly intelligent character ` +
+                            `who uses unusual methods to achieve their goals. They are mysterious ` +
+                            `and adaptable, actively dodging labels. While they are honest and ` +
+                            `loyal to causes, they can be prone to laziness or getting lost in ` +
+                            `philosophical musings rather than taking practical action. Intellectual, independent, altruistic. Detached, unpredictable, eccentric.`;
+                    }
+                    if (check(m, d, 1, 19, 2, 20)) {
+                        return `Pisces (The Fish, The Dreamer): A compassionately unselfish knowledge-gatherer. ` +
+                            `They prefer the limelight of others and are happy to work behind ` +
+                            `the scenes. However, their trusting and caring nature makes them ` +
+                            `gullible, and they may be overcautious to the point of ` +
+                            `escapism when faced with real-world aggression. Compassionate, artistic, intuitive. Escapist, irresolute, gullible.`;
+                    }
+                    return `Unknown Western Sign`;
+                };
+
+                /**
+                 * Assesses the character's Chinese Zodiac based on birth year.
+                 * Includes element calculation for granular character modulation.
+                 */
+                this.assessChineseZodiac = function(profile) {
+                    const year = profile.birthYear;
+                    
+                    // Determine Element (Last digit logic)
+                    const elements = [
+                        'Metal',
+                        'Water',
+                        'Wood',
+                        'Fire',
+                        'Earth',
+                    ];
+                    const element = elements[Math.floor((year % 10)/2)];
+                    
+                    // Determine Animal (12-year cycle)
+                    // 1900 was Year of the Rat
+                    const animals = [
+                        'Rat',
+                        'Ox',
+                        'Tiger',
+                        'Rabbit',
+                        'Dragon',
+                        'Snake',
+                        'Horse',
+                        'Goat',
+                        'Monkey',
+                        'Rooster',
+                        'Dog',
+                        'Pig',
+                    ];
+                    const animalIndex = (year - 1900) % 12;
+                    const animal = animals[animalIndex];
+
+                    const animalData = {
+                        'Rat': `A clever opportunist. This character is social, resourceful, and excellent ` +
+                            `at business shrewdness. Their narrative strength lies in their problem-solving ` +
+                            `ability, though they can be overly ambitious.`,
+                        'Ox': `A dependable worker. Honest and methodical, they stick with difficult tasks ` +
+                            `until they are done right. They value stability and tradition, but may ` +
+                            `clash with others due to their stubbornness.`,
+                        'Tiger': `A brave and competitive leader. They embody courage and unpredictability. ` +
+                                `In a story, they are the inspiring figures who enthusiastically embrace ` +
+                                `challenges but may act on impulsive tendencies.`,
+                        'Rabbit': `A gentle diplomat. Sensitive and peace-loving, they excel in social ` +
+                                `situations where harmony is required. They avoid conflict but are ` +
+                                `highly artistic and intuitive friends.`,
+                        'Dragon': `A powerful visionary. Ambitious and charismatic, they dream big and ` +
+                                `possess the energy to pursue those dreams. They can be seen as ` +
+                                `arrogant, but their confidence often leads others to follow them.`,
+                        'Snake': `A wise strategist. Intelligent and enigmatic, they prefer strategy over ` +
+                                `impulse and value privacy. They have strong inner depth and ` +
+                                `transformation potential, often appearing sophisticated.`,
+                        'Horse': `An energetic free spirit. They thrive on independence and movement, ` +
+                                `disliking confinement or rigid routines. They are sociable and driven ` +
+                                `by passion, but can be impatient with slower peers.`,
+                        'Goat': `A creative and compassionate soul. They value harmony and relationships ` +
+                                `over competition. Their narrative strength is nurturing energy and ` +
+                                `artistic inclination, though they may seem indecisive.`,
+                        'Monkey': `A sharp-witted inventor. Curious and innovative, they enjoy learning ` +
+                                `in dynamic environments. They succeed when they focus their ` +
+                                `creativity, though they can be cunning or mischievous.`,
+                        'Rooster': `An honest perfectionist. Detail-oriented and disciplined, they value ` +
+                                `structure and clear communication. Their success comes from ` +
+                                `consistency, but their bluntness can sometimes cause social friction.`,
+                        'Dog': `A loyal guardian. Principled and honest, they are deeply protective of ` +
+                            `those they care about. They have a strong moral code and value fairness, ` +
+                            `making them the 'moral compass' of a character group.`,
+                        'Pig': `A sincere humanitarian. Warm-hearted and emotionally open, they value ` +
+                            `abundance and meaningful connections. Their strength lies in ` +
+                            `gratitude and kindness, though they may be too trusting.`
+                    };
+
+                    const elementTraits = {
+                        'Metal': `determined and strong-minded`,
+                        'Water': `intuitive and persuasive`,
+                        'Wood': `creative and cooperative`,
+                        'Fire': `bold and ambitious`,
+                        'Earth': `steady and practical`,
+                    };
+
+                    return `Chinese Zodiac: ${element} ${animal}. ${animalData[animal]} ` +
+                        `The ${element} element suggests they are especially ${elementTraits[element]}.`;
+                };
+
+                /**
+                 * Assesses the character's Celtic Tree sign based on lunar cycles.
+                 * Returns an archetype-based description focused on the character's 'soul spirit.'
+                 */
+                this.assessCelticTree = function(profile) {
+                    const m = profile.birthMonth;
+                    const d = profile.birthDay;
+
+                    if (check(m, d, 11, 24, 0, 20)) {
+                        return `Birch (The Achiever): A motivated leader who is unstoppable and resilient. They thrive in tough environments but may need to be reminded to chill out.`;
+                    }
+                    if (check(m, d, 0, 21, 1, 17)) {
+                        return `Rowan (The Thinker): A curious, insightful philosopher who is quietly influential. They often feel misunderstood but have a natural ability to transform situations.`;
+                    }
+                    if (check(m, d, 1, 18, 2, 17)) {
+                        return `Ash (The Enchanter): A creative free-thinker and artist. They are empathetic and in tune with nature, but can be moody or withdrawn into their own world.`;
+                    }
+                    if (check(m, d, 2, 18, 3, 14)) {
+                        return `Alder (The Trailblazer): A charming pathfinder and mover-and-shaker. They are infectious in their self-assurance and dislike wasting time.`;
+                    }
+                    if (check(m, d, 3, 15, 4, 12)) {
+                        return `Willow (The Observer): Highly intelligent and creative with a realistic perspective on life cycles. They are patient but may hold themselves back out of fear.`;
+                    }
+                    if (check(m, d, 4, 13, 5, 9)) {
+                        return `Hawthorn (The Illusionist): A character who is not at all what they appear to be. They carry a fiery internal passion while maintaining a seemingly average life.`;
+                    }
+                    if (check(m, d, 5, 10, 6, 7)) {
+                        return `Oak (The Stabilizer): A generous giant and great defender of the voiceless. They are nurturing and deeply respectful of history and tradition.`;
+                    }
+                    if (check(m, d, 6, 8, 7, 4)) {
+                        return `Holly (The Ruler): A noble, confident leader who handles difficulties effortlessly. They are highly intelligent and goal-oriented.`;
+                    }
+                    if (check(m, d, 7, 5, 8, 1)) {
+                        return `Hazel (The Knower): Knowledge-thirsty and detail-oriented. They are highly organized and value accuracy, often appearing very wise.`;
+                    }
+                    if (check(m, d, 8, 2, 8, 29)) {
+                        return `Vine (The Equalizer): Adaptive and unpredictable. They have strong spirits and elegant tastes, often acting as the stabilizer between opposing forces.`;
+                    }
+                    if (check(m, d, 8, 30, 9, 27)) {
+                        return `Ivy (The Survivor): Restless but optimistic, they are collaborative spirits who thrive through social connection and grit.`;
+                    }
+                    if (check(m, d, 9, 28, 10, 23)) {
+                        return `Reed (The Inquisitor): A willful and compassionate truth-seeker. They are drawn to investigating mysteries and have a strong inner willpower.`;
+                    }
+                    if (check(m, d, 10, 24, 11, 23)) {
+                        return `Elder (The Seeker): A free-spirited resilient character who is not afraid of risks. They are honest and self-opinionated, always reaching for the light.`;
+                    }
+                    return `Unknown Tree Sign`;
+                };
+
+                /**
+                 * Calculates the character's Life Path Number and returns a 'destiny' profile.
+                 * Uses the sum-and-reduce method for all digits of the birth date.
+                 */
+                this.assessNumerology = function(profile) {
+                    const sumDigits = (num) => {
+                        let s = 0;
+                        while (num > 0 || s > 9) {
+                            if (num === 0) {
+                                num = s;
+                                s = 0;
+                            }
+                            s += num % 10;
+                            num = Math.floor(num / 10);
+                        }
+                        return s;
+                    };
+
+                    // Concatenate year, month+1, and day into a single integer string
+                    const fullString = `${profile.birthYear}${profile.birthMonth + 1}${profile.birthDay}`;
+                    let total = 0;
+                    for (let char of fullString) {
+                        total += parseInt(char);
+                    }
+                    
+                    // Check for Master Numbers before final reduction
+                    let lifePath;
+                    if (total === 11 || total === 22 || total === 33) {
+                        lifePath = total;
+                    } else {
+                        lifePath = sumDigits(total);
+                    }
+
+                    const profiles = {
+                        1: `The Leader: A self-starter who values freedom and independence. They must ` +
+                        `learn to embrace their individuality and avoid becoming domineering.`,
+                        2: `The Peacemaker: A sensitive soul who leads with both heart and mind. They ` +
+                        `thrive in partnership but must avoid over-dependence on others.`,
+                        3: `The Communicator: Emotional and charismatic with a lifeblood of creativity. ` +
+                        `They must learn to avoid overdramatizing problems or unnecessary gossip.`,
+                        4: `The Builder: Grounded and systematic backbone of the story. They value ` +
+                        `structure and stability, but must avoid becoming overly rigid or inflexible.`,
+                        5: `The Traveler: An adventurer who loves change and variety. Their infectious ` +
+                        `energy inspires others, but they must guard against restlessness and escapism.`,
+                        6: `The Supporter: A caregiver and nurturer who is a pillar for others. They ` +
+                        `strive for harmony but must learn to set healthy boundaries for themselves.`,
+                        7: `The Seeker: An introspective investigator driven by a quest for truth. They ` +
+                        `often find the emotional realm awkward and prefer spiritual or research pursuits.`,
+                        8: `The Powerhouse: Ambitious and strong-willed with a talent for business. They ` +
+                        `achieve significant success but must not let material goals overshadow empathy.`,
+                        9: `The Humanitarian: Motivated by causes larger than themselves. They see the ` +
+                        `big picture but must learn to let go of past misfortunes and move forward.`,
+                        11: `The Visionary: Possesses high intuition and serves as an inspiration. They ` +
+                            `are sensitive to the point of being psychic but struggle with nervous tension.`,
+                        22: `The Master Builder: Capable of achieving great success and leaving a ` +
+                            `lasting legacy. They manifest big ideas but often feel overwhelmed by ` +
+                            `their own potential.`,
+                        33: `The Teacher: One of the most powerful numbers; a source of compassion ` +
+                            `and service who must avoid falling into a martyr complex.`
+                    };
+
+                    return `Life Path ${lifePath}: ${profiles[lifePath] || `Undefined Destiny`}`;
+                };
+
+                /**
+                 * Assesses the character's Native American Birth Totem.
+                 * Returns a summary of the character's elemental clan and instinctual traits.
+                 */
+                this.assessNativeAmericanTotem = function(profile) {
+                    const m = profile.birthMonth;
+                    const d = profile.birthDay;
+
+                    if (check(m, d, 11, 22, 0, 19)) {
+                        return `Goose (Turtle Clan): A hardworking and serious character ` +
+                                `who values integrity and preservation. They are ambitious ` +
+                                `but must work on expressing their sociability.`;
+                    }
+                    if (check(m, d, 0, 20, 1, 18)) {
+                        return `Otter (Butterfly Clan): A playful and unconventional ` +
+                                `visionary. They can be seen as rebellious but form ` +
+                                `strong connections with family and friends.`;
+                    }
+                    if (check(m, d, 1, 19, 2, 20)) {
+                        return `Wolf (Frog Clan): A loyal yet independent character. ` +
+                                `They have keen instincts and thrive when given space, ` +
+                                `but may speak harshly when feeling threatened.`;
+                    }
+                    if (check(m, d, 2, 21, 3, 19)) {
+                        return `Falcon (Thunderbird Clan): Fearless and discerning. ` +
+                                `They embody the leader who wants to inspire and move ` +
+                                `people, though they may lack patience.`;
+                    }
+                    if (check(m, d, 3, 20, 4, 20)) {
+                        return `Beaver (Turtle Clan): Industrious and persistent. ` +
+                                `They construct their lives with innovation but ` +
+                                `can be overly stubborn and resistant to change.`;
+                    }
+                    if (check(m, d, 4, 21, 5, 20)) {
+                        return `Deer (Butterfly Clan): Graceful and communicative. ` +
+                                `They have a strong connection to nature and a healthy ` +
+                                `sense of humor, though they can be inconsistent.`;
+                    }
+                    if (check(m, d, 5, 21, 6, 21)) {
+                        return `Woodpecker (Frog Clan): Nurturing and emotional. ` +
+                                `They prioritize home and emotional security, acting as ` +
+                                `the empathic stabilizer in their social pack.`;
+                    }
+                    if (check(m, d, 6, 22, 7, 21)) {
+                        return `Salmon (Thunderbird Clan): Confident and purposeful. ` +
+                                `They are natural leaders with high energy, often ` +
+                                `attracting others through their vibrant creative force.`;
+                    }
+                    if (check(m, d, 7, 22, 8, 21)) {
+                        return `Bear (Turtle Clan): Practical and modest. They are ` +
+                                `diligent workers with high ability to judge, ` +
+                                `though they can be fussy or skeptical of others.`;
+                    }
+                    if (check(m, d, 8, 22, 9, 22)) {
+                        return `Raven (Butterfly Clan): Charming and idealistic. ` +
+                                `They navigate social groups with diplomacy, ` +
+                                `striving for harmony even if it leads to indecision.`;
+                    }
+                    if (check(m, d, 9, 23, 10, 22)) {
+                        return `Snake (Frog Clan): Strategy-driven and intuitive. ` +
+                                `They are ambitious and impulsive, often seeking ` +
+                                `inner transformation and powerful change.`;
+                    }
+                    if (check(m, d, 10, 23, 11, 21)) {
+                        return `Owl (Thunderbird Clan): Wise and inquisitive. They ` +
+                                `value their inner world above all and act as ` +
+                                `natural advisers and teachers to their peers.`;
+                    }
+                    
+                    return `Unknown Totem`;
+                };
+
+                /**
+                 * Assesses the character based on the Ancient Egyptian Zodiac.
+                 * Handles the overlapping and multiple date ranges for each deity.
+                 */
+                this.assessEgyptianZodiac = function(profile) {
+                    const m = profile.birthMonth;
+                    const d = profile.birthDay;
+
+                    if (check(m, d, 0, 1, 0, 7) || check(m, d, 5, 19, 5, 28) || check(m, d, 8, 1, 8, 7) || check(m, d, 10, 18, 10, 26)) {
+                        return `Nile: This character is practical and peaceful. They are logical thinkers ` +
+                            `who bring stability to chaos, though they struggle with mood swings.`;
+                    }
+                    if (check(m, d, 0, 8, 0, 21) || check(m, d, 1, 1, 1, 11)) {
+                        return `Amun-Ra: A natural leader and motivator. They are confident and optimistic, ` +
+                            `striving to leave a mark on the world, but can be difficult to know intimately.`;
+                    }
+                    if (check(m, d, 0, 22, 0, 31) || check(m, d, 8, 8, 8, 22)) {
+                        return `Mut: Loyal and nurturing. This character is often an advocate or educator ` +
+                            `with deep emotional strength, though they are shy and slow to open up.`;
+                    }
+                    if (check(m, d, 1, 12, 1, 29) || check(m, d, 7, 20, 7, 31)) {
+                        return `Geb: Grounded and sensitive. They are empathetic friends who easily discern ` +
+                            `others' moods. They make great writers but may struggle with anxiety.`;
+                    }
+                    if (check(m, d, 2, 1, 2, 10) || check(m, d, 10, 27, 11, 18)) {
+                        return `Osiris: A character with a dual nature—strong yet vulnerable. They are ` +
+                            `intelligent entrepreneurs who dislike following orders and put themselves first.`;
+                    }
+                    if (check(m, d, 2, 11, 2, 31) || check(m, d, 9, 18, 9, 29) || check(m, d, 11, 19, 11, 31)) {
+                        return `Isis: Honorable and sociable. They are charming individuals with a ` +
+                            `great sense of humor, often acting as the life of the party.`;
+                    }
+                    if (check(m, d, 3, 1, 3, 19) || check(m, d, 10, 8, 10, 17)) {
+                        return `Thoth: Wise and energetic. They are curious lifelong learners and problem-solvers ` +
+                            `who are in constant search for ways to improve themselves.`;
+                    }
+                    if (check(m, d, 3, 20, 4, 7) || check(m, d, 7, 12, 7, 19)) {
+                        return `Horus: Brave and visionary. They are practical, hardworking leaders who ` +
+                            `uplift and inspire others, often focusing on broad ambitious goals.`;
+                    }
+                    if (check(m, d, 4, 8, 4, 27) || check(m, d, 5, 29, 6, 13)) {
+                        return `Anubis: Introverted and deeply thinking. They enjoy solitude to fuel their ` +
+                            `creativity and spiritual awareness, acting as loyal seekers of knowledge.`;
+                    }
+                    if (check(m, d, 4, 28, 5, 18) || check(m, d, 8, 28, 9, 2)) {
+                        return `Seth: Bold and adventurous. This character craves change and excitement, ` +
+                            `acting as a perfectionist who thrives when they are the center of attention.`;
+                    }
+                    if (check(m, d, 6, 14, 6, 28) || check(m, d, 8, 23, 8, 27) || check(m, d, 9, 3, 9, 17)) {
+                        return `Bastet: Charming and grace-seeking. They avoid conflict through intuition ` +
+                            `and look for balance in all their relationships.`;
+                    }
+                    if (check(m, d, 6, 29, 7, 11) || check(m, d, 9, 30, 10, 7)) {
+                        return `Sekhmet: Disciplined and fair. They have a strong sense of justice and are ` +
+                            `fierce defenders of their causes, possessing a dual easy-going side.`;
+                    }
+                    return `Unknown Egyptian Sign`;
+                };
+
+                /**
+                 * Assesses the character based on the Modern Mayan 13-Sign Lunar Zodiac.
+                 */
+                this.assessMayanZodiac = function(profile) {
+                    const m = profile.birthMonth;
+                    const d = profile.birthDay;
+
+                    if (check(m, d, 11, 13, 0, 9)) {
+                        return `Lizard: Positive and cheerful, this character hates ` +
+                               `disorder. They prefer a low profile but radiate good vibes.`;
+                    }
+                    if (check(m, d, 0, 10, 1, 6)) {
+                        return `Monkey: Firm in difficult situations and excellent at ` +
+                               `diplomacy. They are great listeners and ambassadors.`;
+                    }
+                    if (check(m, d, 1, 7, 2, 6)) {
+                        return `Falcon: Sharp and strategic. They have a discerning ` +
+                               `personality but may lack patience and come off as rude.`;
+                    }
+                    if (check(m, d, 2, 7, 3, 3)) {
+                        return `Jaguar: The most passionate sign. They love risk and ` +
+                               `illegality; the more difficult the goal, the better.`;
+                    }
+                    if (check(m, d, 3, 4, 4, 1)) {
+                        return `Fox: Dedicated to service and solidarity. They are calm ` +
+                               `caregivers but can be irascible if truly angered.`;
+                    }
+                    if (check(m, d, 4, 2, 4, 29)) {
+                        return `Serpent: Elegant, cultured, and ambitious. They have ` +
+                               `a lot of presence and a nature that is sensual or flirtatious.`;
+                    }
+                    if (check(m, d, 4, 30, 5, 26)) {
+                        return `Squirrel: Dreamy and talkative. Their sympathy makes ` +
+                               `it easy for them to make friends, but they talk too much.`;
+                    }
+                    if (check(m, d, 5, 27, 6, 25)) {
+                        return `Turtle: A shy home-lover. They enjoy solitude and family ` +
+                               `time, preferring smooth relationships that go step by step.`;
+                    }
+                    if (check(m, d, 6, 26, 7, 22)) {
+                        return `Bat: A dominant, charismatic leader. They have high ` +
+                               `energy and a clear devotion to their own freedom.`;
+                    }
+                    if (check(m, d, 7, 23, 8, 19)) {
+                        return `Scorpio: Idealistic and active. They have rigid ideas ` +
+                               `and feel uncomfortable with changes or new paradigms.`;
+                    }
+                    if (check(m, d, 8, 20, 9, 17)) {
+                        return `Deer: Sensitive and sentimental. They eternally live ` +
+                               `in love and are closely linked to art and willpower.`;
+                    }
+                    if (check(m, d, 9, 18, 10, 14)) {
+                        return `Barn Owl: Intuitive and wise. They are spiritual ` +
+                               `advisers, though their temperament can be quite volatile.`;
+                        }
+                    if (check(m, d, 10, 15, 11, 12)) {
+                        return `Peacock: Unique and compelling. They need to excel ` +
+                               `and love to be the center of attention in any room.`;
+                        }
+                    
+                    return `Unknown Mayan Sign`;
+                };
+            }
+
             function AppData() {
                 this.currentYear = 2001;
                 this.showLivingOnly = false;
@@ -458,6 +1020,8 @@
                 this.drivers = ``;
                 this.injunctions = ``;
                 this.believedLie = ``;
+                this.thinksWants = ``;
+                this.reallyNeeds = ``;
                 this.contradictions = ``;
                 this.description = ``;
                 this.timeline = ``;
