@@ -230,6 +230,10 @@
                     celtic.appendChild(createElement('p', {}, assesser.assessCelticTree(character)));
                     assessments.appendChild(celtic);
 
+                    const japaneseBloodType = makeFieldset('Ketsueki-gata');
+                    japaneseBloodType.appendChild(createElement('p', {}, assesser.assessBloodType(character)));
+                    assessments.appendChild(japaneseBloodType);
+
                     const numerology = makeFieldset('Numerology');
                     numerology.appendChild(createElement('p', {}, assesser.assessNumerology(character)));
                     assessments.appendChild(numerology);
@@ -786,6 +790,40 @@
                         return `Elder (The Seeker): A free-spirited resilient character who is not afraid of risks. They are honest and self-opinionated, always reaching for the light.`;
                     }
                     return `Unknown Tree Sign`;
+                };
+
+                /**
+                 * Assesses the character based on Japanese Blood Type Theory.
+                 * Requires an additional profile.bloodType property (A, B, AB, O).
+                 */
+                this.assessBloodType = function(profile) {
+                    const bt = (profile.bloodType || ``).replace(/[^a-z0-9]/gi, '').toUpperCase();
+                    
+                    const data = {
+                        'A': `The Kind Organizer. This character is the most sought-after employee—neat, ` +
+                            `fastidious, and reliable. They are peacekeepers who avoid arguments, ` +
+                            `but they get stressed easily and may hide their true opinions to ` +
+                            `maintain the status quo. In romance, they are sensitive and take ` +
+                            `time to open up. Earnest, patient, reliable, but can be stubborn and tense. ` +
+                            `Detail-oriented (Accountant, Librarian).`,
+                        'B': `The Passionate Rule-breaker. A creative and curious individual with a ` +
+                            `'my-pace' mindset. They are innovative problem-solvers but can be ` +
+                            `selfish and irresponsible. They lose interest quickly once the ` +
+                            `novelty fades and are the least likely to suffer a broken heart. ` +
+                            `Creative, passionate, active, but selfish and erratic. Innovator (Artist, Journalist).`,
+                        'AB': `The Peculiar Dreamer. A mix of A and B, seen as a 'dual personality.' ` +
+                            `They are rational and level-headed, yet spiritual and mysterious. ` +
+                            `While sensitive, they are confident in chasing their dreams. They ` +
+                            `value independence and hate feeling suffocated in relationships. ` +
+                            `Rational yet spiritual; dual-personality package. Professional (Lawyer, Teacher).`,
+                        'O': `The Optimistic Leader. Resilient and realistic, they do not 'sweat the small ` +
+                            `stuff.' They are natural leaders who enjoy looking after others. ` +
+                            `However, their lack of attention to detail can be read as rudeness, ` +
+                            `and they are frequently late. They are 'hopeless romantics' at heart. ` +
+                            `Confident, resilient, realistic, but insensitive to detail. Executive (CEO, Politician).`,
+                    };
+
+                    return data[bt] || `Blood type information not found in profile.`;
                 };
 
                 /**
