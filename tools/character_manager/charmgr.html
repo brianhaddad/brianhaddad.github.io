@@ -67,6 +67,7 @@
                 let queueViewOnlyRedraw = false;
                 let masterData = new AppData();
                 let viewMode = AppModes.VIEW;
+                let currentId = 0;
 
                 this.loadFromFile = async (id) => {
                     const data = await loadJsonFiles(id);
@@ -264,6 +265,10 @@
                     addCharacterButton.addEventListener('click', () => {
                         characterListContainer.appendChild(createElement('hr'));
                         const newCharacter = new CharacterProfile();
+                        if (masterData.characters.length > 0) {
+                            currentId = Math.max(...masterData.characters.map(x => x.id)) + 1;
+                        }
+                        newCharacter.id = currentId;
                         masterData.characters.push(newCharacter);
                         renderCharacterEditPanel(characterListContainer, newCharacter, masterData.characters.length - 1);
                         queueSave();
@@ -271,7 +276,8 @@
                     viewDiv.appendChild(addCharacterButton);
                 }
 
-                function renderCharacterEditPanel(container, character, i) {
+                function renderCharacterEditPanel(container, character) {
+                    const i = character.id;
                     const section = createElement('section');
                     container.appendChild(section);
 
@@ -347,16 +353,19 @@
                     form.appendChild(createElement('label', {'for': fn(i, 'timeline')}, `Character Timeline`));
                     form.appendChild(createElement('textarea', {'rows': 10, 'name': fn(i, 'timeline'), 'placeholder': `Significant events in the character's life...`}, character.timeline));
 
-                    //TODO: need to do more testing with this...
-                    //It is DEFINITELY borked. Removing until I can fix it.
                     //Remove Button
-                    //const removeButton = createElement('input', {'type': 'button', 'value': `Remove`});
-                    //const myIndex = i;
-                    //removeButton.addEventListener('click', () => {
-                    //    masterData.characters.splice(myIndex, 1);
-                    //    queueSaveAndRedraw();
-                    //});
-                    //form.appendChild(removeButton);
+                    const removeButton = createElement('input', {'type': 'button', 'value': `Remove`, 'id': fn(i, 'removeButton')});
+                    removeButton.addEventListener('click', (e) => {
+                        const myId = parseInt(e.target.id.split('-')[0]);
+                        const me = masterData.characters.find(x => x.id === myId);
+                        if (me && confirm(`Are you sure you want to remove this character? The character data will be gone for good and cannot be recovered.`)) {
+                            const myIndex = masterData.characters.indexOf(me);
+                            console.log(myIndex, masterData.characters[myIndex]);
+                            masterData.characters.splice(myIndex, 1);
+                            queueSaveAndRedraw();
+                        }
+                    });
+                    form.appendChild(removeButton);
                 }
 
                 function queueSaveAndRedraw() {
@@ -434,7 +443,8 @@
 
                 function loadInMasterData() {
                     if (viewMode === AppModes.EDIT) {
-                        masterData.characters.forEach((c, i) => {
+                        masterData.characters.forEach((c) => {
+                            const i = c.id;
                             c.firstName = document.getElementsByName(fn(i, 'firstName'))[0].value;
                             c.lastName = document.getElementsByName(fn(i, 'lastName'))[0].value;
                             c.aliases = document.getElementsByName(fn(i, 'aliases'))[0].value;
@@ -1075,11 +1085,11 @@
                     if (check(m, d, 9, 18, 10, 14)) {
                         return `Barn Owl: Intuitive and wise. They are spiritual ` +
                                `advisers, though their temperament can be quite volatile.`;
-                        }
+                    }
                     if (check(m, d, 10, 15, 11, 12)) {
                         return `Peacock: Unique and compelling. They need to excel ` +
                                `and love to be the center of attention in any room.`;
-                        }
+                    }
                     
                     return `Unknown Mayan Sign`;
                 };
@@ -1093,6 +1103,7 @@
             }
 
             function CharacterProfile() {
+                this.id = 0;
                 this.firstName = ``;
                 this.lastName = ``;
                 this.aliases = ``;
