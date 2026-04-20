@@ -27,6 +27,17 @@
                 BIRTHDATE: `Birthdate`,
             });
 
+            const BloodTypes = Object.freeze([
+                'A+',
+                'B+',
+                'AB+',
+                'O+',
+                'A-',
+                'B-',
+                'AB-',
+                'O-',
+            ]);
+
             function App(divId) {
                 //constants
                 const assesser = new PersonalityAssesser();
@@ -163,6 +174,7 @@
                             detail.appendChild(createElement('p', {}, `<strong>Aliases:</strong> ${aliases}`));
                             detail.appendChild(createElement('p', {}, `<strong>Born:</strong> ${Months[character.birthMonth]} ${character.birthDay}, ${character.birthYear}`));
                             detail.appendChild(createElement('p', {}, `<strong>Max Age:</strong> ${character.maxAge}`));
+                            detail.appendChild(createElement('p', {}, `<strong>Blood Type:</strong> ${character.bloodType}`));
                             if (character.role && character.role.length > 0) {
                                 detail.appendChild(createElement('p', {}, `<strong>Role:</strong> ${character.role}`));
                             }
@@ -290,6 +302,10 @@
                     //Max Age
                     form.appendChild(createElement('label', {'for': fn(i, 'maxAge')}, `Maximum Age (Alive Until)`));
                     form.appendChild(createElement('input', {'type': 'number', 'name': fn(i, 'maxAge'), 'value': character.maxAge}));
+
+                    //Blood Type
+                    form.appendChild(createElement('label', {'for': fn(i, 'bloodType')}, `Blood Type`));
+                    form.appendChild(makeSelect(fn(i, 'bloodType'), BloodTypes, character.bloodType));
 
                     //Role
                     form.appendChild(createElement('label', {'for': fn(i, 'role')}, `Character Role`));
@@ -428,6 +444,9 @@
                             c.birthDay = parseInt(daySelect.options[daySelect.selectedIndex].value);
 
                             c.maxAge = parseInt(document.getElementsByName(fn(i, 'maxAge'))[0].value);
+
+                            const bloodTypeSelect = document.getElementsByName(fn(i, 'bloodType'))[0];
+                            c.bloodType = BloodTypes[parseInt(bloodTypeSelect.options[bloodTypeSelect.selectedIndex].value)];
 
                             c.role = document.getElementsByName(fn(i, 'role'))[0].value;
 
@@ -1043,6 +1062,7 @@
                 this.birthMonth = 0;
                 this.birthDay = 1;
                 this.maxAge = 99;
+                this.bloodType = BloodTypes[0];
                 this.role = ``;
                 this.drivers = ``;
                 this.injunctions = ``;
