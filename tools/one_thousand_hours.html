@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html color-mode="user">
+    <head>
+        <title>1000 Hours Outside</title>
+        <link rel="stylesheet" href="../css/mvp.css">
+    </head>
+    <body>
+        <main>
+            <div id="main">
+            Something didn't go right...
+        </div>
+        </main>
+        <script src="../scripts/html_tools.js"></script>
+        <script>
+            const today = new Date();
+            const start = new Date(today.getFullYear(), 0, 0);
+            const end = new Date(today.getFullYear(), 11, 31);
+            const diff = today - start;
+            const total = end - start;
+            const percentage = diff/total;
+            const hoursTarget = Math.round(percentage * 1000);
+            const percentageInt = Math.round(percentage * 100);
+
+            const main = document.getElementById('main');
+            main.innerHTML = '';
+            main.appendChild(createElement('h1', {}, `Today, ${today.toLocaleDateString()}, your target total hours outside is ${hoursTarget} hours.`));
+            main.appendChild(createElement('progress', {max: 100, value: percentageInt, style: `width: 100%;`}, `${percentageInt}%`));
+        </script>
+    </body>
+</html>
