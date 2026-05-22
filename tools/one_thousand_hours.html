@@ -12,6 +12,35 @@
         </main>
         <script src="../scripts/html_tools.js"></script>
         <script>
+            const monthlyTotals = [
+                31,
+                28,
+                62,
+                90,
+                124,
+                150,
+                155,
+                124,
+                90,
+                62,
+                60,
+                31,
+            ];
+            const harshHoursTotal = monthlyTotals.reduce((accumulator, currentValue) => accumulator + currentValue, 0);
+            const monthlyDailyTarget = [
+                1,
+                1,
+                2,
+                3,
+                4,
+                5,
+                5,
+                4,
+                3,
+                2,
+                2,
+            ];
+
             const today = new Date();
             const start = new Date(today.getFullYear(), 0, 0);
             const end = new Date(today.getFullYear(), 11, 31);
@@ -21,10 +50,28 @@
             const hoursTarget = Math.round(percentage * 1000);
             const percentageInt = Math.round(percentage * 100);
 
+            const month = today.getMonth();
+            let harshHoursAccumulator = 0;
+            for (let i=0; i<month; i++) {
+                harshHoursAccumulator += monthlyTotals[i];
+            }
+            harshHoursAccumulator += today.getDate() * monthlyDailyTarget[month];
+            const harshHoursPercentage = Math.round((harshHoursAccumulator / harshHoursTotal) * 100);
+
             const main = document.getElementById('main');
             main.innerHTML = '';
-            main.appendChild(createElement('h1', {}, `Today, ${today.toLocaleDateString()}, your target total hours outside is ${hoursTarget} hours.`));
-            main.appendChild(createElement('progress', {max: 100, value: percentageInt, style: `width: 100%;`}, `${percentageInt}%`));
+
+            main.appendChild(createElement('h1', {}, `Today is ${today.toLocaleDateString()}.`));
+
+            const harshWinters = makeFieldset(`For Harsh Winters`);
+            main.appendChild(harshWinters);
+            harshWinters.appendChild(createElement('h1', {}, `For areas with harsh winters, your target total hours outside as of today is ${harshHoursAccumulator} hours.`));
+            harshWinters.appendChild(createElement('progress', {max: 100, value: harshHoursPercentage, style: `width: 100%;`}, `${harshHoursPercentage}%`));
+
+            const blindProgress = makeFieldset(`Blind Progress`);
+            main.appendChild(blindProgress);
+            blindProgress.appendChild(createElement('h1', {}, `For everyone else, your target total hours outside as of today is ${hoursTarget} hours.`));
+            blindProgress.appendChild(createElement('progress', {max: 100, value: percentageInt, style: `width: 100%;`}, `${percentageInt}%`));
         </script>
     </body>
 </html>
