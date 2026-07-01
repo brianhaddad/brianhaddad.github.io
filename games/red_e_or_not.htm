@@ -1,0 +1,170 @@
+<!doctype HTML>
+<html lang="en">
+    <head>
+        <title>Ready E or Not!</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                background-color: #222;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                font-family: sans-serif;
+            }
+            canvas {
+                background-color: #000;
+                max-width: 100%;
+                max-height: 100vh;
+                box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            }
+            #parent-dashboard {
+                display: none;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+                z-index: 10;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="parent-dashboard">
+            <h2>Parent Dashboard</h2>
+            <p>Settings will go here.</p>
+            <button id="close-dashboard">Close</button>
+        </div>
+
+        <script src="html_tools.js"></script>
+        <script>
+            const GAME_WIDTH = 1024;
+            const GAME_HEIGHT = 768;
+
+            function GameEngine(width, height) {
+                const w = width;
+                const h = height;
+
+                // Mouse State
+                let mx = 0;
+                let my = 0;
+
+                // Dynamic Level Configuration (Foundation laid for future computation)
+                this.currentLevelConfig = {
+                    level: 1,
+                    bgType: 'split', // 'solid' or 'split'
+                    bgColors: ['#87CEEB', '#7CFC00'], // Sky, Ground
+                    bgSplitRatio: 0.65 // e.g., 65% sky, 35% ground
+                };
+
+                this.mouseEvent = (mouseX, mouseY, eventType) => {
+                    mx = mouseX;
+                    my = mouseY;
+
+                    if (eventType === 'mouseup') {
+                        // Reverse-Y bounding box hit detection will go here
+                        console.log(`Clicked at ${mx.toFixed(0)}, ${my.toFixed(0)}`);
+                    }
+                };
+
+                this.update = (dt) => {
+                    // Update animations and logic here
+                };
+
+                // --- Modular Drawing Functions ---
+
+                this.drawBackground = (ctx) => {
+                    const config = this.currentLevelConfig;
+
+                    if (config.bgType === 'solid') {
+                        ctx.fillStyle = config.bgColors[0];
+                        ctx.fillRect(0, 0, w, h);
+                    } else if (config.bgType === 'split') {
+                        const splitY = h * config.bgSplitRatio;
+                        
+                        // Top Section (Sky)
+                        ctx.fillStyle = config.bgColors[0];
+                        ctx.fillRect(0, 0, w, splitY);
+                        
+                        // Bottom Section (Ground)
+                        ctx.fillStyle = config.bgColors[1];
+                        ctx.fillRect(0, splitY, w, h - splitY);
+                    }
+                };
+
+                // --- Main Draw Loop ---
+
+                this.draw = (ctx) => {
+                    // 1. Clear Canvas
+                    ctx.clearRect(0, 0, w, h);
+
+                    // 2. Draw Dynamic Backdrop
+                    this.drawBackground(ctx);
+
+                    // 3. (Future) Draw Grid and Letters sorted by Y-axis
+
+                    // (Debug: Draw simple hover cursor follower)
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    ctx.beginPath();
+                    ctx.arc(mx, my, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                };
+            }
+
+            // --- Initialization ---
+            const canvas = createElement('canvas', {'width': GAME_WIDTH, 'height': GAME_HEIGHT}, null);
+            const ctx = canvas.getContext('2d');
+            document.body.appendChild(canvas);
+
+            const game = new GameEngine(GAME_WIDTH, GAME_HEIGHT);
+
+            // --- Input Handling ---
+            function handleMouseEvent(evt) {
+                evt.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                
+                const scaledX = (evt.clientX - rect.left) * scaleX;
+                const scaledY = (evt.clientY - rect.top) * scaleY;
+
+                game.mouseEvent(scaledX, scaledY, evt.type);
+            }
+
+            // Removed mousedown; only tracking move and up
+            canvas.addEventListener('mousemove', handleMouseEvent, false);
+            canvas.addEventListener('mouseup', handleMouseEvent, false);
+
+            // Parent Dashboard Toggle
+            const dashboard = document.getElementById('parent-dashboard');
+            document.addEventListener('keydown', (evt) => {
+                if (evt.shiftKey && (evt.key === 'P' || evt.key === 'p')) {
+                    dashboard.style.display = dashboard.style.display === 'block' ? 'none' : 'block';
+                }
+            });
+            document.getElementById('close-dashboard').addEventListener('click', () => {
+                dashboard.style.display = 'none';
+            });
+
+            // --- Core Loop ---
+            let lastUpdate = Date.now();
+            function animateGame() {
+                const nowUpdate = Date.now();
+                const dt = nowUpdate - lastUpdate;
+                lastUpdate = nowUpdate;
+                
+                game.update(dt);
+                game.draw(ctx);
+                
+                requestAnimationFrame(animateGame);
+            }
+
+            animateGame();
+        </script>
+    </body>
+</html>
