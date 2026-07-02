@@ -280,6 +280,7 @@
             document.body.appendChild(canvas);
 
             const game = new GameEngine(GAME_WIDTH, GAME_HEIGHT);
+            game.loadLevel(1); // Load level 1 to kick things off
 
             // --- Input Handling ---
             function handleMouseEvent(evt) {
