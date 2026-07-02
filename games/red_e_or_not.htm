@@ -1,7 +1,7 @@
 <!doctype HTML>
 <html lang="en">
     <head>
-        <title>Ready E or Not!</title>
+        <title>Red E or Not!</title>
         <style>
             body {
                 margin: 0;
@@ -45,6 +45,101 @@
             const GAME_WIDTH = 1024;
             const GAME_HEIGHT = 768;
 
+            const DEFAULT_SETTINGS = {
+                gridRows: 3, gridCols: 3,
+                clutterDensity: 0.2,
+                cellOffsetVariance: 0.1,
+                letterScaleVariance: 0.0,
+                targetCase: 'upper',
+                targetFontComplexity: 0.0,
+                includeLowercaseDistractors: 0.0,
+                distractorFontComplexity: 0.0,
+                distractorSimilarity: 0.0,
+                allowSplitBackground: false,
+                bgSplitRatio: 0.5,
+                allowScenery: false,
+                sceneryDensity: 0.0,
+                bonusTargetPoolSize: 0,
+            };
+
+            const MILESTONES = [
+                { level: 1, gridRows: 3, gridCols: 3, clutterDensity: 0.2 },
+                { level: 10, gridRows: 6, gridCols: 6, includeLowercaseDistractors: 0.5, allowScenery: true },
+                { level: 15, allowSplitBackground: true },
+                { level: 25, gridRows: 12, gridCols: 12, targetCase: 'random', includeLowercaseDistractors: 1.0 }
+            ];
+
+            function getLevelSettings(level) {
+                const settings = {};
+
+                for (const key in DEFAULT_SETTINGS) {
+                    const val = DEFAULT_SETTINGS[key];
+                    
+                    if (typeof val === 'number') {
+                        // Check if it's meant to be an integer (like grid rows) or float
+                        // For now, let's treat all numbers as interpolatable if they have milestones
+                        settings[key] = getInterpolatedValue(level, key);
+                    } else {
+                        settings[key] = getLatestValue(level, key);
+                    }
+                }
+                
+                // Final pass for integer-specific rounding
+                settings.gridRows = Math.round(settings.gridRows);
+                settings.gridCols = Math.round(settings.gridCols);
+                
+                return settings;
+            }
+
+            function getLatestValue(level, attribute) {
+                let value = DEFAULT_SETTINGS[attribute];
+                for (const m of MILESTONES) {
+                    if (m.level <= level && m.hasOwnProperty(attribute)) {
+                        value = m[attribute];
+                    }
+                }
+                return value;
+            }
+
+            function getInterpolatedValue(level, attribute) {
+                let startMilestone = null;
+                let endMilestone = null;
+
+                // 1. Find the bounding keyframes
+                for (const m of MILESTONES) {
+                    if (m.hasOwnProperty(attribute)) {
+                        if (m.level <= level) {
+                            // Keeps overwriting until we have the LAST milestone <= current level
+                            startMilestone = m; 
+                        } else if (m.level > level) {
+                            // Grabs the FIRST milestone > current level, then stops searching
+                            endMilestone = m; 
+                            break; 
+                        }
+                    }
+                }
+
+                // 2. Handle missing bounds
+                // If no prior milestone defined this attribute, assume it starts at Level 1 with the default
+                if (!startMilestone) {
+                    startMilestone = { level: 1, [attribute]: DEFAULT_SETTINGS[attribute] };
+                }
+
+                // If there is no future milestone, we've maxed out the progression for this trait
+                if (!endMilestone) {
+                    return startMilestone[attribute];
+                }
+
+                // 3. Perform the interpolation (Lerp)
+                const range = endMilestone.level - startMilestone.level;
+                const t = (level - startMilestone.level) / range; 
+                
+                const startVal = startMilestone[attribute];
+                const endVal = endMilestone[attribute];
+
+                return startVal + (endVal - startVal) * t;
+            }
+
             function GameEngine(width, height) {
                 const w = width;
                 const h = height;
@@ -53,12 +148,20 @@
                 let mx = 0;
                 let my = 0;
 
+                // Instantiate the grid once
+                const grid = new Grid(w, h);
+
                 // Dynamic Level Configuration (Foundation laid for future computation)
-                this.currentLevelConfig = {
-                    level: 1,
-                    bgType: 'split', // 'solid' or 'split'
-                    bgColors: ['#87CEEB', '#7CFC00'], // Sky, Ground
-                    bgSplitRatio: 0.65 // e.g., 65% sky, 35% ground
+                this.currentLevelConfig = {};
+
+                // A new method to handle loading a level
+                this.loadLevel = (levelNumber) => {
+                    this.currentLevelConfig = getLevelSettings(levelNumber);
+                    
+                    // Tell the grid to map out the new level's dimensions
+                    grid.build(this.currentLevelConfig);
+                    
+                    console.log(`Level ${levelNumber} loaded!`, this.currentLevelConfig);
                 };
 
                 this.mouseEvent = (mouseX, mouseY, eventType) => {
@@ -72,26 +175,23 @@
                 };
 
                 this.update = (dt) => {
-                    // Update animations and logic here
+                    grid.update(dt);
                 };
 
                 // --- Modular Drawing Functions ---
 
-                this.drawBackground = (ctx) => {
+                const drawBackground = (ctx) => {
                     const config = this.currentLevelConfig;
+                    if (!config) return;
 
-                    if (config.bgType === 'solid') {
-                        ctx.fillStyle = config.bgColors[0];
+                    if (!config.allowSplitBackground) {
+                        ctx.fillStyle = '#222'; // Default solid for now
                         ctx.fillRect(0, 0, w, h);
-                    } else if (config.bgType === 'split') {
+                    } else {
                         const splitY = h * config.bgSplitRatio;
-                        
-                        // Top Section (Sky)
-                        ctx.fillStyle = config.bgColors[0];
+                        ctx.fillStyle = '#87CEEB'; // Sky
                         ctx.fillRect(0, 0, w, splitY);
-                        
-                        // Bottom Section (Ground)
-                        ctx.fillStyle = config.bgColors[1];
+                        ctx.fillStyle = '#7CFC00'; // Ground
                         ctx.fillRect(0, splitY, w, h - splitY);
                     }
                 };
@@ -103,15 +203,74 @@
                     ctx.clearRect(0, 0, w, h);
 
                     // 2. Draw Dynamic Backdrop
-                    this.drawBackground(ctx);
+                    drawBackground(ctx);
 
-                    // 3. (Future) Draw Grid and Letters sorted by Y-axis
+                    // The engine delegates spatial drawing to the grid
+                    grid.draw(ctx);
 
                     // (Debug: Draw simple hover cursor follower)
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
                     ctx.beginPath();
                     ctx.arc(mx, my, 5, 0, Math.PI * 2);
                     ctx.fill();
+                };
+            }
+
+            function Grid(gameWidth, gameHeight) {
+                // Lock the stage dimensions into the closure
+                const w = gameWidth;
+                const h = gameHeight;
+                
+                // Internal state
+                let cells = [];
+                let rows = 0;
+                let cols = 0;
+
+                // The reset/rebuild method to be called on level load
+                this.build = (levelSettings) => {
+                    cells = []; // Clear the old layout
+                    
+                    // Consume and round the decimal settings into integers
+                    rows = Math.round(levelSettings.gridRows);
+                    cols = Math.round(levelSettings.gridCols);
+                    
+                    const cellWidth = w / cols;
+                    const cellHeight = h / rows;
+                    
+                    // Generate the spatial map
+                    for (let r = 0; r < rows; r++) {
+                        for (let c = 0; c < cols; c++) {
+                            cells.push({
+                                row: r,
+                                col: c,
+                                x: c * cellWidth,
+                                y: r * cellHeight,
+                                width: cellWidth,
+                                height: cellHeight,
+                                // Pre-calculating the center saves math later during drawing
+                                centerX: (c * cellWidth) + (cellWidth / 2),
+                                centerY: (r * cellHeight) + (cellHeight / 2),
+                                entity: null // This will hold our letter/word object later
+                            });
+                        }
+                    }
+                };
+
+                this.update = (dt) => {
+                    // Future: Iterate through cells and call entity.update(dt) if needed
+                };
+
+                this.draw = (ctx) => {
+                    // Debug Rendering: Let's draw the grid lines so we can see it working
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; // Faint white lines
+                    ctx.lineWidth = 2;
+                    
+                    for (let i = 0; i < cells.length; i++) {
+                        const cell = cells[i];
+                        ctx.strokeRect(cell.x, cell.y, cell.width, cell.height);
+                        
+                        // Future: if (cell.entity) cell.entity.draw(ctx);
+                    }
                 };
             }
 
