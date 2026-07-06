@@ -233,7 +233,7 @@
                     const cellWidth = w / cols;
                     const cellHeight = h / rows;
                     
-                    // Generate the spatial map
+                    // 1. Generate the empty spatial map
                     for (let r = 0; r < rows; r++) {
                         for (let c = 0; c < cols; c++) {
                             cells.push({
@@ -248,6 +248,43 @@
                                 centerY: (r * cellHeight) + (cellHeight / 2),
                                 entity: null // This will hold our letter/word object later
                             });
+                        }
+                    }
+
+                    // 2. Insert the Target "Red E"
+                    let targetChar = 'E';
+                    if (levelSettings.targetCase === 'lower') {
+                        targetChar = 'e';
+                    } else if (levelSettings.targetCase === 'random') {
+                        targetChar = Math.random() < 0.5 ? 'E' : 'e';
+                    }
+
+                    // Pick a random cell for the target
+                    const targetIndex = Math.floor(Math.random() * cells.length);
+                    cells[targetIndex].entity = new CharacterDisplay(targetChar, cells[targetIndex], levelSettings, true);
+
+                    // 3. Populate Clutter (Distractors)
+                    const distractorChars = "ABCDFGHIJKLMNOPQRSTUVWXYZ"; // Excludes 'E'
+                    const lowerCaseOdds = levelSettings.includeLowercaseDistractors / 2;
+
+                    for (let i = 0; i < cells.length; i++) {
+                        // Skip the cell if it already contains our Target
+                        if (i === targetIndex) continue;
+
+                        // Roll against the clutter density scalar (0.0 to 1.0)
+                        if (Math.random() <= levelSettings.clutterDensity) {
+                            
+                            // Pick a random distractor character
+                            const randomIndex = Math.floor(Math.random() * distractorChars.length);
+                            let char = distractorChars.charAt(randomIndex);
+                            
+                            // Roll to see if it becomes lowercase
+                            if (Math.random() < lowerCaseOdds) {
+                                char = char.toLowerCase();
+                            }
+
+                            // Instantiate and assign to the cell
+                            cells[i].entity = new CharacterDisplay(char, cells[i], levelSettings, false);
                         }
                     }
                 };
@@ -265,10 +302,68 @@
                         const cell = cells[i];
                         ctx.strokeRect(cell.x, cell.y, cell.width, cell.height);
                         
-                        // Future: if (cell.entity) cell.entity.draw(ctx);
+                        if (cell.entity) {
+                            cell.entity.draw(ctx);
+                        }
                     }
                 };
             }
+
+            function CharacterDisplay(text, cell, settings, isTarget = false) {
+                // 1. Core Identity
+                this.text = text;
+                this.isTarget = isTarget;
+
+                // 2. Calculate Size with Variance
+                // Base size on the smallest cell dimension so it fits safely
+                const baseSize = Math.min(cell.width, cell.height) * 0.7; 
+                
+                // Math.random() * 2 - 1 gives us a range from -1.0 to 1.0
+                const scaleRandomness = (Math.random() * 2 - 1) * settings.letterScaleVariance;
+                this.fontSize = baseSize + (baseSize * scaleRandomness);
+
+                // 3. Calculate Position with Offset Variance
+                const maxOffsetX = (cell.width / 2) * settings.cellOffsetVariance;
+                const maxOffsetY = (cell.height / 2) * settings.cellOffsetVariance;
+                
+                this.x = cell.centerX + ((Math.random() * 2 - 1) * maxOffsetX);
+                this.y = cell.centerY + ((Math.random() * 2 - 1) * maxOffsetY);
+
+                // 4. Determine Styling (Placeholders to be expanded)
+                // The target is always Red E. Distractors will eventually use `distractorSimilarity`.
+                this.color = this.isTarget ? '#FF0000' : this.generateDistractorColor(settings.distractorSimilarity);
+                this.fontFamily = this.generateFont(settings.distractorFontComplexity);
+
+                this.update = (dt) => {
+                    // Future: idle animations, wobbles, or spawn-in scaling
+                };
+
+                this.draw = (ctx) => {
+                    // Set alignment so our X/Y acts as the dead-center of the text
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    
+                    ctx.font = `bold ${this.fontSize}px ${this.fontFamily}`;
+                    ctx.fillStyle = this.color;
+                    
+                    // Draw the text
+                    ctx.fillText(this.text, this.x, this.y);
+                };
+            }
+
+            // --- Helper Methods (Attached to prototype or defined inside closure) ---
+
+            CharacterDisplay.prototype.generateDistractorColor = function(similarity) {
+                // Stub: If similarity is low, pick wildly different colors. 
+                // If high, pick oranges, purples, or dark reds.
+                const colors = ['#0000FF', '#008000', '#FFA500', '#800080', '#000000'];
+                return colors[Math.floor(Math.random() * colors.length)];
+            };
+
+            CharacterDisplay.prototype.generateFont = function(complexity) {
+                // Stub: 0.0 = basic sans-serif. 1.0 = introduces cursive, serif, blocky fonts.
+                return 'sans-serif';
+            };
 
             // --- Initialization ---
             const canvas = createElement('canvas', {'width': GAME_WIDTH, 'height': GAME_HEIGHT}, null);
