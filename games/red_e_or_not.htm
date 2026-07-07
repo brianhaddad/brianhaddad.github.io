@@ -439,6 +439,7 @@
 
                 this.draw = (ctx) => {
                     // Debug Rendering: Let's draw the grid lines so we can see it working
+                    ctx.save();
                     ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; // Faint white lines
                     ctx.lineWidth = 2;
                     
@@ -450,6 +451,7 @@
                             cell.entity.draw(ctx);
                         }
                     }
+                    ctx.restore();
                 };
             }
 
@@ -477,6 +479,7 @@
                 this.fontFamily = this.generateFont(settings.distractorFontComplexity);
 
                 this.draw = (ctx) => {
+                    ctx.save();
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.font = `bold ${this.fontSize}px ${this.fontFamily}`;
@@ -490,6 +493,7 @@
                     // Draw the Fill
                     ctx.fillStyle = this.colors.fill;
                     ctx.fillText(this.text, this.x, this.y);
+                    ctx.restore();
                 };
             }
 
