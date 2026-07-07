@@ -18,6 +18,7 @@
                 max-width: 100%;
                 max-height: 100vh;
                 box-shadow: 0 0 20px rgba(0,0,0,0.8);
+                cursor: none;
             }
             #parent-dashboard {
                 display: none;
@@ -44,6 +45,9 @@
         <script>
             const GAME_WIDTH = 1024;
             const GAME_HEIGHT = 768;
+
+            let glassRadius = 50; // Will be dynamically calculated per level
+            let targetEntity = null; // A direct reference to our Red E so we don't have to search for it
 
             const DEFAULT_SETTINGS = {
                 gridRows: 3, gridCols: 3,
@@ -157,6 +161,13 @@
                     // Tell the grid to map out the new level's dimensions
                     grid.build(this.currentLevelConfig);
                     
+                    // Grab the Red E reference directly from the grid to make hit detection $O(1)$
+                    targetEntity = grid.getTargetEntity(); 
+                    
+                    // Calculate 2/3rds of the target's max dimension
+                    // (Assuming targetEntity exposes its fontSize or max dimensions)
+                    glassRadius = targetEntity.fontSize * 0.66;
+                    
                     console.log(`Level ${levelNumber} loaded!`, this.currentLevelConfig);
                 };
 
@@ -164,9 +175,22 @@
                     mx = mouseX;
                     my = mouseY;
 
-                    if (eventType === 'mouseup') {
-                        // Reverse-Y bounding box hit detection will go here
-                        console.log(`Clicked at ${mx.toFixed(0)}, ${my.toFixed(0)}`);
+                    if (eventType === 'mouseup' && targetEntity) {
+                        // Calculate the Pythagorean distance between the cursor and the target
+                        const dx = mx - targetEntity.x;
+                        const dy = my - targetEntity.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+
+                        // If the distance is less than ~half the glass radius, the E is mostly inside
+                        const hitThreshold = glassRadius * 0.5;
+
+                        if (distance < hitThreshold) {
+                            console.log("Found the Red E! Proceed to next level.");
+                            // this.loadLevel(this.currentLevelConfig.level + 1);
+                        } else {
+                            console.log("Nope! Keep looking.");
+                            // Trigger incorrect feedback (e.g., a little screen shake or sound)
+                        }
                     }
                 };
 
@@ -204,11 +228,31 @@
                     // The engine delegates spatial drawing to the grid
                     grid.draw(ctx);
 
-                    // (Debug: Draw simple hover cursor follower)
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    ctx.save();
+    
+                    // The Glass
                     ctx.beginPath();
-                    ctx.arc(mx, my, 5, 0, Math.PI * 2);
+                    ctx.arc(mx, my, glassRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; // Slight tint to feel like glass
                     ctx.fill();
+                    ctx.lineWidth = 4;
+                    ctx.strokeStyle = '#555'; // Dark grey rim
+                    ctx.stroke();
+
+                    // The Handle (drawn pointing down and to the right)
+                    ctx.beginPath();
+                    // Start at the bottom-right edge of the circle
+                    const handleStartX = mx + (glassRadius * Math.cos(Math.PI / 4));
+                    const handleStartY = my + (glassRadius * Math.sin(Math.PI / 4));
+                    ctx.moveTo(handleStartX, handleStartY);
+                    // Draw a line out from there
+                    ctx.lineTo(handleStartX + (glassRadius * 0.8), handleStartY + (glassRadius * 0.8));
+                    ctx.lineWidth = 12;
+                    ctx.lineCap = 'round';
+                    ctx.strokeStyle = '#8B4513'; // SaddleBrown for a classic wooden handle
+                    ctx.stroke();
+                    
+                    ctx.restore();
                 };
             }
 
@@ -216,6 +260,9 @@
                 // Lock the stage dimensions into the closure
                 const w = gameWidth;
                 const h = gameHeight;
+
+                let targetRef = null;
+                this.getTargetEntity = () => targetRef;
                 
                 // Internal state
                 let cells = [];
@@ -261,7 +308,9 @@
 
                     // Pick a random cell for the target
                     const targetIndex = Math.floor(Math.random() * cells.length);
-                    cells[targetIndex].entity = new CharacterDisplay(targetChar, cells[targetIndex], levelSettings, true);
+                    const targetEntity = new CharacterDisplay(targetChar, cells[targetIndex], levelSettings, true);
+                    cells[targetIndex].entity = targetEntity;
+                    targetRef = targetEntity; // Save it for the engine!
 
                     // 3. Populate Clutter (Distractors)
                     const distractorChars = "ABCDFGHIJKLMNOPQRSTUVWXYZ"; // Excludes 'E'
