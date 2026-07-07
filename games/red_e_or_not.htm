@@ -244,7 +244,7 @@
                         const dy = my - targetEntity.y;
                         const distance = Math.sqrt(dx * dx + dy * dy);
 
-                        if (distance < glassRadius * 0.5) {
+                        if (distance < glassRadius * 0.8) {
                             // HIT! We pass the global ctx so we can force a redraw
                             this.triggerSuccess(ctx); 
                         } else {
@@ -454,59 +454,179 @@
             }
 
             function CharacterDisplay(text, cell, settings, isTarget = false) {
-                // 1. Core Identity
                 this.text = text;
                 this.isTarget = isTarget;
 
-                // 2. Calculate Size with Variance
-                // Base size on the smallest cell dimension so it fits safely
+                // Size & Position Math
+                const baseSize = Math.min(cell.width, cell.height) * 0.7;function CharacterDisplay(text, cell, settings, isTarget = false) {
+                this.text = text;
+                this.isTarget = isTarget;
+
+                // Size & Position Math
                 const baseSize = Math.min(cell.width, cell.height) * 0.7; 
-                
-                // Math.random() * 2 - 1 gives us a range from -1.0 to 1.0
                 const scaleRandomness = (Math.random() * 2 - 1) * settings.letterScaleVariance;
                 this.fontSize = baseSize + (baseSize * scaleRandomness);
 
-                // 3. Calculate Position with Offset Variance
                 const maxOffsetX = (cell.width / 2) * settings.cellOffsetVariance;
                 const maxOffsetY = (cell.height / 2) * settings.cellOffsetVariance;
-                
                 this.x = cell.centerX + ((Math.random() * 2 - 1) * maxOffsetX);
                 this.y = cell.centerY + ((Math.random() * 2 - 1) * maxOffsetY);
 
-                // 4. Determine Styling (Placeholders to be expanded)
-                // The target is always Red E. Distractors will eventually use `distractorSimilarity`.
-                this.color = this.isTarget ? '#FF0000' : this.generateDistractorColor(settings.distractorSimilarity);
+                // Styling
+                this.colors = this.generateColors(settings.distractorSimilarity);
                 this.fontFamily = this.generateFont(settings.distractorFontComplexity);
 
-                this.update = (dt) => {
-                    // Future: idle animations, wobbles, or spawn-in scaling
-                };
-
                 this.draw = (ctx) => {
-                    // Set alignment so our X/Y acts as the dead-center of the text
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-                    
                     ctx.font = `bold ${this.fontSize}px ${this.fontFamily}`;
-                    ctx.fillStyle = this.color;
-                    
-                    // Draw the text
+
+                    // Draw the Outline (Stroke) first so it sits behind the fill
+                    ctx.lineWidth = this.fontSize * 0.15; // Scale outline thickness with the letter size
+                    ctx.strokeStyle = this.colors.stroke;
+                    ctx.lineJoin = 'round'; // Gives the outline soft, friendly corners
+                    ctx.strokeText(this.text, this.x, this.y);
+
+                    // Draw the Fill
+                    ctx.fillStyle = this.colors.fill;
                     ctx.fillText(this.text, this.x, this.y);
                 };
             }
 
-            // --- Helper Methods (Attached to prototype or defined inside closure) ---
+            // --- Generator Methods ---
 
-            CharacterDisplay.prototype.generateDistractorColor = function(similarity) {
-                // Stub: If similarity is low, pick wildly different colors. 
-                // If high, pick oranges, purples, or dark reds.
-                const colors = ['#0000FF', '#008000', '#FFA500', '#800080', '#000000'];
-                return colors[Math.floor(Math.random() * colors.length)];
+            CharacterDisplay.prototype.generateColors = function(similarity) {
+                // 1. The Target is an immutable guarantee
+                if (this.isTarget) {
+                    return { fill: '#FF0000', stroke: '#FFFFFF' }; 
+                }
+
+                // 2. High Similarity (The Tricky Distractors)
+                // If similarity is high, there's a chance to use "trick" color combos
+                if (similarity > 0.7 && Math.random() < similarity) {
+                    const trickyFills = ['#FF0000', '#FFFFFF', '#FF4500']; // Red, White, Orange-Red
+                    const trickyStrokes = ['#000000', '#FFFF00', '#FF0000']; // Black, Yellow, Red
+                    
+                    let f = trickyFills[Math.floor(Math.random() * trickyFills.length)];
+                    let s = trickyStrokes[Math.floor(Math.random() * trickyStrokes.length)];
+                    
+                    // CRITICAL GUARDRAIL: Never accidentally generate the exact Target combo
+                    if (f === '#FF0000' && s === '#FFFFFF') {
+                        s = '#000000'; // Swap the white outline for black
+                    }
+                    return { fill: f, stroke: s };
+                }
+
+                // 3. Normal / Low Similarity Distractors
+                // Avoid pure red. Stick to blues, greens, yellows, and purples.
+                const safeHues = [240, 120, 60, 300, 30, 180]; 
+                const hue = safeHues[Math.floor(Math.random() * safeHues.length)];
+                
+                return {
+                    fill: `hsl(${hue}, 80%, 50%)`,
+                    stroke: (Math.random() > 0.5) ? '#FFFFFF' : '#000000' // 50/50 white or black outline
+                };
             };
 
             CharacterDisplay.prototype.generateFont = function(complexity) {
-                // Stub: 0.0 = basic sans-serif. 1.0 = introduces cursive, serif, blocky fonts.
-                return 'sans-serif';
+                // Standard, highly readable fonts for early levels
+                const basicFonts = ['Arial', 'Verdana', 'Tahoma', 'Trebuchet MS'];
+                
+                // Serif and slightly stylized fonts
+                const mediumFonts = ['Georgia', 'Times New Roman', 'Courier New'];
+                
+                // Weird, blocky, or cursive fonts that distort the letter shapes
+                const hardFonts = ['Impact', 'Comic Sans MS', 'Palatino', 'Brush Script MT'];
+
+                let pool = [...basicFonts];
+                
+                // As complexity scales from 0.0 to 1.0, we dump more difficult fonts into the pool
+                if (complexity > 0.33) pool = pool.concat(mediumFonts);
+                if (complexity > 0.66) pool = pool.concat(hardFonts);
+
+                return pool[Math.floor(Math.random() * pool.length)];
+            };
+                const scaleRandomness = (Math.random() * 2 - 1) * settings.letterScaleVariance;
+                this.fontSize = baseSize + (baseSize * scaleRandomness);
+
+                const maxOffsetX = (cell.width / 2) * settings.cellOffsetVariance;
+                const maxOffsetY = (cell.height / 2) * settings.cellOffsetVariance;
+                this.x = cell.centerX + ((Math.random() * 2 - 1) * maxOffsetX);
+                this.y = cell.centerY + ((Math.random() * 2 - 1) * maxOffsetY);
+
+                // Styling
+                this.colors = this.generateColors(settings.distractorSimilarity);
+                this.fontFamily = this.generateFont(settings.distractorFontComplexity);
+
+                this.draw = (ctx) => {
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.font = `bold ${this.fontSize}px ${this.fontFamily}`;
+
+                    // Draw the Outline (Stroke) first so it sits behind the fill
+                    ctx.lineWidth = this.fontSize * 0.15; // Scale outline thickness with the letter size
+                    ctx.strokeStyle = this.colors.stroke;
+                    ctx.lineJoin = 'round'; // Gives the outline soft, friendly corners
+                    ctx.strokeText(this.text, this.x, this.y);
+
+                    // Draw the Fill
+                    ctx.fillStyle = this.colors.fill;
+                    ctx.fillText(this.text, this.x, this.y);
+                };
+            }
+
+            // --- Generator Methods ---
+
+            CharacterDisplay.prototype.generateColors = function(similarity) {
+                // 1. The Target is an immutable guarantee
+                if (this.isTarget) {
+                    return { fill: '#FF0000', stroke: '#FFFFFF' }; 
+                }
+
+                // 2. High Similarity (The Tricky Distractors)
+                // If similarity is high, there's a chance to use "trick" color combos
+                if (similarity > 0.7 && Math.random() < similarity) {
+                    const trickyFills = ['#FF0000', '#FFFFFF', '#FF4500']; // Red, White, Orange-Red
+                    const trickyStrokes = ['#000000', '#FFFF00', '#FF0000']; // Black, Yellow, Red
+                    
+                    let f = trickyFills[Math.floor(Math.random() * trickyFills.length)];
+                    let s = trickyStrokes[Math.floor(Math.random() * trickyStrokes.length)];
+                    
+                    // CRITICAL GUARDRAIL: Never accidentally generate the exact Target combo
+                    if (f === '#FF0000' && s === '#FFFFFF') {
+                        s = '#000000'; // Swap the white outline for black
+                    }
+                    return { fill: f, stroke: s };
+                }
+
+                // 3. Normal / Low Similarity Distractors
+                // Avoid pure red. Stick to blues, greens, yellows, and purples.
+                const safeHues = [240, 120, 60, 300, 30, 180]; 
+                const hue = safeHues[Math.floor(Math.random() * safeHues.length)];
+                
+                return {
+                    fill: `hsl(${hue}, 80%, 50%)`,
+                    stroke: (Math.random() > 0.5) ? '#FFFFFF' : '#000000' // 50/50 white or black outline
+                };
+            };
+
+            CharacterDisplay.prototype.generateFont = function(complexity) {
+                // Standard, highly readable fonts for early levels
+                const basicFonts = ['Arial', 'Verdana', 'Tahoma', 'Trebuchet MS'];
+                
+                // Serif and slightly stylized fonts
+                const mediumFonts = ['Georgia', 'Times New Roman', 'Courier New'];
+                
+                // Weird, blocky, or cursive fonts that distort the letter shapes
+                const hardFonts = ['Impact', 'Comic Sans MS', 'Palatino', 'Brush Script MT'];
+
+                let pool = [...basicFonts];
+                
+                // As complexity scales from 0.0 to 1.0, we dump more difficult fonts into the pool
+                if (complexity > 0.33) pool = pool.concat(mediumFonts);
+                if (complexity > 0.66) pool = pool.concat(hardFonts);
+
+                return pool[Math.floor(Math.random() * pool.length)];
             };
 
             // --- Initialization ---
@@ -534,6 +654,7 @@
             // Removed mousedown; only tracking move and up
             canvas.addEventListener('mousemove', handleMouseEvent, false);
             canvas.addEventListener('mouseup', handleMouseEvent, false);
+            canvas.addEventListener('mousedown', (evt) => evt.preventDefault(), false);
 
             // Parent Dashboard Toggle
             const dashboard = document.getElementById('parent-dashboard');
