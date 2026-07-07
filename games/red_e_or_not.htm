@@ -212,7 +212,7 @@
                 nextLevelBtn.addEventListener('click', () => {
                     successModal.style.display = 'none';
                     gameState = 'playing';
-                    this.loadLevel(this.currentLevelConfig.level + 1);
+                    this.loadLevel(parseInt(this.currentLevelConfig.level) + 1);
                 });
 
                 // Dynamic Level Configuration (Foundation laid for future computation)
