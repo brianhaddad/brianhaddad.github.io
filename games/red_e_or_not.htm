@@ -32,6 +32,47 @@
                 box-shadow: 0 4px 15px rgba(0,0,0,0.5);
                 z-index: 10;
             }
+            #success-modal {
+                display: none;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: #FFF8DC; 
+                padding: 30px;
+                border-radius: 16px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+                text-align: center;
+                z-index: 20;
+                border: 4px solid #87CEEB;
+            }
+            #success-modal h2 {
+                margin-top: 0;
+                color: #333;
+                font-size: 32px;
+            }
+            #mini-canvas {
+                background: white;
+                border-radius: 8px; /* Changed to a rounded square */
+                border: 4px solid #ddd;
+                margin-bottom: 20px;
+                width: 150px;
+                height: 150px;
+            }
+            #next-level-btn {
+                background: #7CFC00;
+                color: #222;
+                border: none;
+                padding: 15px 30px;
+                font-size: 24px;
+                font-weight: bold;
+                border-radius: 8px;
+                cursor: pointer;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            }
+            #next-level-btn:hover {
+                background: #6BE000;
+            }
         </style>
     </head>
     <body>
@@ -39,6 +80,12 @@
             <h2>Parent Dashboard</h2>
             <p>Settings will go here.</p>
             <button id="close-dashboard">Close</button>
+        </div>
+        <div id="success-modal">
+            <h2>You found it!</h2>
+            <canvas id="mini-canvas" width="200" height="200"></canvas>
+            <br>
+            <button id="next-level-btn">Next Level ➔</button>
         </div>
 
         <script src="../scripts/html_tools.js"></script>
@@ -144,12 +191,29 @@
                 const w = width;
                 const h = height;
 
+                let gameState = 'playing'; // 'playing' or 'success'
+                let shakeTimer = 0;
+                const SHAKE_DURATION = 300; // ms
+
                 // Mouse State
                 let mx = 0;
                 let my = 0;
 
                 // Instantiate the grid once
                 const grid = new Grid(w, h);
+
+                // The DOM elements for our success modal
+                const successModal = document.getElementById('success-modal');
+                const nextLevelBtn = document.getElementById('next-level-btn');
+                const miniCanvas = document.getElementById('mini-canvas');
+                const miniCtx = miniCanvas.getContext('2d');
+
+                // Hook up the Next Level button
+                nextLevelBtn.addEventListener('click', () => {
+                    successModal.style.display = 'none';
+                    gameState = 'playing';
+                    this.loadLevel(this.currentLevelConfig.level + 1);
+                });
 
                 // Dynamic Level Configuration (Foundation laid for future computation)
                 this.currentLevelConfig = {};
@@ -175,26 +239,51 @@
                     mx = mouseX;
                     my = mouseY;
 
-                    if (eventType === 'mouseup' && targetEntity) {
-                        // Calculate the Pythagorean distance between the cursor and the target
+                    if (eventType === 'mouseup' && gameState === 'playing' && targetEntity) {
                         const dx = mx - targetEntity.x;
                         const dy = my - targetEntity.y;
                         const distance = Math.sqrt(dx * dx + dy * dy);
 
-                        // If the distance is less than ~half the glass radius, the E is mostly inside
-                        const hitThreshold = glassRadius * 0.5;
-
-                        if (distance < hitThreshold) {
-                            console.log("Found the Red E! Proceed to next level.");
-                            // this.loadLevel(this.currentLevelConfig.level + 1);
+                        if (distance < glassRadius * 0.5) {
+                            // HIT! We pass the global ctx so we can force a redraw
+                            this.triggerSuccess(ctx); 
                         } else {
-                            console.log("Nope! Keep looking.");
-                            // Trigger incorrect feedback (e.g., a little screen shake or sound)
+                            // MISS! Start the wobble timer
+                            shakeTimer = SHAKE_DURATION;
                         }
                     }
                 };
 
+                this.triggerSuccess = (mainCtx) => {
+                    gameState = 'success';
+                    
+                    // 1. Force a clean draw (This redraws the board without the magnifying glass)
+                    this.draw(mainCtx); 
+                    
+                    // 2. Calculate the 2x square cutout
+                    // We use fontSize as the longest dimension proxy for the text
+                    const snapSize = targetEntity.fontSize * 2;
+                    const sx = targetEntity.x - (snapSize / 2);
+                    const sy = targetEntity.y - (snapSize / 2);
+                    
+                    // 3. Clear the mini-canvas and draw the cutout from the main canvas
+                    miniCtx.clearRect(0, 0, miniCanvas.width, miniCanvas.height);
+                    
+                    // drawImage(source, sourceX, sourceY, sourceW, sourceH, destX, destY, destW, destH)
+                    miniCtx.drawImage(
+                        mainCtx.canvas, 
+                        sx, sy, snapSize, snapSize, 
+                        0, 0, miniCanvas.width, miniCanvas.height
+                    );
+                    
+                    // 4. Show the modal
+                    successModal.style.display = 'block';
+                };
+
                 this.update = (dt) => {
+                    if (shakeTimer > 0) {
+                        shakeTimer -= dt;
+                    }
                     grid.update(dt);
                 };
 
@@ -219,38 +308,44 @@
                 // --- Main Draw Loop ---
 
                 this.draw = (ctx) => {
-                    // 1. Clear Canvas
+                    // Clear Canvas
                     ctx.clearRect(0, 0, w, h);
 
-                    // 2. Draw Dynamic Backdrop
+                    ctx.save();
+
+                    // Apply the wobble if we missed
+                    if (shakeTimer > 0) {
+                        const intensity = 8; // Pixels to move left/right
+                        const speed = 0.04; 
+                        const offsetX = Math.sin(shakeTimer * speed) * intensity;
+                        ctx.translate(offsetX, 0);
+                    }
+
                     drawBackground(ctx);
 
                     // The engine delegates spatial drawing to the grid
                     grid.draw(ctx);
-
-                    ctx.save();
     
-                    // The Glass
-                    ctx.beginPath();
-                    ctx.arc(mx, my, glassRadius, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; // Slight tint to feel like glass
-                    ctx.fill();
-                    ctx.lineWidth = 4;
-                    ctx.strokeStyle = '#555'; // Dark grey rim
-                    ctx.stroke();
+                    // Draw the Magnifying Glass ONLY if we are actively playing
+                    if (gameState === 'playing') {
+                        ctx.beginPath();
+                        ctx.arc(mx, my, glassRadius, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                        ctx.fill();
+                        ctx.lineWidth = 4;
+                        ctx.strokeStyle = '#555';
+                        ctx.stroke();
 
-                    // The Handle (drawn pointing down and to the right)
-                    ctx.beginPath();
-                    // Start at the bottom-right edge of the circle
-                    const handleStartX = mx + (glassRadius * Math.cos(Math.PI / 4));
-                    const handleStartY = my + (glassRadius * Math.sin(Math.PI / 4));
-                    ctx.moveTo(handleStartX, handleStartY);
-                    // Draw a line out from there
-                    ctx.lineTo(handleStartX + (glassRadius * 0.8), handleStartY + (glassRadius * 0.8));
-                    ctx.lineWidth = 12;
-                    ctx.lineCap = 'round';
-                    ctx.strokeStyle = '#8B4513'; // SaddleBrown for a classic wooden handle
-                    ctx.stroke();
+                        ctx.beginPath();
+                        const handleStartX = mx + (glassRadius * Math.cos(Math.PI / 4));
+                        const handleStartY = my + (glassRadius * Math.sin(Math.PI / 4));
+                        ctx.moveTo(handleStartX, handleStartY);
+                        ctx.lineTo(handleStartX + (glassRadius * 0.8), handleStartY + (glassRadius * 0.8));
+                        ctx.lineWidth = 12;
+                        ctx.lineCap = 'round';
+                        ctx.strokeStyle = '#8B4513';
+                        ctx.stroke();
+                    }
                     
                     ctx.restore();
                 };
