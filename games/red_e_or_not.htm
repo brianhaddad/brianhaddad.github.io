@@ -117,7 +117,8 @@
                 { level: 1, gridRows: 3, gridCols: 3, clutterDensity: 0.2 },
                 { level: 10, gridRows: 6, gridCols: 6, includeLowercaseDistractors: 0.5, allowScenery: true },
                 { level: 15, allowSplitBackground: true },
-                { level: 25, gridRows: 12, gridCols: 12, targetCase: 'random', includeLowercaseDistractors: 1.0 }
+                { level: 25, gridRows: 12, gridCols: 12, targetCase: 'random', includeLowercaseDistractors: 1.0 },
+                { level: 26, gridRows: 18, gridCols: 20, clutterDensity: 1.0, cellOffsetVariance: 1.0, letterScaleVariance: 1.5, distractorSimilarity: 0.9, allowScenery: true, sceneryDensity: 0.5 },
             ];
 
             function getLevelSettings(level) {
@@ -198,6 +199,7 @@
                 // Mouse State
                 let mx = 0;
                 let my = 0;
+                let drawGlass = false;
 
                 // Instantiate the grid once
                 const grid = new Grid(w, h);
@@ -251,6 +253,12 @@
                             // MISS! Start the wobble timer
                             shakeTimer = SHAKE_DURATION;
                         }
+                    }
+                    else if (eventType == 'mousemove' || eventType === 'mouseover') {
+                        drawGlass = true;
+                    }
+                    else if (eventType === 'mouseout') {
+                        drawGlass = false;
                     }
                 };
 
@@ -327,7 +335,7 @@
                     grid.draw(ctx);
     
                     // Draw the Magnifying Glass ONLY if we are actively playing
-                    if (gameState === 'playing') {
+                    if (drawGlass && gameState === 'playing') {
                         ctx.beginPath();
                         ctx.arc(mx, my, glassRadius, 0, Math.PI * 2);
                         ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
@@ -402,7 +410,9 @@
                     }
 
                     // Pick a random cell for the target
-                    const targetIndex = Math.floor(Math.random() * cells.length);
+                    const targetX = Math.floor(Math.random() * (cols - 2)) + 1;
+                    const targetY = Math.floor(Math.random() * (rows - 2)) + 1;
+                    const targetIndex = targetY * cols + targetX;
                     const targetEntity = new CharacterDisplay(targetChar, cells[targetIndex], levelSettings, true);
                     cells[targetIndex].entity = targetEntity;
                     targetRef = targetEntity; // Save it for the engine!
@@ -460,14 +470,9 @@
                 this.isTarget = isTarget;
 
                 // Size & Position Math
-                const baseSize = Math.min(cell.width, cell.height) * 0.7;function CharacterDisplay(text, cell, settings, isTarget = false) {
-                this.text = text;
-                this.isTarget = isTarget;
-
-                // Size & Position Math
-                const baseSize = Math.min(cell.width, cell.height) * 0.7; 
-                const scaleRandomness = (Math.random() * 2 - 1) * settings.letterScaleVariance;
-                this.fontSize = baseSize + (baseSize * scaleRandomness);
+                const baseSize = Math.min(cell.width, cell.height) * 0.7;
+                const scaleRandomness = ((Math.random() * 2) - .5) * settings.letterScaleVariance;
+                this.fontSize = Math.max(8, baseSize + (baseSize * scaleRandomness));
 
                 const maxOffsetX = (cell.width / 2) * settings.cellOffsetVariance;
                 const maxOffsetY = (cell.height / 2) * settings.cellOffsetVariance;
@@ -533,100 +538,37 @@
             };
 
             CharacterDisplay.prototype.generateFont = function(complexity) {
-                // Standard, highly readable fonts for early levels
-                const basicFonts = ['Arial', 'Verdana', 'Tahoma', 'Trebuchet MS'];
+                // TODO: let's really research our font selections.
+                // This isn't working (there are fonts with serifs in the "easy" category).
+                // EASY: Single-story characters, high legibility.
+                // (Comic Sans and Century Gothic are the primary web-safe options here)
+                const easyFonts = [
+                    '"Comic Sans MS"', 
+                    '"Century Gothic"', 
+                    'Quicksand', // Google Font (Great for kids)
+                    'Andika'     // Google Font (Specifically designed for literacy)
+                ];
                 
-                // Serif and slightly stylized fonts
-                const mediumFonts = ['Georgia', 'Times New Roman', 'Courier New'];
+                // MEDIUM: Clean sans-serif, but introduces double-story 'a' and 'g'.
+                const mediumFonts = [
+                    'Arial', 
+                    'Verdana', 
+                    'Helvetica', 
+                    '"Trebuchet MS"'
+                ];
                 
-                // Weird, blocky, or cursive fonts that distort the letter shapes
-                const hardFonts = ['Impact', 'Comic Sans MS', 'Palatino', 'Brush Script MT'];
+                // HARD: Introduces serifs, varied stroke widths, and complex shapes.
+                const hardFonts = [
+                    'Georgia', 
+                    '"Times New Roman"', 
+                    '"Courier New"', 
+                    'Impact', 
+                    '"Brush Script MT"'
+                ];
 
-                let pool = [...basicFonts];
+                let pool = [...easyFonts];
                 
-                // As complexity scales from 0.0 to 1.0, we dump more difficult fonts into the pool
-                if (complexity > 0.33) pool = pool.concat(mediumFonts);
-                if (complexity > 0.66) pool = pool.concat(hardFonts);
-
-                return pool[Math.floor(Math.random() * pool.length)];
-            };
-                const scaleRandomness = (Math.random() * 2 - 1) * settings.letterScaleVariance;
-                this.fontSize = baseSize + (baseSize * scaleRandomness);
-
-                const maxOffsetX = (cell.width / 2) * settings.cellOffsetVariance;
-                const maxOffsetY = (cell.height / 2) * settings.cellOffsetVariance;
-                this.x = cell.centerX + ((Math.random() * 2 - 1) * maxOffsetX);
-                this.y = cell.centerY + ((Math.random() * 2 - 1) * maxOffsetY);
-
-                // Styling
-                this.colors = this.generateColors(settings.distractorSimilarity);
-                this.fontFamily = this.generateFont(settings.distractorFontComplexity);
-
-                this.draw = (ctx) => {
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.font = `bold ${this.fontSize}px ${this.fontFamily}`;
-
-                    // Draw the Outline (Stroke) first so it sits behind the fill
-                    ctx.lineWidth = this.fontSize * 0.15; // Scale outline thickness with the letter size
-                    ctx.strokeStyle = this.colors.stroke;
-                    ctx.lineJoin = 'round'; // Gives the outline soft, friendly corners
-                    ctx.strokeText(this.text, this.x, this.y);
-
-                    // Draw the Fill
-                    ctx.fillStyle = this.colors.fill;
-                    ctx.fillText(this.text, this.x, this.y);
-                };
-            }
-
-            // --- Generator Methods ---
-
-            CharacterDisplay.prototype.generateColors = function(similarity) {
-                // 1. The Target is an immutable guarantee
-                if (this.isTarget) {
-                    return { fill: '#FF0000', stroke: '#FFFFFF' }; 
-                }
-
-                // 2. High Similarity (The Tricky Distractors)
-                // If similarity is high, there's a chance to use "trick" color combos
-                if (similarity > 0.7 && Math.random() < similarity) {
-                    const trickyFills = ['#FF0000', '#FFFFFF', '#FF4500']; // Red, White, Orange-Red
-                    const trickyStrokes = ['#000000', '#FFFF00', '#FF0000']; // Black, Yellow, Red
-                    
-                    let f = trickyFills[Math.floor(Math.random() * trickyFills.length)];
-                    let s = trickyStrokes[Math.floor(Math.random() * trickyStrokes.length)];
-                    
-                    // CRITICAL GUARDRAIL: Never accidentally generate the exact Target combo
-                    if (f === '#FF0000' && s === '#FFFFFF') {
-                        s = '#000000'; // Swap the white outline for black
-                    }
-                    return { fill: f, stroke: s };
-                }
-
-                // 3. Normal / Low Similarity Distractors
-                // Avoid pure red. Stick to blues, greens, yellows, and purples.
-                const safeHues = [240, 120, 60, 300, 30, 180]; 
-                const hue = safeHues[Math.floor(Math.random() * safeHues.length)];
-                
-                return {
-                    fill: `hsl(${hue}, 80%, 50%)`,
-                    stroke: (Math.random() > 0.5) ? '#FFFFFF' : '#000000' // 50/50 white or black outline
-                };
-            };
-
-            CharacterDisplay.prototype.generateFont = function(complexity) {
-                // Standard, highly readable fonts for early levels
-                const basicFonts = ['Arial', 'Verdana', 'Tahoma', 'Trebuchet MS'];
-                
-                // Serif and slightly stylized fonts
-                const mediumFonts = ['Georgia', 'Times New Roman', 'Courier New'];
-                
-                // Weird, blocky, or cursive fonts that distort the letter shapes
-                const hardFonts = ['Impact', 'Comic Sans MS', 'Palatino', 'Brush Script MT'];
-
-                let pool = [...basicFonts];
-                
-                // As complexity scales from 0.0 to 1.0, we dump more difficult fonts into the pool
+                // As complexity scales from 0.0 to 1.0, we expand the pool
                 if (complexity > 0.33) pool = pool.concat(mediumFonts);
                 if (complexity > 0.66) pool = pool.concat(hardFonts);
 
@@ -659,6 +601,8 @@
             canvas.addEventListener('mousemove', handleMouseEvent, false);
             canvas.addEventListener('mouseup', handleMouseEvent, false);
             canvas.addEventListener('mousedown', (evt) => evt.preventDefault(), false);
+            canvas.addEventListener('mouseover', handleMouseEvent, false);
+            canvas.addEventListener('mouseout', handleMouseEvent, false);
 
             // Parent Dashboard Toggle
             const dashboard = document.getElementById('parent-dashboard');
